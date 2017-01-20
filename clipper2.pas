@@ -182,7 +182,6 @@ type
     FUse64BitRange      : Boolean;      //see LoRange and HiRange consts notes below
     FHasOpenPaths       : Boolean;
     FCurrentLocMinIdx   : integer;
-
     FIntersectList      : TList;
     FClipType           : TClipType;
     FFillType           : TPolyFillType;
@@ -217,7 +216,7 @@ type
     procedure DisposeIntersectNodes;
     procedure BuildIntersectList(const TopY: cInt);
     procedure ProcessIntersectList;
-    function FixupIntersectionOrder: Boolean;
+    procedure FixupIntersectionOrder;
     procedure SwapPositionsInAEL(E1, E2: PActive);
     procedure SwapPositionsInSEL(E1, E2: PActive);
     procedure ProcessHorizontals(Y: cInt);
@@ -892,9 +891,9 @@ end;
 //------------------------------------------------------------------------------
 
 (*******************************************************************************
-*  Dx:                             0(90º)                                      *
+*  Dx:                             0(90deg)                                    *
 *                                  |                                           *
-*                 +inf (180º) <--- o ---> -inf (0º)                            *
+*               +inf (180deg) <--- o ---> -inf (0deg)                          *
 *******************************************************************************)
 procedure SetDx(edge: PActive);
 var
@@ -1999,9 +1998,9 @@ procedure TClipper2.ProcessIntersections(const TopY: cInt);
 begin
   try
     BuildIntersectList(TopY);
-    if (FIntersectList.Count = 0) then Exit
-    else if FixupIntersectionOrder then ProcessIntersectList()
-    else raise EClipperLibException.Create(rsClippingErr);
+    if (FIntersectList.Count = 0) then Exit;
+    FixupIntersectionOrder;
+    ProcessIntersectList;
   finally
     DisposeIntersectNodes; //clean up if there's been an error
     FSortedEdges := nil;
@@ -2105,15 +2104,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.FixupIntersectionOrder: Boolean;
+procedure TClipper2.FixupIntersectionOrder;
 var
   I, J, Cnt: Integer;
   Node: PIntersectNode;
 begin
-  //pre-condition: intersections are sorted bottom-most first.
-  //Now it's crucial that intersections are made only between adjacent edges,
-  //and to ensure this the order of intersections may need adjusting ...
-  Result := True;
+  //Intersections have been sorted so the bottom-most are processed first but
+  //it's also crucial that intersections are made between adjacent edges, so
+  //the order of these intersections may need some adjusting ...
   Cnt := FIntersectList.Count;
   if Cnt < 2 then exit;
 
@@ -2126,10 +2124,8 @@ begin
       J := I + 1;
       while (J < Cnt) and not EdgesAdjacent(FIntersectList[J]) do inc(J);
       if J = Cnt then
-      begin
-        Result := False;
-        Exit; //error!!
-      end;
+        raise EClipperLibException.Create(rsClippingErr);
+
       //Swap IntersectNodes ...
       Node := FIntersectList[I];
       FIntersectList[I] := FIntersectList[J];
@@ -2171,18 +2167,7 @@ begin
     E2.PrevInAEL := E1;
     E2.NextInAEL := Next;
   end else
-  begin
-    Next := E1.NextInAEL;
-    Prev := E1.PrevInAEL;
-    E1.NextInAEL := E2.NextInAEL;
-    if Assigned(E1.NextInAEL) then E1.NextInAEL.PrevInAEL := E1;
-    E1.PrevInAEL := E2.PrevInAEL;
-    if Assigned(E1.PrevInAEL) then E1.PrevInAEL.NextInAEL := E1;
-    E2.NextInAEL := Next;
-    if Assigned(E2.NextInAEL) then E2.NextInAEL.PrevInAEL := E2;
-    E2.PrevInAEL := Prev;
-    if Assigned(E2.PrevInAEL) then E2.PrevInAEL.NextInAEL := E2;
-  end;
+    raise EClipperLibException.Create(rsClippingErr);
   if not Assigned(E1.PrevInAEL) then FActiveEdges := E1
   else if not Assigned(E2.PrevInAEL) then FActiveEdges := E2;
 end;
@@ -2214,18 +2199,7 @@ begin
     E2.PrevInSEL := E1;
     E2.NextInSEL := Next;
   end else
-  begin
-    Next := E1.NextInSEL;
-    Prev := E1.PrevInSEL;
-    E1.NextInSEL := E2.NextInSEL;
-    if Assigned(E1.NextInSEL) then E1.NextInSEL.PrevInSEL := E1;
-    E1.PrevInSEL := E2.PrevInSEL;
-    if Assigned(E1.PrevInSEL) then E1.PrevInSEL.NextInSEL := E1;
-    E2.NextInSEL := Next;
-    if Assigned(E2.NextInSEL) then E2.NextInSEL.PrevInSEL := E2;
-    E2.PrevInSEL := Prev;
-    if Assigned(E2.PrevInSEL) then E2.PrevInSEL.NextInSEL := E2;
-  end;
+    raise EClipperLibException.Create(rsClippingErr);
   if not Assigned(E1.PrevInSEL) then FSortedEdges := E1
   else if not Assigned(E2.PrevInSEL) then FSortedEdges := E2;
 end;
@@ -2248,7 +2222,7 @@ var
   pt: TIntPoint;
   isMaxima: Boolean;
 
-  procedure ResetHorzDir;
+  procedure ResetHorzDirection;
   var
     e: PActive;
   begin
@@ -2317,7 +2291,7 @@ begin
     maxPair := nil;
 
   if assigned(HorzEdge.OutRec) then AddOutPt(HorzEdge, HorzEdge.Curr);
-  ResetHorzDir;
+  ResetHorzDirection;
 
   while true do //loops through consec. horizontal edges (if open)
   begin
@@ -2373,7 +2347,7 @@ begin
 
     //still more horizontals in bound to process ...
     UpdateEdgeIntoAEL(HorzEdge);
-    ResetHorzDir;
+    ResetHorzDirection;
   end;
 
   //we've now reached the end of an intermediate horizontal ...
