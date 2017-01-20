@@ -150,12 +150,6 @@ type
     LocMin   : PLocalMinimum; //bottom of bound
   end;
 
-  PActives = ^TActives;
-  TActives = record
-    E   : PActive;
-    next: PActives;
-  end;
-
   PScanLine = ^TScanLine;
   TScanLine = record
     Y       : cInt;
@@ -206,7 +200,6 @@ type
     procedure StartOutRec(e1, e2: PActive; const pt: TIntPoint);
     procedure DisposeOutRec(Index: Integer);
     procedure DisposeAllOutRecs;
-
     function IsContributing(Edge: PActive): Boolean;
     procedure SetWindingCount(Edge: PActive);
     procedure InsertLocalMinimaIntoAEL(const BotY: cInt);
@@ -414,7 +407,6 @@ const
   Mask32Bits = $FFFFFFFF;
 
 type
-
   //nb: TInt128.Lo is typed Int64 instead of UInt64 to provide Delphi 7
   //compatability. However while UInt64 isn't a recognised type in
   //Delphi 7, it can still be used in typecasts.
@@ -484,8 +476,6 @@ begin
   if Negate then Int128Negate(Result);
 end;
 //------------------------------------------------------------------------------
-
-{$OVERFLOWCHECKS ON}
 
 {$ENDIF} //$IFNDEF use_int32
 
@@ -972,29 +962,6 @@ begin
     result := nil; //this happens when the maxPair is a horizontal
   end;
 end;
-//------------------------------------------------------------------------------
-
-procedure PushActive(var stack: PActives; E: PActive);
-var
-  listItem: PActives;
-begin
-  new(listItem);
-  listItem.E := E;
-  listItem.next := stack;
-  stack := listItem;
-end;
-//------------------------------------------------------------------------------
-
-function PopActive(var stack: PActives): PActive;
-var
-  listItem: PActives;
-begin
-  listItem := stack;
-  stack := stack.next;
-  result := listItem.E;
-  dispose(listItem);
-end;
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // TClipper2 methods ...
