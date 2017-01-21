@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  20 January 2017                                                 *
+* Date      :  21 January 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -138,13 +138,12 @@ type
     WindCnt2 : integer;       //wind count of opposite TPolyType
     OutRec   : POutRec;
     Flags    : TActiveFlags;
-
     //AEL - active edge list - edges participating in current scanbeam
     PrevInAEL: PActive;
     NextInAEL: PActive;
-    //SEL - sorted edge list - new order of active edges at top of scambeam
-    //(determines intersections and re-used for horizontal edges)
-    PrevInSEL: PActive;       //DLL needed for EdgesAdjacent() method
+    //SEL - used primarily to reorder active edges at the top of scambeams,
+    //      but it's also used to process horizontals.
+    PrevInSEL: PActive;
     NextInSEL: PActive;
     vertTop  : PVertex;       //edge's top vertex
     LocMin   : PLocalMinimum; //bottom of bound
@@ -196,7 +195,6 @@ type
     procedure DisposeScanLineList;
     procedure DisposeLocalMinimaList;
     procedure DisposePolyPts(PP: POutPt);
-    procedure StartOutRec(e1, e2: PActive; const pt: TIntPoint);
     procedure DisposeOutRec(Index: Integer);
     procedure DisposeAllOutRecs;
     function IsContributing(Edge: PActive): Boolean;
@@ -204,12 +202,12 @@ type
     procedure InsertLocalMinimaIntoAEL(const BotY: cInt);
     procedure DeleteFromAEL(E: PActive);
     procedure AddOutPt(e: PActive; const pt: TIntPoint);
-    procedure AddLocalMinPoly(E1, E2: PActive; const Pt: TIntPoint);
+    procedure AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
-    procedure AddEdgeToSEL(Edge: PActive);
-    function PopEdgeFromSEL(out E: PActive): Boolean;
     procedure CopyAELToSEL;
     procedure UpdateEdgeIntoAEL(var E: PActive);
+    procedure PushHorz(E: PActive);
+    function PopHorz: PActive;
     procedure SwapOutRecs(E1, E2: PActive);
     procedure IntersectEdges(E1,E2: PActive; Pt: TIntPoint);
     procedure ProcessIntersections(const TopY: cInt);
@@ -219,7 +217,6 @@ type
     procedure FixupIntersectionOrder;
     procedure SwapPositionsInAEL(E1, E2: PActive);
     procedure SwapPositionsInSEL(E1, E2: PActive);
-    procedure ProcessHorizontals(Y: cInt);
     procedure ProcessHorizontal(HorzEdge: PActive);
     procedure DoTopOfScanbeam(Y: cInt);
     function DoMaxima(e: PActive): PActive;
@@ -234,7 +231,7 @@ type
     FVertexList       : TList;
     procedure Reset; virtual;
   public
-     constructor Create; virtual;
+    constructor Create; virtual;
     destructor Destroy; override;
     procedure Clear; virtual;
     function GetBounds: TIntRect;
@@ -250,7 +247,7 @@ type
 
 function Orientation(const path: TPath): Boolean; overload;
 function Area(const path: TPath): Double; overload;
-function PointInPolygon (const pt: TIntPoint; const poly: TPath): Integer; overload;
+function PointInPolygon(const pt: TIntPoint; const poly: TPath): Integer; overload;
 function GetBounds(const paths: TPaths): TIntRect;
 
 {$IFDEF use_xyz}
@@ -639,15 +636,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointInPolygon (const pt: TIntPoint; const poly: TPath): Integer;
+//PointInPolygon: 0=false; +1=true; -1 when 'pt' is on a polygon edge
+function PointInPolygon(const pt: TIntPoint; const poly: TPath): Integer;
 var
   i, cnt: Integer;
-  d, d2, d3: double; //use cInt ???
+  d, d2, d3: double; //nb: double not cInt to avoid potential overflow errors
   ip, ipNext: TIntPoint;
 begin
-  //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
-  //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
-  //nb: if poly bounds are known, test them first before calling this function.
   result := 0;
   cnt := Length(poly);
   if cnt < 3 then Exit;
@@ -700,15 +695,12 @@ begin
 end;
 //---------------------------------------------------------------------------
 
-//See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
-//http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
-function PointInPolygon (const pt: TIntPoint; ops: POutPt): Integer; overload;
+function PointInPolygon(const pt: TIntPoint; ops: POutPt): Integer; overload;
 var
-  d, d2, d3: double; //nb: double not cInt avoids potential overflow errors
+  d, d2, d3: double;
   opStart: POutPt;
   pt1, ptN: TIntPoint;
 begin
-  //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
   result := 0;
   opStart := ops;
   pt1.X := ops.Pt.X; pt1.Y := ops.Pt.Y;
@@ -1582,7 +1574,7 @@ begin
         AddLocalMinPoly(LeftB, RightB, LeftB.Bot);
 
       if IsHorizontal(RightB) then
-        AddEdgeToSEL(RightB) else
+        PushHorz(RightB) else
         InsertScanLine(RightB.Top.Y);
 
     end
@@ -1590,7 +1582,7 @@ begin
       AddOutPt(LeftB, LeftB.Bot); //an open path
 
     if IsHorizontal(LeftB) then
-      AddEdgeToSEL(LeftB) else
+      PushHorz(LeftB) else
       InsertScanLine(LeftB.Top.Y);
 
     if (LeftB.NextInAEL <> RightB) then
@@ -1644,10 +1636,10 @@ begin
   op.Prev.Next := op2;
   op.Prev := op2;
   if ToFront then e.OutRec.Pts := op2;
- end;
+end;
 //------------------------------------------------------------------------------
 
-procedure EndOutRec(outRec: POutRec);
+procedure EndOutRec(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outRec.LeftE.OutRec := nil;
   if assigned(outRec.RightE) then outRec.RightE.OutRec := nil;
@@ -1656,9 +1648,25 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddLocalMinPoly(E1, E2: PActive; const Pt: TIntPoint);
+procedure TClipper2.AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
+var
+  OutRec: POutRec;
+  op    : POutPt;
 begin
-  StartOutRec(E1, E2, Pt);
+  new(OutRec);
+  OutRec.IsOpen := afOpen in e1.Flags;
+  OutRec.Pts := nil;
+  OutRec.Idx := FPolyOutList.Add(OutRec);
+  OutRec.LeftE := e1;
+  OutRec.RightE := e2;
+  e1.OutRec := OutRec;
+  if assigned(e2) then e2.OutRec := OutRec;
+
+  new(op);
+  OutRec.Pts := op;
+  op.Pt := pt;
+  op.Next := op;
+  op.Prev := op;
 end;
 //------------------------------------------------------------------------------
 
@@ -1670,39 +1678,6 @@ begin
   else if e1.OutRec.Idx < e2.OutRec.Idx then
     AppendPath(E1, E2) else
     AppendPath(E2, E1);
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipper2.AddEdgeToSEL(Edge: PActive);
-begin
-  //SEL pointers in PActive are use to build transient lists of horizontal edges.
-  //However, since we don't need to worry about processing order, all additions
-  //are made to the front of the list ...
-  if not Assigned(FSortedEdges) then
-  begin
-    FSortedEdges := Edge;
-    Edge.PrevInSEL := nil;
-    Edge.NextInSEL := nil;
-  end else
-  begin
-    Edge.NextInSEL := FSortedEdges;
-    Edge.PrevInSEL := nil;
-    FSortedEdges.PrevInSEL := Edge;
-    FSortedEdges := Edge;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TClipper2.PopEdgeFromSEL(out E: PActive): Boolean;
-begin
-  //Pop edge from front of SEL (ie SEL is a FILO list)
-  E := FSortedEdges;
-  Result := assigned(E);
-  if not Result then Exit;
-  FSortedEdges := E.NextInSEL;
-  if Assigned(FSortedEdges) then FSortedEdges.PrevInSEL := nil;
-  E.NextInSEL := nil;
-  E.PrevInSEL := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -1731,6 +1706,20 @@ begin
   E.Curr := E.Bot;
   SetDx(E);
   if not IsHorizontal(E) then InsertScanLine(E.Top.Y);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper2.PushHorz(E: PActive);
+begin
+  E.NextInSEL := FSortedEdges;
+  FSortedEdges := E;
+end;
+//------------------------------------------------------------------------------
+
+function TClipper2.PopHorz: PActive;
+begin
+  Result := FSortedEdges;
+  FSortedEdges := Result.NextInSEL;
 end;
 //------------------------------------------------------------------------------
 
@@ -1972,7 +1961,8 @@ var
     while true do
     begin
       InsertLocalMinimaIntoAEL(Y);
-      if assigned(FSortedEdges) then ProcessHorizontals(Y);
+      while assigned(FSortedEdges) do
+        ProcessHorizontal(PopHorz);
        if not PopScanLine(Y) then break;
       ProcessIntersections(Y);
       DoTopOfScanbeam(Y);
@@ -2205,15 +2195,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.ProcessHorizontals(Y: cInt);
-var
-  E: PActive;
-begin
-  while PopEdgeFromSEL(E) do
-    ProcessHorizontal(E);
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipper2.ProcessHorizontal(HorzEdge: PActive);
 var
   e, eNext, maxPair: PActive;
@@ -2377,7 +2358,7 @@ begin
         //INTERMEDIATE VERTEX ...
         UpdateEdgeIntoAEL(e);
         if assigned(e.OutRec) then AddOutPt(e, e.Bot);
-        if IsHorizontal(e) then AddEdgeToSEL(e);
+        if IsHorizontal(e) then PushHorz(e);
       end;
     end else
     begin
@@ -2460,28 +2441,6 @@ begin
     Pp1.Prev := Pp2;
     Pp1 := Pp2;
   until Pp1 = PP;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipper2.StartOutRec(e1, e2: PActive; const pt: TIntPoint);
-var
-  OutRec: POutRec;
-  op    : POutPt;
-begin
-  new(OutRec);
-  OutRec.IsOpen := afOpen in e1.Flags;
-  OutRec.Pts := nil;
-  OutRec.Idx := FPolyOutList.Add(OutRec);
-  OutRec.LeftE := e1;
-  OutRec.RightE := e2;
-  e1.OutRec := OutRec;
-  if assigned(e2) then e2.OutRec := OutRec;
-
-  new(op);
-  OutRec.Pts := op;
-  op.Pt := pt;
-  op.Next := op;
-  op.Prev := op;
 end;
 //------------------------------------------------------------------------------
 
