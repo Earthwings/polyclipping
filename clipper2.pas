@@ -176,9 +176,9 @@ type
 
   TClipper2 = class
   private
-    FScanLine           : PScanLine;    //ScanLine list
+    FScanLine           : PScanLine;
     FLocMinListSorted   : Boolean;
-    FUse64BitRange      : Boolean;      //see LoRange and HiRange consts notes below
+    FUse64BitRange      : Boolean; //see LoRange and HiRange consts notes below
     FHasOpenPaths       : Boolean;
     FCurrentLocMinIdx   : integer;
     FIntersectList      : TList;
@@ -772,7 +772,6 @@ begin
 {$IFDEF use_xyz}
   ip.Z := 0;
 {$ENDIF}
-
   //if parallel then return the current pt of E1 ...
   if (E1.Dx = E2.Dx) then
   begin
@@ -810,33 +809,6 @@ begin
     if Abs(E1.Dx) < Abs(E2.Dx) then
       result.X := round(E1.Dx * M + B1) else
       result.X := round(E2.Dx * M + B2);
-  end;
-
-  //The precondition - E.Curr.X > eNext.Curr.X - indicates that the two edges
-  //do intersect below TopY (and hence below the tops of either Edge). However,
-  //when edges are almost parallel, rounding errors may cause False positives -
-  //indicating intersections when there really aren't any. Also, floating point
-  //imprecision can incorrectly place an intersect point beyond/above an Edge.
-  //Therfore, further adjustment to the intersect point may be warranted ...
-  if (result.Y < E1.Top.Y) or (result.Y < E2.Top.Y) then
-  begin
-    //Find the lower top of the two edges and compare X's at this Y.
-    //If Edge1's X is greater than Edge2's X then it's fair to assume an
-    //intersection really has occurred...
-    if (E1.Top.Y > E2.Top.Y) then
-      result.Y := E1.Top.Y else
-      result.Y := E2.Top.Y;
-    if Abs(E1.Dx) < Abs(E2.Dx) then
-      result.X := TopX(E1, result.Y) else
-      result.X := TopX(E2, result.Y);
-  end
-  //finally, make sure the intersect point isn't BELOW the scanbeam ...
-  else if (result.Y > E1.Curr.Y) then
-  begin
-    result.Y := E1.Curr.Y;
-    if (abs(E1.Dx) > abs(E2.Dx)) then //ie use more vertical edge
-      result.X := TopX(E2, result.Y) else
-      result.X := TopX(E1, result.Y);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1004,7 +976,7 @@ end;
  procedure TClipper2.Reset;
 var
   i: integer;
- begin
+begin
   if not FLocMinListSorted then
     FLocMinList.Sort(LocMinListSort);
   for i := 0 to FLocMinList.Count -1 do
@@ -1685,8 +1657,8 @@ procedure TClipper2.CopyAELToSEL;
 var
   E: PActive;
 begin
+  FSortedEdges := FActiveEdges;
   E := FActiveEdges;
-  FSortedEdges := E;
   while Assigned(E) do
   begin
     E.PrevInSEL := E.PrevInAEL;
@@ -2017,9 +1989,9 @@ var
 begin
   if not Assigned(fActiveEdges) then Exit;
 
-  //prepare for sorting ...
+  //copy AEL to SEL while also adjusting Curr.X ...
+  FSortedEdges := FActiveEdges;
   E := FActiveEdges;
-  FSortedEdges := E;
   while Assigned(E) do
   begin
     E.PrevInSEL := E.PrevInAEL;
@@ -2037,9 +2009,27 @@ begin
       eNext := E.NextInSEL;
       if (E.Curr.X > eNext.Curr.X) then
       begin
+        //An intersection is occuring somewhere within the scanbeam ...
         pt := GetIntersectPoint(E, eNext);
-        if Pt.Y < TopY then
-          Pt := IntPoint(TopX(E, TopY), TopY);
+
+        //Rounding errors can occasionally place the calculated intersection
+        //point either below or above the scanbeam, so check and correct ...
+        if (pt.Y > E.Curr.Y) then
+        begin
+          pt.Y := E.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
+          //use the more vertical of the 2 edges to derive pt.X ...
+          if (abs(E.Dx) < abs(eNext.Dx)) then
+            pt.X := TopX(E, pt.Y) else
+            pt.X := TopX(eNext, pt.Y);
+        end
+        else if pt.Y < TopY then
+        begin
+          pt.Y := TopY;          //TopY = top of scanbeam
+          if (abs(E.Dx) < abs(eNext.Dx)) then
+            pt.X := E.Curr.X else
+            pt.X := eNext.Curr.X;
+        end;
+
         new(NewNode);
         NewNode.Edge1 := E;
         NewNode.Edge2 := eNext;
