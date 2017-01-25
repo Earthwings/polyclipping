@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  21 January 2017                                                 *
+* Date      :  25 January 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -53,7 +53,7 @@ unit Clipper2;
 interface
 
 uses
-   SysUtils, Types, Classes, Math;
+  SysUtils, Types, Classes, Math;
 
 type
 {$IFDEF use_int32}
@@ -138,14 +138,14 @@ type
     WindCnt2 : integer;       //wind count of opposite TPolyType
     OutRec   : POutRec;
     Flags    : TActiveFlags;
-    //AEL - active edge list - edges participating in current scanbeam
+    //AEL - active edge list; aka AET active edge table (Vatti)
     PrevInAEL: PActive;
     NextInAEL: PActive;
-    //SEL - used primarily to reorder active edges at the top of scambeams,
-    //      but it's also used to process horizontals.
+    //SEL - 'sorted' edge list; aka ST sorted table (Vatti)
+    //New edge order at the top of scambeams. Reused to process horizontals.
     PrevInSEL: PActive;
     NextInSEL: PActive;
-    vertTop  : PVertex;       //edge's top vertex
+    vertTop  : PVertex;
     LocMin   : PLocalMinimum; //bottom of bound
   end;
 
@@ -168,17 +168,17 @@ type
     Idx         : Integer;
     IsOpen      : Boolean;
     Pts         : POutPt;
-    LeftE       : PActive;
-    RightE      : PActive;
+    StartE      : PActive;
+    EndE        : PActive;
   end;
 
-  TDirection = (dRightToLeft, dLeftToRight);
+  TDirection = (dRightToLeft, dLeftToRight); //used for horizontal processing
 
   TClipper2 = class
   private
     FScanLine           : PScanLine;
     FLocMinListSorted   : Boolean;
-    FUse64BitRange      : Boolean; //see LoRange and HiRange consts notes below
+    FUse64BitRange      : Boolean; //see LoRange and HiRange const below
     FHasOpenPaths       : Boolean;
     FCurrentLocMinIdx   : integer;
     FIntersectList      : TList;
@@ -204,7 +204,7 @@ type
     procedure AddOutPt(e: PActive; const pt: TIntPoint);
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
-    procedure CopyAELToSEL;
+    procedure CopyActivesToSEL;
     procedure UpdateEdgeIntoAEL(var E: PActive);
     procedure PushHorz(E: PActive);
     function PopHorz: PActive;
@@ -220,13 +220,13 @@ type
     procedure ProcessHorizontal(HorzEdge: PActive);
     procedure DoTopOfScanbeam(Y: cInt);
     function DoMaxima(e: PActive): PActive;
-    procedure AppendPath(E1, E2: PActive);
+    procedure JoinOutrecPaths(E1, E2: PActive);
     function BuildResult: TPaths;
   protected
     FPolyOutList      : TList;
     FLocMinList       : TList;
-    FActiveEdges      : PActive;      //active edge list (AEL)
-    FSortedEdges      : PActive;      //used for temporary sorting
+    FActives          : PActive; //see AEL above
+    FSel              : PActive; //see SEL above
     FPathCount        : integer;
     FVertexList       : TList;
     procedure Reset; virtual;
@@ -269,7 +269,7 @@ const
 
 implementation
 
- const
+const
 //The math performed in the SlopesEqual function places the most constraints
 //on coordinate values. To avoid overflow errors there, coordinate values must
 //not exceed HiRange below. Also, when coordinate values exceed LoRange,
@@ -305,9 +305,9 @@ resourcestring
   rsOpenPathErr  = 'TPolyTree struct is needed for open path clipping.';
   rsClippingErr  = 'Undefined clipping error';
 
-function IsLeftSide(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsStartSide(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  if (Edge = Edge.OutRec.LeftE) then
+  if (Edge = Edge.OutRec.StartE) then
     result := true else
     result := false;
 end;
@@ -618,7 +618,7 @@ begin
   while (I < Len) and (Length(paths[I]) = 0) do inc(I);
   if (I = Len) then
   begin
-    with Result do begin Left := 0; Top := 0; Right := 0; Bottom := 0; end;
+    Result := EmptyRect;
     Exit;
   end;
   Result.Left := paths[I][0].X;
@@ -932,7 +932,7 @@ end;
 
 constructor TClipper2.Create;
 begin
-   FLocMinList := TList.Create;
+  FLocMinList := TList.Create;
   FPolyOutList := TList.Create;
   FIntersectList := TList.Create;
   FVertexList := TList.Create;
@@ -947,7 +947,7 @@ begin
   FPolyOutList.Free;
   FIntersectList.Free;
   FVertexList.Free;
-   inherited;
+  inherited;
 end;
 //------------------------------------------------------------------------------
 
@@ -973,7 +973,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
- procedure TClipper2.Reset;
+procedure TClipper2.Reset;
 var
   i: integer;
 begin
@@ -982,14 +982,21 @@ begin
   for i := 0 to FLocMinList.Count -1 do
     InsertScanLine(PLocalMinimum(FLocMinList[i]).vertex.Pt.Y);
   FCurrentLocMinIdx := 0;
- end;
+  FActives := nil;
+  FSel := nil;
+end;
 //------------------------------------------------------------------------------
 
 procedure TClipper2.InsertScanLine(const Y: cInt);
 var
   newSl, sl: PScanLine;
 begin
-  //single-linked list: sorted descending, ignoring dups.
+  //The scanline list is a single-linked list of all the Y coordinates of
+  //subject and clip vertices in the clipping operation (sorted descending).
+  //Only scanlines (Y's) at Local Minima are inserted before clipping starts.
+  //As the sweep algorithm progresses, scanlines are removed from this list and
+  //new scanlines are inserted when edged becomes active (ie their Top.Y's are
+  //inserted). This keeps the list as short as possible and speeds up entry.
   new(newSl);
   newSl.Y := Y;
   if not Assigned(FScanLine) then
@@ -1009,7 +1016,7 @@ begin
       newSl.Next := sl.Next;
       sl.Next := newSl;
     end
-    else dispose(newSl);
+    else dispose(newSl); //skip/ignore dups
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1330,7 +1337,7 @@ begin
     else
       Edge.WindCnt := Edge.WindDelta;
     Edge.WindCnt2 := 0;
-    E := FActiveEdges; //ie get ready to calc WindCnt2
+    E := FActives; //ie get ready to calc WindCnt2
   end
   else if IsOpen(Edge) and (FClipType <> ctUnion) then
   begin
@@ -1440,22 +1447,22 @@ procedure TClipper2.InsertLocalMinimaIntoAEL(const BotY: cInt);
 
   procedure InsertEdgeIntoAEL(Edge, StartEdge: PActive; preferLeft: Boolean);
   begin
-    if not Assigned(FActiveEdges) then
+    if not Assigned(FActives) then
     begin
       Edge.PrevInAEL := nil;
       Edge.NextInAEL := nil;
-      FActiveEdges := Edge;
+      FActives := Edge;
     end
     else if not Assigned(StartEdge) and
-      E2InsertsBeforeE1(FActiveEdges, Edge, preferLeft) then
+      E2InsertsBeforeE1(FActives, Edge, preferLeft) then
     begin
       Edge.PrevInAEL := nil;
-      Edge.NextInAEL := FActiveEdges;
-      FActiveEdges.PrevInAEL := Edge;
-      FActiveEdges := Edge;
+      Edge.NextInAEL := FActives;
+      FActives.PrevInAEL := Edge;
+      FActives := Edge;
     end else
     begin
-      if not Assigned(StartEdge) then StartEdge := FActiveEdges;
+      if not Assigned(StartEdge) then StartEdge := FActives;
       while Assigned(StartEdge.NextInAEL) and
         not E2InsertsBeforeE1(StartEdge.NextInAEL, Edge, preferLeft) do
         begin
@@ -1580,9 +1587,9 @@ begin
   AelPrev := E.PrevInAEL;
   AelNext := E.NextInAEL;
   if not Assigned(AelPrev) and not Assigned(AelNext) and
-    (E <> FActiveEdges) then Exit; //already deleted
+    (E <> FActives) then Exit; //already deleted
   if Assigned(AelPrev) then AelPrev.NextInAEL := AelNext
-  else FActiveEdges := AelNext;
+  else FActives := AelNext;
   if Assigned(AelNext) then AelNext.PrevInAEL := AelPrev;
   E.NextInAEL := nil;
   E.PrevInAEL := nil;
@@ -1592,31 +1599,35 @@ end;
 
 procedure TClipper2.AddOutPt(e: PActive; const pt: TIntPoint);
 var
-  PrevOp, op, op2: POutPt;
-  ToFront: Boolean;
+  opStart, opEnd, opNew: POutPt;
+  ToStart: Boolean;
 begin
-  if not assigned(e.OutRec) or not assigned(e.OutRec.Pts) then
-    raise EClipperLibException.Create(rsClippingErr);
-  ToFront := IsLeftSide(e);
-  op := e.OutRec.Pts;
-  if ToFront then PrevOp := op else PrevOp := op.Prev;
-  if PointsEqual(pt, PrevOp.Pt) then Exit;
-  new(op2);
-  op2.Pt := pt;
-  op2.Next := op;
-  op2.Prev := op.Prev;
-  op.Prev.Next := op2;
-  op.Prev := op2;
-  if ToFront then e.OutRec.Pts := op2;
+  ToStart := IsStartSide(e);
+  opStart := e.OutRec.Pts;
+  opEnd := opStart.Prev;
+  if ToStart then
+  begin
+    if PointsEqual(pt, opStart.Pt) then Exit;
+  end else
+  begin
+    if PointsEqual(pt, opEnd.Pt) then Exit;
+  end;
+  new(opNew);
+  opNew.Pt := pt;
+  opNew.Next := opStart;
+  opNew.Prev := opEnd;
+  opEnd.Next := opNew;
+  opStart.Prev := opNew;
+  if ToStart then e.OutRec.Pts := opNew;
 end;
 //------------------------------------------------------------------------------
 
 procedure EndOutRec(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  outRec.LeftE.OutRec := nil;
-  if assigned(outRec.RightE) then outRec.RightE.OutRec := nil;
-  outRec.LeftE := nil;
-  outRec.RightE := nil;
+  outRec.StartE.OutRec := nil;
+  if assigned(outRec.EndE) then outRec.EndE.OutRec := nil;
+  outRec.StartE := nil;
+  outRec.EndE := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -1626,39 +1637,38 @@ var
   op    : POutPt;
 begin
   new(OutRec);
-  OutRec.IsOpen := afOpen in e1.Flags;
-  OutRec.Pts := nil;
   OutRec.Idx := FPolyOutList.Add(OutRec);
-  OutRec.LeftE := e1;
-  OutRec.RightE := e2;
+  OutRec.IsOpen := afOpen in e1.Flags;
+  OutRec.StartE := e1;
+  OutRec.EndE := e2;
   e1.OutRec := OutRec;
   if assigned(e2) then e2.OutRec := OutRec;
 
   new(op);
-  OutRec.Pts := op;
   op.Pt := pt;
   op.Next := op;
   op.Prev := op;
+  OutRec.Pts := op;
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipper2.AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
 begin
   AddOutPt(E1, Pt);
-  if (E1.OutRec = E2.OutRec) then
-    EndOutRec(E1.OutRec)
+  if (E1.OutRec = E2.OutRec) then EndOutRec(E1.OutRec)
+  //and to preserve the winding orientation of Outrec ...
   else if e1.OutRec.Idx < e2.OutRec.Idx then
-    AppendPath(E1, E2) else
-    AppendPath(E2, E1);
+    JoinOutrecPaths(E1, E2) else
+    JoinOutrecPaths(E2, E1);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.CopyAELToSEL;
+procedure TClipper2.CopyActivesToSEL;
 var
   E: PActive;
 begin
-  FSortedEdges := FActiveEdges;
-  E := FActiveEdges;
+  FSel := FActives;
+  E := FActives;
   while Assigned(E) do
   begin
     E.PrevInSEL := E.PrevInAEL;
@@ -1683,15 +1693,15 @@ end;
 
 procedure TClipper2.PushHorz(E: PActive);
 begin
-  E.NextInSEL := FSortedEdges;
-  FSortedEdges := E;
+  E.NextInSEL := FSel;
+  FSel := E;
 end;
 //------------------------------------------------------------------------------
 
 function TClipper2.PopHorz: PActive;
 begin
-  Result := FSortedEdges;
-  FSortedEdges := Result.NextInSEL;
+  Result := FSel;
+  FSel := Result.NextInSEL;
 end;
 //------------------------------------------------------------------------------
 
@@ -1704,22 +1714,22 @@ begin
   or2 := E2.OutRec;
   if (or1 = or2) then
   begin
-    e := or1.LeftE;
-    or1.LeftE := or1.RightE;
-    or1.RightE := e;
+    e := or1.StartE;
+    or1.StartE := or1.EndE;
+    or1.EndE := e;
     Exit;
   end;
   if assigned(or1) then
   begin
-    if E1 = or1.LeftE then
-      or1.LeftE := E2 else
-      or1.RightE := E2;
+    if E1 = or1.StartE then
+      or1.StartE := E2 else
+      or1.EndE := E2;
   end;
   if assigned(or2) then
   begin
-    if E2 = or2.LeftE then
-      or2.LeftE := E1 else
-      or2.RightE := E1;
+    if E2 = or2.StartE then
+      or2.StartE := E1 else
+      or2.EndE := E1;
   end;
   E1.OutRec := or2;
   E2.OutRec := or1;
@@ -1731,7 +1741,6 @@ var
   E1Contributing, E2contributing: Boolean;
   E1Wc, E2Wc, E1Wc2, E2Wc2: Integer;
 begin
-  {IntersectEdges}
   //E1 will be to the left of E2 BELOW the intersection. Therefore E1 is before
   //E2 in AEL except when E1 is being inserted at the intersection point ...
 
@@ -1915,27 +1924,25 @@ function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
 var
   Y: cInt;
 
- begin
+begin
   Result := False;
   solution := nil;
   if FExecuteLocked then Exit;
   //nb: Open paths can only be returned via the PolyTree structure ...
   if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
-  try try
+
+  try
     FExecuteLocked := True;
     FFillType := fillType;
     FClipType := clipType;
-
     Reset;
-    FSortedEdges := nil;
     if not PopScanLine(Y) then Exit;
-     ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////
     while true do
     begin
       InsertLocalMinimaIntoAEL(Y);
-      while assigned(FSortedEdges) do
-        ProcessHorizontal(PopHorz);
-       if not PopScanLine(Y) then break;
+      while assigned(FSel) do ProcessHorizontal(PopHorz);
+      if not PopScanLine(Y) then break;
       ProcessIntersections(Y);
       DoTopOfScanbeam(Y);
     end;
@@ -1943,16 +1950,12 @@ var
 
     solution := BuildResult;
     Result := True;
-  except
-    //cleanup ...
-    while assigned(FActiveEdges) do DeleteFromAEL(FActiveEdges);
-    solution := nil;
-  end;
   finally
+    while assigned(FActives) do DeleteFromAEL(FActives);
     DisposeScanLineList;
     DisposeAllOutRecs;
     FExecuteLocked := False;
-   end;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1965,7 +1968,7 @@ begin
     ProcessIntersectList;
   finally
     DisposeIntersectNodes; //clean up if there's been an error
-    FSortedEdges := nil;
+    FSel := nil;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1987,11 +1990,11 @@ var
   IsModified: Boolean;
   NewNode: PIntersectNode;
 begin
-  if not Assigned(fActiveEdges) then Exit;
+  if not Assigned(FActives) then Exit;
 
   //copy AEL to SEL while also adjusting Curr.X ...
-  FSortedEdges := FActiveEdges;
-  E := FActiveEdges;
+  FSel := FActives;
+  E := FActives;
   while Assigned(E) do
   begin
     E.PrevInSEL := E.PrevInAEL;
@@ -2003,7 +2006,7 @@ begin
   //bubblesort (because adjacent swaps are required) ...
   repeat
     IsModified := False;
-    E := FSortedEdges;
+    E := FSel;
     while Assigned(E.NextInSEL) do
     begin
       eNext := E.NextInSEL;
@@ -2095,7 +2098,7 @@ begin
   Cnt := FIntersectList.Count;
   if Cnt < 2 then exit;
 
-  CopyAELToSEL;
+  CopyActivesToSEL;
   FIntersectList.Sort(IntersectListSort);
   for I := 0 to Cnt - 1 do
   begin
@@ -2103,8 +2106,8 @@ begin
     begin
       J := I + 1;
       while (J < Cnt) and not EdgesAdjacent(FIntersectList[J]) do inc(J);
-      if J = Cnt then
-        raise EClipperLibException.Create(rsClippingErr);
+//      if J = Cnt then
+//        raise EClipperLibException.Create(rsClippingErr);
 
       //Swap IntersectNodes ...
       Node := FIntersectList[I];
@@ -2121,10 +2124,6 @@ procedure TClipper2.SwapPositionsInAEL(E1, E2: PActive);
 var
   Prev,Next: PActive;
 begin
-  //check that one or other edge hasn't already been removed from AEL ...
-  if (E1.NextInAEL = E1.PrevInAEL) or (E2.NextInAEL = E2.PrevInAEL) then
-    Exit;
-
   if E1.NextInAEL = E2 then
   begin
     Next := E2.NextInAEL;
@@ -2135,6 +2134,7 @@ begin
     E2.NextInAEL := E1;
     E1.PrevInAEL := E2;
     E1.NextInAEL := Next;
+    if not Assigned(E2.PrevInAEL) then FActives := E2;
   end
   else if E2.NextInAEL = E1 then
   begin
@@ -2146,10 +2146,9 @@ begin
     E1.NextInAEL := E2;
     E2.PrevInAEL := E1;
     E2.NextInAEL := Next;
+    if not Assigned(E1.PrevInAEL) then FActives := E1;
   end else
     raise EClipperLibException.Create(rsClippingErr);
-  if not Assigned(E1.PrevInAEL) then FActiveEdges := E1
-  else if not Assigned(E2.PrevInAEL) then FActiveEdges := E2;
 end;
 //------------------------------------------------------------------------------
 
@@ -2167,6 +2166,7 @@ begin
     E2.NextInSEL := E1;
     E1.PrevInSEL := E2;
     E1.NextInSEL := Next;
+    if not Assigned(E2.PrevInSEL) then FSel := E2;
   end
   else if E2.NextInSEL = E1 then
   begin
@@ -2178,10 +2178,9 @@ begin
     E1.NextInSEL := E2;
     E2.PrevInSEL := E1;
     E2.NextInSEL := Next;
+    if not Assigned(E1.PrevInSEL) then FSel := E1;
   end else
     raise EClipperLibException.Create(rsClippingErr);
-  if not Assigned(E1.PrevInSEL) then FSortedEdges := E1
-  else if not Assigned(E2.PrevInSEL) then FSortedEdges := E2;
 end;
 //------------------------------------------------------------------------------
 
@@ -2232,11 +2231,11 @@ begin
 * are completed, intermediate HEs are 'promoted' to the next edge in their     *
 * bounds, and they in turn may be intersected [%] by other HEs.                *
 *                                                                              *
-* eg: 3 horizontals at a scanline:  /   |                      /          /    *
-*              |                   /    |    (HE3) o==========%==========o     *
-*              o=======o (HE2)    /     |        /          /                  *
-*         o============#=========*======*=======#==========o (HE1)             *
-*        /             |        /       |     /                                *
+* eg: 3 horizontals at a scanline:  /   |                     /          /     *
+*              |                   /    |    (HE3) o=========%==========o      *
+*              o=======o (HE2)    /     |         /         /                  *
+*         o============#=========*======*========#=========o (HE1)             *
+*        /             |        /       |       /                              *
 *******************************************************************************)
 
   //with closed paths, simplify consecutive horizontals into a 'single' edge ...
@@ -2331,7 +2330,7 @@ procedure TClipper2.DoTopOfScanbeam(Y: cInt);
 var
   e: PActive;
 begin
-  e := FActiveEdges;
+  e := FActives;
   while Assigned(e) do
   begin
     Exclude(E.Flags, afMaxima);
@@ -2406,8 +2405,8 @@ begin
   //here E.NextInAEL == ENext == EMaxPair ...
   if assigned(e.OutRec) or assigned(eMaxPair.OutRec) then
   begin
-    if not assigned(e.OutRec) or not assigned(eMaxPair.OutRec) then
-      raise EClipperLibException.Create(rsClippingErr) else //oops!
+//    if not assigned(e.OutRec) or not assigned(eMaxPair.OutRec) then
+//      raise EClipperLibException.Create(rsClippingErr) else //oops!
       AddLocalMaxPoly(e, eMaxPair, e.Top);
   end;
 
@@ -2415,7 +2414,7 @@ begin
   DeleteFromAEL(eMaxPair);
   if assigned(ePrev) then
     Result := ePrev.NextInAEL else
-    Result := FActiveEdges;
+    Result := FActives;
 end;
 //------------------------------------------------------------------------------
 
@@ -2434,81 +2433,71 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AppendPath(E1, E2: PActive);
+procedure TClipper2.JoinOutrecPaths(E1, E2: PActive);
 var
-  liveOR, deadOR: POutRec;
   P1_lt, P1_rt, P2_lt, P2_rt: POutPt;
 begin
-  liveOR := E1.OutRec;
-  deadOR := E2.OutRec;
-
-  //get the start and ends of both output polygons and
-  //join E2 poly onto E1 poly and delete pointers to E2 ...
-
-  P1_lt := liveOR.Pts;
-  P2_lt := deadOR.Pts;
+  //join E2 outrec path onto E1 outrec path and then
+  //delete E2 outrec path pointers.
+  P1_lt :=  E1.OutRec.Pts;
+  P2_lt :=  E2.OutRec.Pts;
   P1_rt := P1_lt.Prev;
   P2_rt := P2_lt.Prev;
 
-  if IsLeftSide(E1) then
+  if IsStartSide(E1) then
   begin
-    if IsLeftSide(E2) then
+    if IsStartSide(E2) then
     begin
-      //z y x a b c
+      //start-start join
       ReversePolyPtLinks(P2_lt);
       P2_lt.Next := P1_lt;
       P1_lt.Prev := P2_lt;
       P1_rt.Next := P2_rt;
       P2_rt.Prev := P1_rt;
-      liveOR.Pts := P2_rt;
+      E1.OutRec.Pts := P2_rt;
+      E1.OutRec.StartE := E2.OutRec.EndE;
     end else
     begin
-      //x y z a b c
+      //end-start join
       P2_rt.Next := P1_lt;
       P1_lt.Prev := P2_rt;
       P2_lt.Prev := P1_rt;
       P1_rt.Next := P2_lt;
-      liveOR.Pts := P2_lt;
+      E1.OutRec.Pts := P2_lt;
+      E1.OutRec.StartE := E2.OutRec.StartE;
     end;
+    if assigned(E1.OutRec.StartE.OutRec) then //ie closed paths
+      E1.OutRec.StartE.OutRec := E1.OutRec;
   end else
   begin
-    if IsLeftSide(E2) then
+    if IsStartSide(E2) then
     begin
-      //a b c x y z
+      //start-end join
       P1_rt.Next := P2_lt;
       P2_lt.Prev := P1_rt;
       P1_lt.Prev := P2_rt;
       P2_rt.Next := P1_lt;
+      E1.OutRec.EndE := E2.OutRec.EndE;
     end else
     begin
-      //a b c z y x
+      //end-end join (see JoinOutrec4.png)
       ReversePolyPtLinks(P2_lt);
       P1_rt.Next := P2_rt;
       P2_rt.Prev := P1_rt;
       P2_lt.Next := P1_lt;
       P1_lt.Prev := P2_lt;
+      E1.OutRec.EndE := E2.OutRec.StartE;
     end;
+    if assigned(E1.OutRec.EndE.OutRec) then //ie closed paths
+      E1.OutRec.EndE.OutRec := E1.OutRec;
   end;
-
-  if IsLeftSide(E1) then
-  begin
-    if IsLeftSide(E2) then
-      liveOR.LeftE := deadOR.RightE else
-      liveOR.LeftE := deadOR.LeftE;
-    if assigned(liveOR.LeftE.OutRec) then
-      liveOR.LeftE.OutRec := liveOR;
-  end else
-  begin
-    if IsLeftSide(E2) then
-      liveOR.RightE := deadOR.RightE else
-      liveOR.RightE := deadOR.LeftE;
-    if assigned(liveOR.RightE.OutRec) then
-      liveOR.RightE.OutRec := liveOR;
-  end;
-
+  //after joining, the E2.OutRec contains not vertices ...
+  E2.OutRec.StartE := nil;
+  E2.OutRec.EndE := nil;
+  E2.OutRec.Pts := nil;
+  //and e1 and e2 are maxima and are about to be dropped from the Actives list.
   e1.OutRec := nil;
   e2.OutRec := nil;
-  deadOR.LeftE := nil; deadOR.RightE := nil; deadOR.Pts := nil;
 end;
 //------------------------------------------------------------------------------
 
