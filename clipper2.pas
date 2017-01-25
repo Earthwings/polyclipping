@@ -2435,35 +2435,35 @@ end;
 
 procedure TClipper2.JoinOutrecPaths(E1, E2: PActive);
 var
-  P1_lt, P1_rt, P2_lt, P2_rt: POutPt;
+  P1_st, P1_end, P2_st, P2_end: POutPt;
 begin
   //join E2 outrec path onto E1 outrec path and then
   //delete E2 outrec path pointers.
-  P1_lt :=  E1.OutRec.Pts;
-  P2_lt :=  E2.OutRec.Pts;
-  P1_rt := P1_lt.Prev;
-  P2_rt := P2_lt.Prev;
+  P1_st :=  E1.OutRec.Pts;
+  P2_st :=  E2.OutRec.Pts;
+  P1_end := P1_st.Prev;
+  P2_end := P2_st.Prev;
 
   if IsStartSide(E1) then
   begin
     if IsStartSide(E2) then
     begin
       //start-start join
-      ReversePolyPtLinks(P2_lt);
-      P2_lt.Next := P1_lt;
-      P1_lt.Prev := P2_lt;
-      P1_rt.Next := P2_rt;
-      P2_rt.Prev := P1_rt;
-      E1.OutRec.Pts := P2_rt;
+      ReversePolyPtLinks(P2_st);
+      P2_st.Next := P1_st;
+      P1_st.Prev := P2_st;
+      P1_end.Next := P2_end; //P2 now reversed
+      P2_end.Prev := P1_end;
+      E1.OutRec.Pts := P2_end;
       E1.OutRec.StartE := E2.OutRec.EndE;
     end else
     begin
       //end-start join
-      P2_rt.Next := P1_lt;
-      P1_lt.Prev := P2_rt;
-      P2_lt.Prev := P1_rt;
-      P1_rt.Next := P2_lt;
-      E1.OutRec.Pts := P2_lt;
+      P2_end.Next := P1_st;
+      P1_st.Prev := P2_end;
+      P2_st.Prev := P1_end;
+      P1_end.Next := P2_st;
+      E1.OutRec.Pts := P2_st;
       E1.OutRec.StartE := E2.OutRec.StartE;
     end;
     if assigned(E1.OutRec.StartE.OutRec) then //ie closed paths
@@ -2472,20 +2472,20 @@ begin
   begin
     if IsStartSide(E2) then
     begin
-      //start-end join
-      P1_rt.Next := P2_lt;
-      P2_lt.Prev := P1_rt;
-      P1_lt.Prev := P2_rt;
-      P2_rt.Next := P1_lt;
+      //end-start join
+      P1_end.Next := P2_st;
+      P2_st.Prev := P1_end;
+      P1_st.Prev := P2_end;
+      P2_end.Next := P1_st;
       E1.OutRec.EndE := E2.OutRec.EndE;
     end else
     begin
       //end-end join (see JoinOutrec4.png)
-      ReversePolyPtLinks(P2_lt);
-      P1_rt.Next := P2_rt;
-      P2_rt.Prev := P1_rt;
-      P2_lt.Next := P1_lt;
-      P1_lt.Prev := P2_lt;
+      ReversePolyPtLinks(P2_st);
+      P1_end.Next := P2_end; //P2 now reversed
+      P2_end.Prev := P1_end;
+      P2_st.Next := P1_st;
+      P1_st.Prev := P2_st;
       E1.OutRec.EndE := E2.OutRec.StartE;
     end;
     if assigned(E1.OutRec.EndE.OutRec) then //ie closed paths
