@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  25 January 2017                                                 *
+* Date      :  29 January 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -167,6 +167,7 @@ type
   TOutRec = record
     Idx         : Integer;
     IsOpen      : Boolean;
+    IsOuter     : Boolean;
     Pts         : POutPt;
     StartE      : PActive;
     EndE        : PActive;
@@ -202,6 +203,7 @@ type
     procedure InsertLocalMinimaIntoAEL(const BotY: cInt);
     procedure DeleteFromAEL(E: PActive);
     procedure AddOutPt(e: PActive; const pt: TIntPoint);
+    function GetIsOuter(e: PActive): Boolean; //{$IFDEF INLINING} inline; {$ENDIF}
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
     procedure CopyActivesToSEL;
@@ -1169,12 +1171,12 @@ begin
     begin
       i := pathLen -1;
       while p[i].Y = p[0].Y do dec(i);
-      P0IsMinima := p[i].Y < p[0].Y; //p[0].Y is a minima
+      P0IsMinima := p[i].Y < p[0].Y; //p[0].Y == a minima
     end else
     begin
       i := pathLen -1;
       while p[i].Y = p[0].Y do dec(i);
-      P0IsMaxima := p[i].Y > p[0].Y; //p[0].Y is a maxima
+      P0IsMaxima := p[i].Y > p[0].Y; //p[0].Y == a maxima
     end;
   end;
 
@@ -1230,7 +1232,7 @@ begin
       v := @result[i];
       while (v.Next.Pt.Y <= v.Pt.Y) do v := v.next;
       include(v.flags, vfMaxima);
-      if P0IsMinima then AddLocMin(@result[0]);
+      if P0IsMinima then AddLocMin(@result[0]); //ie just turned to going up
     end else
     begin
       //going down so find local minima ...
@@ -1602,6 +1604,7 @@ var
   opStart, opEnd, opNew: POutPt;
   ToStart: Boolean;
 begin
+  //Outrec.Pts: circular double-linked-list of POutPt.
   ToStart := IsStartSide(e);
   opStart := e.OutRec.Pts;
   opEnd := opStart.Prev;
@@ -1631,6 +1634,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TClipper2.GetIsOuter(e: PActive): Boolean;
+begin
+  while assigned(e) and not assigned(e.OutRec) do e := e.PrevInAEL;
+  if not assigned(e) then
+    Result := true else
+    Result := (e.OutRec.EndE = e);
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipper2.AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
 var
   OutRec: POutRec;
@@ -1639,8 +1651,17 @@ begin
   new(OutRec);
   OutRec.Idx := FPolyOutList.Add(OutRec);
   OutRec.IsOpen := afOpen in e1.Flags;
-  OutRec.StartE := e1;
-  OutRec.EndE := e2;
+  OutRec.IsOuter := GetIsOuter(e1.PrevInAEL);
+  //set orientation ...
+  if OutRec.IsOuter = (e1.Dx >= e2.Dx) then
+  begin
+    OutRec.StartE := e1;
+    OutRec.EndE := e2;
+  end else
+  begin
+    OutRec.StartE := e2;
+    OutRec.EndE := e1;
+  end;
   e1.OutRec := OutRec;
   if assigned(e2) then e2.OutRec := OutRec;
 
@@ -1736,7 +1757,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.IntersectEdges(E1,E2: PActive; Pt: TIntPoint);
+procedure TClipper2.IntersectEdges(E1, E2: PActive; Pt: TIntPoint);
 var
   E1Contributing, E2contributing: Boolean;
   E1Wc, E2Wc, E1Wc2, E2Wc2: Integer;
@@ -1923,7 +1944,6 @@ function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
   fillType: TPolyFillType = pftEvenOdd): Boolean;
 var
   Y: cInt;
-
 begin
   Result := False;
   solution := nil;
@@ -2260,8 +2280,9 @@ begin
   end else
     maxPair := nil;
 
-  if assigned(HorzEdge.OutRec) then AddOutPt(HorzEdge, HorzEdge.Curr);
   ResetHorzDirection;
+  if assigned(HorzEdge.OutRec) then
+    AddOutPt(HorzEdge, HorzEdge.Curr);
 
   while true do //loops through consec. horizontal edges (if open)
   begin
@@ -2355,9 +2376,9 @@ begin
       e.Curr.X := TopX(e, Y);
       //if an edge touches a vertex in the previous bound, then insert an
       //OutPt here to avoid micro self-interesctions ...
-      if assigned(e.OutRec) and assigned(e.PrevInAEL) and
-        (e.PrevInAEL.Curr.X = e.Curr.X) and assigned(e.PrevInAEL.OutRec) then
-          AddOutPt(e, e.Curr);
+//      if assigned(e.OutRec) and assigned(e.PrevInAEL) and
+//        (e.PrevInAEL.Curr.X = e.Curr.X) and assigned(e.PrevInAEL.OutRec) then
+//          AddOutPt(e, e.Curr);
     end;
     e := e.NextInAEL;
   end;
