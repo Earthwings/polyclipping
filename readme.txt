@@ -1,14 +1,10 @@
-Clipper2 (29 January 2017)
+Clipper2 (30 January 2017)
 This is just a preview of a major update I'm (slowly) working on. 
 This new version currently performs only the "bare bones" of the clipping algorithm. 
 It's "bare bones" because there's no merging of polygons that have common/touching edges in the clip solutions.
 The merging of adjacent/touching polygons is/was incomplete and cumbersome in the earlier versions and needs to be completely rewritten.
 
-Performance is a little faster than earlier versions.
-
-Benchmark test comparison between Old and New Clipper.
-'Old' Clipper is version 6.4.2 (minus code that merges touching solution polygons).
-Tests performed on Windows 10 64Bit using Intel i7 2.0GHz CPU, 8GB RAM.
+Performance is a little faster than earlier versions. Below are 2 benchmark test comparisons between the Old and New Clipper. The Old Clipper (version 6.4.2) has had its solution merging code removed in order to compare 'apples with apples'. Tests were performed using Windows 10 64Bit with Intel i7 2.0GHz CPU and 8GB RAM.
 
 TEST1: Time (secs) to intersect a single random subject and clip COMPLEX polygon.
 +===================+=========+=========+=======+

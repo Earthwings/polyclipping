@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  29 January 2017                                                 *
+* Date      :  30 January 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -25,7 +25,7 @@ unit Clipper2;
 //{$DEFINE use_xyz}
 
 //use_lines: Enables open path clipping (with a very minor cost to performance)
-//{$DEFINE use_lines}
+{$DEFINE use_lines}
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -166,6 +166,7 @@ type
   //carry a pointer to an OutRec when they are part of the clipping solution.
   TOutRec = record
     Idx         : Integer;
+    Owner       : POutRec;
     IsOpen      : Boolean;
     IsOuter     : Boolean;
     Pts         : POutPt;
@@ -203,7 +204,7 @@ type
     procedure InsertLocalMinimaIntoAEL(const BotY: cInt);
     procedure DeleteFromAEL(E: PActive);
     procedure AddOutPt(e: PActive; const pt: TIntPoint);
-    function GetIsOuter(e: PActive): Boolean; //{$IFDEF INLINING} inline; {$ENDIF}
+    function SetOwner(e: PActive): POutRec;
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
     procedure CopyActivesToSEL;
@@ -302,10 +303,12 @@ type
   end;
 
 resourcestring
-  rsDivZeroErr   = 'Int128 divide by zero error';
-  rsRangeErr     = 'Coordinate exceeds range bounds';
-  rsOpenPathErr  = 'TPolyTree struct is needed for open path clipping.';
-  rsClippingErr  = 'Undefined clipping error';
+  rsDivZeroErr      = 'Int128 divide by zero error';
+  rsRangeErr        = 'Coordinate exceeds range bounds';
+  rsOpenPath        = 'Open paths require setting a pre-compiler directive.';
+  rsOpenPathSubOnly = 'Only subject paths can be open.';
+  rsOpenPathErr     = 'TPolyTree struct is needed for open path clipping.';
+  rsClippingErr     = 'Undefined clipping error';
 
 function IsStartSide(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -1250,6 +1253,11 @@ procedure TClipper2.AddPath(const path: TPath; PolyType: TPolyType;
 var
   vertices: PVertexArray;
 begin
+{$IFNDEF use_lines}
+  if isOpen then EClipperLibException.Create(rsOpenPath);
+{$ENDIF}
+  if isOpen and (PolyType = ptClip) then
+    EClipperLibException.Create(rsOpenPathSubOnly);
   FLocMinListSorted := false;
   vertices := PathToVertexArray(path, polyType, isOpen);
   if not assigned(vertices) then Exit;
@@ -1536,28 +1544,24 @@ begin
 
     if not assigned(LeftB) then
     begin
-      tmp := LeftB;
       LeftB := RightB;
-      RightB := tmp;
+      RightB := nil;
     end;
 
-    InsertEdgeIntoAEL(LeftB, nil, false);
+    InsertEdgeIntoAEL(LeftB, nil, false);      //insert left edge
     SetWindingCount(LeftB);
-    RightB.WindCnt := LeftB.WindCnt;
-    RightB.WindCnt2 := LeftB.WindCnt2;
     contributing := IsContributing(LeftB);
-    InsertEdgeIntoAEL(RightB, LeftB, false);
-
-
     if assigned(RightB) then
     begin
+      RightB.WindCnt := LeftB.WindCnt;
+      RightB.WindCnt2 := LeftB.WindCnt2;
+      InsertEdgeIntoAEL(RightB, LeftB, false); //insert right edge
       if contributing then
         AddLocalMinPoly(LeftB, RightB, LeftB.Bot);
 
       if IsHorizontal(RightB) then
         PushHorz(RightB) else
         InsertScanLine(RightB.Top.Y);
-
     end
     else if IsContributing(LeftB) then
       AddOutPt(LeftB, LeftB.Bot); //an open path
@@ -1634,12 +1638,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.GetIsOuter(e: PActive): Boolean;
+function TClipper2.SetOwner(e: PActive): POutRec;
 begin
   while assigned(e) and not assigned(e.OutRec) do e := e.PrevInAEL;
   if not assigned(e) then
-    Result := true else
-    Result := (e.OutRec.EndE = e);
+    Result := nil
+  else if e.OutRec.IsOuter = (e.OutRec.EndE = e) then
+    Result := e.OutRec.Owner
+  else
+    Result := e.OutRec;
 end;
 //------------------------------------------------------------------------------
 
@@ -1651,8 +1658,11 @@ begin
   new(OutRec);
   OutRec.Idx := FPolyOutList.Add(OutRec);
   OutRec.IsOpen := afOpen in e1.Flags;
-  OutRec.IsOuter := GetIsOuter(e1.PrevInAEL);
-  //set orientation ...
+  OutRec.Owner := SetOwner(e1.PrevInAEL);
+  if not assigned(OutRec.Owner) then
+    OutRec.IsOuter := true else
+    OutRec.IsOuter := not OutRec.Owner.IsOuter;
+  //now set orientation ...
   if OutRec.IsOuter = (e1.Dx >= e2.Dx) then
   begin
     OutRec.StartE := e1;
@@ -2399,7 +2409,7 @@ begin
     DeleteFromAEL(e);
     if assigned(ePrev) then
       Result := ePrev.NextInAEL else
-      Result := FActiveEdges;
+      Result := FActives;
     Exit;
   end;
 {$ENDIF}
