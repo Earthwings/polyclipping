@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  30 January 2017                                                 *
+* Date      :  31 January 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -133,7 +133,7 @@ type
     Curr     : TIntPoint;
     Top      : TIntPoint;
     Dx       : double;        //inverse of edge slope (zero = vertical)
-    WindDelta: integer;       //wind direction (is zero for open paths)
+    WindDelta: integer;       //wind direction (ascending: +1; descending: -1)
     WindCnt  : integer;       //edge wind count of
     WindCnt2 : integer;       //wind count of opposite TPolyType
     OutRec   : POutRec;
@@ -1551,6 +1551,7 @@ begin
     InsertEdgeIntoAEL(LeftB, nil, false);      //insert left edge
     SetWindingCount(LeftB);
     contributing := IsContributing(LeftB);
+
     if assigned(RightB) then
     begin
       RightB.WindCnt := LeftB.WindCnt;
@@ -1562,6 +1563,7 @@ begin
       if IsHorizontal(RightB) then
         PushHorz(RightB) else
         InsertScanLine(RightB.Top.Y);
+
     end
     else if IsContributing(LeftB) then
       AddOutPt(LeftB, LeftB.Bot); //an open path
@@ -2453,7 +2455,7 @@ procedure ReversePolyPtLinks(PP: POutPt);
 var
   Pp1,Pp2: POutPt;
 begin
-  if not Assigned(PP) then Exit;
+  if (PP.Next = PP.Prev) then Exit;
   Pp1 := PP;
   repeat
     Pp2:= Pp1.Next;
@@ -2522,6 +2524,10 @@ begin
     if assigned(E1.OutRec.EndE.OutRec) then //ie closed paths
       E1.OutRec.EndE.OutRec := E1.OutRec;
   end;
+
+  if E1.OutRec.Owner = E2.OutRec then
+    raise EClipperLibException.Create(rsClippingErr);
+
   //after joining, the E2.OutRec contains not vertices ...
   E2.OutRec.StartE := nil;
   E2.OutRec.EndE := nil;
