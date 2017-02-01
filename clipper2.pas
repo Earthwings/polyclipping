@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  31 January 2017                                                 *
+* Date      :  1 February 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -315,6 +315,14 @@ begin
   if (Edge = Edge.OutRec.StartE) then
     result := true else
     result := false;
+end;
+//------------------------------------------------------------------------------
+
+function GetLastOutPt(E: PActive): POutPt; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if IsStartSide(E) then
+    result := e.OutRec.Pts else
+    result := e.OutRec.Pts.Prev;
 end;
 //------------------------------------------------------------------------------
 
@@ -1254,10 +1262,10 @@ var
   vertices: PVertexArray;
 begin
 {$IFNDEF use_lines}
-  if isOpen then EClipperLibException.Create(rsOpenPath);
+  if isOpen then raise EClipperLibException.Create(rsOpenPath);
 {$ENDIF}
   if isOpen and (PolyType = ptClip) then
-    EClipperLibException.Create(rsOpenPathSubOnly);
+    raise EClipperLibException.Create(rsOpenPathSubOnly);
   FLocMinListSorted := false;
   vertices := PathToVertexArray(path, polyType, isOpen);
   if not assigned(vertices) then Exit;
@@ -1504,7 +1512,7 @@ begin
       LeftB.LocMin := LocMin;
       LeftB.OutRec := nil;
       LeftB.Bot := LocMin.vertex.Pt;
-      LeftB.vertTop := LocMin.vertex.prev;  //ie a descending bound initially
+      LeftB.vertTop := LocMin.vertex.prev; //ie descending
       LeftB.Top := LeftB.vertTop.Pt;
       LeftB.Curr := LeftB.Bot;
       LeftB.WindDelta := -1;
@@ -1520,7 +1528,7 @@ begin
       RightB.LocMin := LocMin;
       RightB.OutRec := nil;
       RightB.Bot := LocMin.vertex.Pt;
-      RightB.vertTop := LocMin.vertex.next; //ie an ascending bound initially
+      RightB.vertTop := LocMin.vertex.next; //ie ascending
       RightB.Top := RightB.vertTop.Pt;
       RightB.Curr := RightB.Bot;
       RightB.WindDelta := 1;
@@ -1529,10 +1537,10 @@ begin
     end else
       RightB := nil;
 
-    //now swap left and right bounds according to orientation ...
+    //Currently LeftB is just the descending bound and RightB is the ascending.
+    //Now if the LeftB isn't on the left of RightB then we need swap them ...
     if assigned(LeftB) and assigned(RightB) then
     begin
-      //swap bounds when oriented clockwise (ie when left bound is ascending)
       if (IsHorizontal(LeftB) and (LeftB.Top.X > LeftB.Bot.X)) or
        (not IsHorizontal(LeftB) and (LeftB.Dx < RightB.Dx)) then
        begin
@@ -1733,8 +1741,9 @@ end;
 
 function TClipper2.PopHorz: PActive;
 begin
+  //first in, last out so 'top' horiz. will be processed before 'bottom' horiz.
   Result := FSel;
-  FSel := Result.NextInSEL;
+  FSel := FSel.NextInSEL;
 end;
 //------------------------------------------------------------------------------
 
@@ -1963,7 +1972,7 @@ begin
   //nb: Open paths can only be returned via the PolyTree structure ...
   if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
 
-  try
+  try try
     FExecuteLocked := True;
     FFillType := fillType;
     FClipType := clipType;
@@ -1976,12 +1985,14 @@ begin
       while assigned(FSel) do ProcessHorizontal(PopHorz);
       if not PopScanLine(Y) then break;
       ProcessIntersections(Y);
-      DoTopOfScanbeam(Y);
+      DoTopOfScanbeam(Y); //leaves horizontals for next loop iteration
     end;
     ////////////////////////////////////////////////////////
 
     solution := BuildResult;
     Result := True;
+  except
+  end;
   finally
     while assigned(FActives) do DeleteFromAEL(FActives);
     DisposeScanLineList;
@@ -2138,9 +2149,6 @@ begin
     begin
       J := I + 1;
       while (J < Cnt) and not EdgesAdjacent(FIntersectList[J]) do inc(J);
-//      if J = Cnt then
-//        raise EClipperLibException.Create(rsClippingErr);
-
       //Swap IntersectNodes ...
       Node := FIntersectList[I];
       FIntersectList[I] := FIntersectList[J];
@@ -2305,13 +2313,12 @@ begin
 
     while assigned(e) do
     begin
-      //if we've gone past the end of the horizontal (nb can't be a maxima)
+      //break if we've gone past the end of the horizontal ...
       if ((direction = dLeftToRight) and (e.Curr.X > horzRight)) or
         ((direction = dRightToLeft) and (e.Curr.X < horzLeft)) then break;
-
+      //or if we've got to the end of an intermediate horizontal edge ...
       if (E.Curr.X = HorzEdge.Top.X) and not isMaxima and not IsHorizontal(e) then
       begin
-        //also break if we've got to the end of an intermediate horizontal edge ...
         pt := NextVertex(HorzEdge).Pt;
         if((direction = dLeftToRight) and (TopX(E, pt.Y) >= pt.X)) or
           ((direction = dRightToLeft) and (TopX(E, pt.Y) <= pt.X)) then Break;
@@ -2354,8 +2361,8 @@ begin
   end;
 
   //we've now reached the end of an intermediate horizontal ...
-  if assigned(HorzEdge.OutRec) then AddOutPt(HorzEdge, HorzEdge.Top);
-  UpdateEdgeIntoAEL(HorzEdge);
+    if assigned(HorzEdge.OutRec) then AddOutPt(HorzEdge, HorzEdge.Top);
+      UpdateEdgeIntoAEL(HorzEdge);
 end;
 //------------------------------------------------------------------------------
 
@@ -2380,17 +2387,12 @@ begin
         //INTERMEDIATE VERTEX ...
         UpdateEdgeIntoAEL(e);
         if assigned(e.OutRec) then AddOutPt(e, e.Bot);
-        if IsHorizontal(e) then PushHorz(e);
+        if IsHorizontal(e) then PushHorz(e); //horizontals are processed later
       end;
     end else
     begin
       e.Curr.Y := Y;
       e.Curr.X := TopX(e, Y);
-      //if an edge touches a vertex in the previous bound, then insert an
-      //OutPt here to avoid micro self-interesctions ...
-//      if assigned(e.OutRec) and assigned(e.PrevInAEL) and
-//        (e.PrevInAEL.Curr.X = e.Curr.X) and assigned(e.PrevInAEL.OutRec) then
-//          AddOutPt(e, e.Curr);
     end;
     e := e.NextInAEL;
   end;
@@ -2425,7 +2427,7 @@ begin
   end;
   eNext := e.NextInAEL;
 
-  //non-horizontal maxima here.
+  //only non-horizontal maxima here.
 
   //process any edges between maxima pair ...
   while (eNext <> eMaxPair) do
@@ -2436,12 +2438,8 @@ begin
   end;
 
   //here E.NextInAEL == ENext == EMaxPair ...
-  if assigned(e.OutRec) or assigned(eMaxPair.OutRec) then
-  begin
-//    if not assigned(e.OutRec) or not assigned(eMaxPair.OutRec) then
-//      raise EClipperLibException.Create(rsClippingErr) else //oops!
+  if assigned(e.OutRec) then
       AddLocalMaxPoly(e, eMaxPair, e.Top);
-  end;
 
   DeleteFromAEL(e);
   DeleteFromAEL(eMaxPair);
@@ -2451,7 +2449,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure ReversePolyPtLinks(PP: POutPt);
+procedure ReversePolyPtLinks(PP: POutPt); {$IFDEF INLINING} inline; {$ENDIF}
 var
   Pp1,Pp2: POutPt;
 begin
@@ -2470,8 +2468,8 @@ procedure TClipper2.JoinOutrecPaths(E1, E2: PActive);
 var
   P1_st, P1_end, P2_st, P2_end: POutPt;
 begin
-  //join E2 outrec path onto E1 outrec path and then
-  //delete E2 outrec path pointers.
+  //join E2 outrec path onto E1 outrec path and then delete E2 outrec path
+  //pointers. (nb: Only very rarely do the joining ends share the same coords.)
   P1_st :=  E1.OutRec.Pts;
   P2_st :=  E2.OutRec.Pts;
   P1_end := P1_st.Prev;
@@ -2505,7 +2503,7 @@ begin
   begin
     if IsStartSide(E2) then
     begin
-      //end-start join
+      //end-start join (see JoinOutrec3.png)
       P1_end.Next := P2_st;
       P2_st.Prev := P1_end;
       P1_st.Prev := P2_end;
@@ -2532,13 +2530,15 @@ begin
   E2.OutRec.StartE := nil;
   E2.OutRec.EndE := nil;
   E2.OutRec.Pts := nil;
+  //E2.OutRec.Owner := E1.OutRec; //this may be redundant
+
   //and e1 and e2 are maxima and are about to be dropped from the Actives list.
   e1.OutRec := nil;
   e2.OutRec := nil;
 end;
 //------------------------------------------------------------------------------
 
-function PointCount(Pts: POutPt): Integer;
+function PointCount(Pts: POutPt): Integer; {$IFDEF INLINING} inline; {$ENDIF}
 var
   P: POutPt;
 begin
