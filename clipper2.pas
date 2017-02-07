@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  1 February 2017                                                 *
+* Date      :  8 Febuary 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -32,22 +32,18 @@ unit Clipper2;
 
 {$IFDEF FPC}
   {$DEFINE INLINING}
-  {$DEFINE UInt64Support}
 {$ELSE}
-  {$IF CompilerVersion >= 25.0}
-    {$LEGACYIFEND ON} // enable LEGACYIFEND for Delphi XE4+
+  {$IF CompilerVersion < 15}
+    Requires Delphi version 7 or above.
   {$IFEND}
-
-  {$IFDEF ConditionalExpressions}
-    {$IF CompilerVersion >= 15}
-      {$DEFINE UInt64Support}   //Delphi7 does marginally supports UInt64.
+  {$IF CompilerVersion >= 18}         //Delphi 2007
+    //While Inlining has been supported since D2005, both D2005 and D2006
+    //have an Inline codegen bug (QC41166) so ignore Inline until D2007.
+    {$DEFINE INLINING}
+    {$IF CompilerVersion >= 25.0}     //Delphi XE4+
+      {$LEGACYIFEND ON}
     {$IFEND}
-    {$IF CompilerVersion >= 18} //Delphi 2007
-      //While Inlining has been supported since D2005, both D2005 and D2006
-      //have an Inline codegen bug (QC41166) so ignore Inline until D2007.
-      {$DEFINE INLINING}
-    {$IFEND}
-  {$ENDIF}
+  {$IFEND}
 {$ENDIF}
 
 interface
@@ -118,7 +114,6 @@ type
   TLocalMinimum = record
     vertex    : PVertex;
     PolyType  : TPolyType;
-    PolyIdx   : integer;   //not used by the clipping algorithm
     IsOpen    : Boolean;
   end;
 
@@ -151,8 +146,8 @@ type
 
   PScanLine = ^TScanLine;
   TScanLine = record
-    Y       : cInt;
-    Next    : PScanLine;
+    Y        : cInt;
+    Next     : PScanLine;
   end;
 
   POutPt = ^TOutPt;
@@ -165,13 +160,13 @@ type
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
   TOutRec = record
-    Idx         : Integer;
-    Owner       : POutRec;
-    IsOpen      : Boolean;
-    IsOuter     : Boolean;
-    Pts         : POutPt;
-    StartE      : PActive;
-    EndE        : PActive;
+    Idx      : Integer;
+    Owner    : POutRec;
+    IsOpen   : Boolean;
+    IsOuter  : Boolean;
+    Pts      : POutPt;
+    StartE   : PActive;
+    EndE     : PActive;
   end;
 
   TDirection = (dRightToLeft, dLeftToRight); //used for horizontal processing
@@ -230,7 +225,6 @@ type
     FLocMinList       : TList;
     FActives          : PActive; //see AEL above
     FSel              : PActive; //see SEL above
-    FPathCount        : integer;
     FVertexList       : TList;
     procedure Reset; virtual;
   public
@@ -303,7 +297,6 @@ type
   end;
 
 resourcestring
-  rsDivZeroErr      = 'Int128 divide by zero error';
   rsRangeErr        = 'Coordinate exceeds range bounds';
   rsOpenPath        = 'Open paths require setting a pre-compiler directive.';
   rsOpenPathSubOnly = 'Only subject paths can be open.';
@@ -379,33 +372,9 @@ end;
 
 {$IFNDEF use_int32}
 
-//------------------------------------------------------------------------------
-// UInt64 math support for Delphi 6
-//------------------------------------------------------------------------------
-
-{$IFNDEF UInt64Support}
-function CompareUInt64(const i, j: Int64): Integer;
-begin
-  if Int64Rec(i).Hi < Int64Rec(j).Hi then
-    Result := -1
-  else if Int64Rec(i).Hi > Int64Rec(j).Hi then
-    Result := 1
-  else if Int64Rec(i).Lo < Int64Rec(j).Lo then
-    Result := -1
-  else if Int64Rec(i).Lo > Int64Rec(j).Lo then
-    Result := 1
-  else
-    Result := 0;
-end;
-{$ENDIF}
-
 function UInt64LT(const i, j: Int64): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-{$IFDEF UInt64Support}
   Result := UInt64(i) < UInt64(j);
-{$ELSE}
-  Result := CompareUInt64(i, j) = -1;
-{$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -930,12 +899,12 @@ begin
   end else
   begin
     result := E.NextInAEL;
-    while assigned(Result) and (TopX(Result, E.Top.Y) <= E.Top.X) do
+    while assigned(Result) do
     begin
       if Result.vertTop = E.vertTop then Exit;  //Found!
       result := result.NextInAEL;
     end;
-    result := nil; //this happens when the maxPair is a horizontal
+    result := nil; //this happens whenever the maxPair is a horizontal
   end;
 end;
 
@@ -968,7 +937,6 @@ procedure TClipper2.Clear;
 begin
   DisposeLocalMinimaList;
   FCurrentLocMinIdx := 0;
-  FPathCount := 0;
   FLocMinListSorted := false;
   FUse64BitRange := False;
   FHasOpenPaths := False;
@@ -1153,7 +1121,6 @@ var
     lm.vertex := vert;
     lm.PolyType := polyType;
     lm.IsOpen := isOpen;
-    lm.PolyIdx := FPathCount;
     FLocMinList.Add(lm);                 //nb: sorted in Reset()
   end;
   //----------------------------------------------------------------------------
@@ -1264,13 +1231,16 @@ begin
 {$IFNDEF use_lines}
   if isOpen then raise EClipperLibException.Create(rsOpenPath);
 {$ENDIF}
-  if isOpen and (PolyType = ptClip) then
-    raise EClipperLibException.Create(rsOpenPathSubOnly);
+  if isOpen then
+  begin
+    if (PolyType = ptClip) then
+      raise EClipperLibException.Create(rsOpenPathSubOnly);
+    FHasOpenPaths := true;
+  end;
   FLocMinListSorted := false;
   vertices := PathToVertexArray(path, polyType, isOpen);
   if not assigned(vertices) then Exit;
   FVertexList.Add(vertices);
-  inc(FPathCount);
 end;
 //------------------------------------------------------------------------------
 
@@ -1538,7 +1508,7 @@ begin
       RightB := nil;
 
     //Currently LeftB is just the descending bound and RightB is the ascending.
-    //Now if the LeftB isn't on the left of RightB then we need swap them ...
+    //Now if the LeftB isn't on the left of RightB then we need swap them.
     if assigned(LeftB) and assigned(RightB) then
     begin
       if (IsHorizontal(LeftB) and (LeftB.Top.X > LeftB.Bot.X)) or
@@ -1618,17 +1588,15 @@ var
   opStart, opEnd, opNew: POutPt;
   ToStart: Boolean;
 begin
-  //Outrec.Pts: circular double-linked-list of POutPt.
+  //Outrec.Pts: a circular double-linked-list of POutPt.
   ToStart := IsStartSide(e);
   opStart := e.OutRec.Pts;
   opEnd := opStart.Prev;
   if ToStart then
   begin
     if PointsEqual(pt, opStart.Pt) then Exit;
-  end else
-  begin
-    if PointsEqual(pt, opEnd.Pt) then Exit;
-  end;
+  end
+  else if PointsEqual(pt, opEnd.Pt) then Exit;
   new(opNew);
   opNew.Pt := pt;
   opNew.Next := opStart;
@@ -1650,7 +1618,15 @@ end;
 
 function TClipper2.SetOwner(e: PActive): POutRec;
 begin
-  while assigned(e) and not assigned(e.OutRec) do e := e.PrevInAEL;
+  if IsHorizontal(e) and (e.Top.X < e.Bot.X) then
+  begin
+    e := e.NextInAEL;
+    while assigned(e) and not assigned(e.OutRec) do e := e.NextInAEL;
+  end else
+  begin
+    e := e.PrevInAEL;
+    while assigned(e) and not assigned(e.OutRec) do e := e.PrevInAEL;
+  end;
   if not assigned(e) then
     Result := nil
   else if e.OutRec.IsOuter = (e.OutRec.EndE = e) then
@@ -1668,10 +1644,10 @@ begin
   new(OutRec);
   OutRec.Idx := FPolyOutList.Add(OutRec);
   OutRec.IsOpen := afOpen in e1.Flags;
-  OutRec.Owner := SetOwner(e1.PrevInAEL);
-  if not assigned(OutRec.Owner) then
-    OutRec.IsOuter := true else
-    OutRec.IsOuter := not OutRec.Owner.IsOuter;
+  OutRec.Owner := SetOwner(e1);
+  if assigned(OutRec.Owner) then
+    OutRec.IsOuter := not OutRec.Owner.IsOuter else
+    OutRec.IsOuter := true;
   //now set orientation ...
   if OutRec.IsOuter = (e1.Dx >= e2.Dx) then
   begin
@@ -1968,10 +1944,10 @@ var
 begin
   Result := False;
   solution := nil;
-  if FExecuteLocked then Exit;
   //nb: Open paths can only be returned via the PolyTree structure ...
   if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
 
+  if FExecuteLocked then Exit;
   try try
     FExecuteLocked := True;
     FFillType := fillType;
@@ -1991,13 +1967,14 @@ begin
 
     solution := BuildResult;
     Result := True;
-  except
-  end;
   finally
     while assigned(FActives) do DeleteFromAEL(FActives);
     DisposeScanLineList;
     DisposeAllOutRecs;
     FExecuteLocked := False;
+  end;
+  except;
+    Result := False;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2302,7 +2279,9 @@ begin
 
   ResetHorzDirection;
   if assigned(HorzEdge.OutRec) then
+  begin
     AddOutPt(HorzEdge, HorzEdge.Curr);
+  end;
 
   while true do //loops through consec. horizontal edges (if open)
   begin
@@ -2327,7 +2306,9 @@ begin
       if (e = maxPair) then
       begin
         if assigned(HorzEdge.OutRec)  then
+        begin
           AddLocalMaxPoly(HorzEdge, e, HorzEdge.Top);
+        end;
         DeleteFromAEL(HorzEdge);
         DeleteFromAEL(e);
         Exit;
@@ -2361,8 +2342,11 @@ begin
   end;
 
   //we've now reached the end of an intermediate horizontal ...
-    if assigned(HorzEdge.OutRec) then AddOutPt(HorzEdge, HorzEdge.Top);
-      UpdateEdgeIntoAEL(HorzEdge);
+  if assigned(HorzEdge.OutRec) then
+  begin
+    AddOutPt(HorzEdge, HorzEdge.Top);
+  end;
+  UpdateEdgeIntoAEL(HorzEdge);
 end;
 //------------------------------------------------------------------------------
 
