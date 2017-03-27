@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  8 Febuary 2017                                                  *
+* Date      :  27 March 2017                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -133,11 +133,11 @@ type
     WindCnt2 : integer;       //wind count of opposite TPolyType
     OutRec   : POutRec;
     Flags    : TActiveFlags;
-    //AEL - active edge list; aka AET active edge table (Vatti)
+    //AEL - active edge list (Vatti's AET - active edge table)
     PrevInAEL: PActive;
     NextInAEL: PActive;
-    //SEL - 'sorted' edge list; aka ST sorted table (Vatti)
-    //New edge order at the top of scambeams. Reused to process horizontals.
+    //SEL - 'sorted' edge list (Vatti's ST - sorted table)
+    //    -  also (re)used in processing horizontals.
     PrevInSEL: PActive;
     NextInSEL: PActive;
     vertTop  : PVertex;
@@ -157,16 +157,18 @@ type
     Prev     : POutPt;
   end;
 
+  TOutRecFlag = (orOpen, orOuter, orHorz, orHorzJoin);
+  TOutRecFlags = set of TOutRecFlag;
+
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
   TOutRec = record
     Idx      : Integer;
     Owner    : POutRec;
-    IsOpen   : Boolean;
-    IsOuter  : Boolean;
     Pts      : POutPt;
     StartE   : PActive;
     EndE     : PActive;
+    Flags    : TOutRecFlags;
   end;
 
   TDirection = (dRightToLeft, dLeftToRight); //used for horizontal processing
@@ -204,8 +206,6 @@ type
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
     procedure CopyActivesToSEL;
     procedure UpdateEdgeIntoAEL(var E: PActive);
-    procedure PushHorz(E: PActive);
-    function PopHorz: PActive;
     procedure SwapOutRecs(E1, E2: PActive);
     procedure IntersectEdges(E1,E2: PActive; Pt: TIntPoint);
     procedure ProcessIntersections(const TopY: cInt);
@@ -220,6 +220,8 @@ type
     function DoMaxima(e: PActive): PActive;
     procedure JoinOutrecPaths(E1, E2: PActive);
     function BuildResult: TPaths;
+    procedure PushHorz(E: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+    function PopHorz(out E: PActive): Boolean;
   protected
     FPolyOutList      : TList;
     FLocMinList       : TList;
@@ -302,6 +304,12 @@ resourcestring
   rsOpenPathSubOnly = 'Only subject paths can be open.';
   rsOpenPathErr     = 'TPolyTree struct is needed for open path clipping.';
   rsClippingErr     = 'Undefined clipping error';
+
+function IsHotEdge(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  result := assigned(Edge.OutRec);
+end;
+//------------------------------------------------------------------------------
 
 function IsStartSide(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -1541,7 +1549,6 @@ begin
       if IsHorizontal(RightB) then
         PushHorz(RightB) else
         InsertScanLine(RightB.Top.Y);
-
     end
     else if IsContributing(LeftB) then
       AddOutPt(LeftB, LeftB.Bot); //an open path
@@ -1597,13 +1604,15 @@ begin
     if PointsEqual(pt, opStart.Pt) then Exit;
   end
   else if PointsEqual(pt, opEnd.Pt) then Exit;
+
   new(opNew);
   opNew.Pt := pt;
   opNew.Next := opStart;
   opNew.Prev := opEnd;
   opEnd.Next := opNew;
   opStart.Prev := opNew;
-  if ToStart then e.OutRec.Pts := opNew;
+  if ToStart then
+    e.OutRec.Pts := opNew;
 end;
 //------------------------------------------------------------------------------
 
@@ -1621,18 +1630,36 @@ begin
   if IsHorizontal(e) and (e.Top.X < e.Bot.X) then
   begin
     e := e.NextInAEL;
-    while assigned(e) and not assigned(e.OutRec) do e := e.NextInAEL;
+    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
+      e := e.NextInAEL;
+    if not assigned(e) then Result := nil
+    else if (orOuter in e.OutRec.Flags) = (e.OutRec.StartE = e) then
+      Result := e.OutRec.Owner
+    else Result := e.OutRec;
   end else
   begin
     e := e.PrevInAEL;
-    while assigned(e) and not assigned(e.OutRec) do e := e.PrevInAEL;
+    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
+      e := e.PrevInAEL;
+    if not assigned(e) then Result := nil
+    else if (orOuter in e.OutRec.Flags) = (e.OutRec.EndE = e) then
+      Result := e.OutRec.Owner
+    else Result := e.OutRec;
   end;
-  if not assigned(e) then
-    Result := nil
-  else if e.OutRec.IsOuter = (e.OutRec.EndE = e) then
-    Result := e.OutRec.Owner
-  else
-    Result := e.OutRec;
+end;
+//------------------------------------------------------------------------------
+
+procedure Clockwise(OutRec: POutRec; e1, e2: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  OutRec.StartE := e1;
+  OutRec.EndE := e2;
+end;
+//------------------------------------------------------------------------------
+
+procedure CounterClockwise(OutRec: POutRec; e1, e2: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  OutRec.StartE := e2;
+  OutRec.EndE := e1;
 end;
 //------------------------------------------------------------------------------
 
@@ -1643,21 +1670,30 @@ var
 begin
   new(OutRec);
   OutRec.Idx := FPolyOutList.Add(OutRec);
-  OutRec.IsOpen := afOpen in e1.Flags;
   OutRec.Owner := SetOwner(e1);
-  if assigned(OutRec.Owner) then
-    OutRec.IsOuter := not OutRec.Owner.IsOuter else
-    OutRec.IsOuter := true;
+  if assigned(OutRec.Owner) and (orOuter in OutRec.Owner.Flags) then
+    OutRec.Flags := [] else
+    OutRec.Flags := [orOuter];
+  if afOpen in e1.Flags then Include(OutRec.Flags, orOpen);
+
   //now set orientation ...
-  if OutRec.IsOuter = (e1.Dx >= e2.Dx) then
+  if IsHorizontal(e1) then
   begin
-    OutRec.StartE := e1;
-    OutRec.EndE := e2;
-  end else
+    if IsHorizontal(e2) then
+    begin
+      if (orOuter in OutRec.Flags) = (e1.Bot.X > e2.Bot.X) then
+        Clockwise(OutRec, e1,e2) else CounterClockwise(OutRec, e1,e2);
+    end
+    else if (orOuter in OutRec.Flags) = (e1.Top.X < e1.Bot.X) then
+      Clockwise(OutRec, e1,e2) else CounterClockwise(OutRec, e1,e2);
+  end
+  else if IsHorizontal(e2) then
   begin
-    OutRec.StartE := e2;
-    OutRec.EndE := e1;
-  end;
+    if (orOuter in OutRec.Flags) = (e2.Top.X > e2.Bot.X) then
+      Clockwise(OutRec, e1,e2) else CounterClockwise(OutRec, e1,e2);
+  end
+  else if (orOuter in OutRec.Flags) = (e1.Dx >= e2.Dx) then
+    Clockwise(OutRec, e1,e2) else CounterClockwise(OutRec, e1,e2);
   e1.OutRec := OutRec;
   if assigned(e2) then e2.OutRec := OutRec;
 
@@ -1710,15 +1746,18 @@ end;
 
 procedure TClipper2.PushHorz(E: PActive);
 begin
-  E.NextInSEL := FSel;
+  if assigned(FSel) then
+    E.NextInSEL := FSel else
+    E.NextInSEL := nil;
   FSel := E;
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.PopHorz: PActive;
+function TClipper2.PopHorz(out E: PActive): Boolean;
 begin
-  //first in, last out so 'top' horiz. will be processed before 'bottom' horiz.
-  Result := FSel;
+  result := assigned(FSel);
+  if not result then Exit;
+  E := FSel;
   FSel := FSel.NextInSEL;
 end;
 //------------------------------------------------------------------------------
@@ -1762,8 +1801,8 @@ begin
   //E1 will be to the left of E2 BELOW the intersection. Therefore E1 is before
   //E2 in AEL except when E1 is being inserted at the intersection point ...
 
-  E1Contributing := assigned(E1.OutRec);
-  E2contributing := assigned(E2.OutRec);
+  E1Contributing := IsHotEdge(E1);
+  E2contributing := IsHotEdge(E2);
 
   E1.Curr := Pt;
   E2.Curr := Pt;
@@ -1871,6 +1910,11 @@ begin
       (not IsSamePolyType(E1, E2) and (fClipType <> ctXor)) then
     begin
       AddLocalMaxPoly(E1, E2, Pt);
+    end
+    else if (E1.OutRec = E2.OutRec) then //optional
+    begin
+      AddLocalMaxPoly(E1, E2, Pt);
+      AddLocalMinPoly(E1, E2, Pt);
     end else
     begin
       AddOutPt(E1, Pt);
@@ -1941,6 +1985,7 @@ function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
   fillType: TPolyFillType = pftEvenOdd): Boolean;
 var
   Y: cInt;
+  E: PActive;
 begin
   Result := False;
   solution := nil;
@@ -1954,12 +1999,13 @@ begin
     FClipType := clipType;
     Reset;
     if not PopScanLine(Y) then Exit;
+
     ////////////////////////////////////////////////////////
     while true do
     begin
       InsertLocalMinimaIntoAEL(Y);
-      while assigned(FSel) do ProcessHorizontal(PopHorz);
-      if not PopScanLine(Y) then break;
+      while PopHorz(E) do ProcessHorizontal(E);
+      if not PopScanLine(Y) then break; //Y = top of scanbeam
       ProcessIntersections(Y);
       DoTopOfScanbeam(Y); //leaves horizontals for next loop iteration
     end;
@@ -1967,14 +2013,14 @@ begin
 
     solution := BuildResult;
     Result := True;
+  except;
+    Result := False;
+  end;
   finally
     while assigned(FActives) do DeleteFromAEL(FActives);
     DisposeScanLineList;
     DisposeAllOutRecs;
     FExecuteLocked := False;
-  end;
-  except;
-    Result := False;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2048,8 +2094,13 @@ begin
         else if pt.Y < TopY then
         begin
           pt.Y := TopY;          //TopY = top of scanbeam
-          if (abs(E.Dx) < abs(eNext.Dx)) then
-            pt.X := E.Curr.X else
+          if E.Top.Y = TopY then
+            pt.X := E.Top.X
+          else if eNext.Top.Y = TopY then
+            pt.X := eNext.Top.X
+          else if (abs(E.Dx) < abs(eNext.Dx)) then
+            pt.X := E.Curr.X
+          else
             pt.X := eNext.Curr.X;
         end;
 
@@ -2081,7 +2132,6 @@ begin
     begin
       IntersectEdges(Edge1, Edge2, Pt);
       SwapPositionsInAEL(Edge1, Edge2);
-      //todo: check here for double contributing parallel edges
     end;
     dispose(PIntersectNode(FIntersectList[I]));
   end;
@@ -2278,10 +2328,8 @@ begin
     maxPair := nil;
 
   ResetHorzDirection;
-  if assigned(HorzEdge.OutRec) then
-  begin
+  if IsHotEdge(HorzEdge) then
     AddOutPt(HorzEdge, HorzEdge.Curr);
-  end;
 
   while true do //loops through consec. horizontal edges (if open)
   begin
@@ -2305,12 +2353,12 @@ begin
 
       if (e = maxPair) then
       begin
-        if assigned(HorzEdge.OutRec)  then
+        if IsHotEdge(HorzEdge)  then
         begin
           AddLocalMaxPoly(HorzEdge, e, HorzEdge.Top);
         end;
-        DeleteFromAEL(HorzEdge);
         DeleteFromAEL(e);
+        DeleteFromAEL(HorzEdge);
         Exit;
       end;
 
@@ -2342,10 +2390,9 @@ begin
   end;
 
   //we've now reached the end of an intermediate horizontal ...
-  if assigned(HorzEdge.OutRec) then
-  begin
+  if IsHotEdge(HorzEdge) then
     AddOutPt(HorzEdge, HorzEdge.Top);
-  end;
+
   UpdateEdgeIntoAEL(HorzEdge);
 end;
 //------------------------------------------------------------------------------
@@ -2357,7 +2404,7 @@ begin
   e := FActives;
   while Assigned(e) do
   begin
-    Exclude(E.Flags, afMaxima);
+    E.Flags := E.Flags - [afMaxima];
     //nb: E will never be horizontal at this point
     if (e.Top.Y = Y) then
     begin
@@ -2370,8 +2417,9 @@ begin
       begin
         //INTERMEDIATE VERTEX ...
         UpdateEdgeIntoAEL(e);
-        if assigned(e.OutRec) then AddOutPt(e, e.Bot);
-        if IsHorizontal(e) then PushHorz(e); //horizontals are processed later
+        if IsHotEdge(e) then AddOutPt(e, e.Bot);
+        if IsHorizontal(e) then
+          PushHorz(e); //horizontals are processed later
       end;
     end else
     begin
@@ -2392,7 +2440,7 @@ begin
 {$IFDEF use_lines}
   if IsOpen(e) then
   begin
-    if assigned(e.OutRec) then
+    if IsHotEdge(e) then
       AddOutPt(e, e.Top);
     DeleteFromAEL(e);
     if assigned(ePrev) then
@@ -2422,7 +2470,7 @@ begin
   end;
 
   //here E.NextInAEL == ENext == EMaxPair ...
-  if assigned(e.OutRec) then
+  if IsHotEdge(e) then
       AddLocalMaxPoly(e, eMaxPair, e.Top);
 
   DeleteFromAEL(e);
@@ -2458,7 +2506,6 @@ begin
   P2_st :=  E2.OutRec.Pts;
   P1_end := P1_st.Prev;
   P2_end := P2_st.Prev;
-
   if IsStartSide(E1) then
   begin
     if IsStartSide(E2) then
@@ -2481,7 +2528,7 @@ begin
       E1.OutRec.Pts := P2_st;
       E1.OutRec.StartE := E2.OutRec.StartE;
     end;
-    if assigned(E1.OutRec.StartE.OutRec) then //ie closed paths
+    if assigned(E1.OutRec.StartE.OutRec) then //ie closed path
       E1.OutRec.StartE.OutRec := E1.OutRec;
   end else
   begin
@@ -2503,7 +2550,7 @@ begin
       P1_st.Prev := P2_st;
       E1.OutRec.EndE := E2.OutRec.StartE;
     end;
-    if assigned(E1.OutRec.EndE.OutRec) then //ie closed paths
+    if assigned(E1.OutRec.EndE.OutRec) then //ie closed path
       E1.OutRec.EndE.OutRec := E1.OutRec;
   end;
 
@@ -2514,7 +2561,7 @@ begin
   E2.OutRec.StartE := nil;
   E2.OutRec.EndE := nil;
   E2.OutRec.Pts := nil;
-  //E2.OutRec.Owner := E1.OutRec; //this may be redundant
+  E2.OutRec.Owner := E1.OutRec; //this may be redundant
 
   //and e1 and e2 are maxima and are about to be dropped from the Actives list.
   e1.OutRec := nil;
@@ -2568,3 +2615,4 @@ end;
 //------------------------------------------------------------------------------
 
 end.
+
