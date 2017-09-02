@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  27 March 2017                                                   *
+* Date      :  2 September 2017                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -13,22 +13,6 @@ unit Clipper2;
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *                                                                              *
 *******************************************************************************)
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-//use_int32: When enabled 32bit ints are used instead of 64bit ints. This
-//improve performance but coordinate values are limited to the range +/- 46340
-//{$DEFINE use_int32}
-
-//use_xyz: adds a Z member to IntPoint (with only a minor cost to performance)
-//{$DEFINE use_xyz}
-
-//use_lines: Enables open path clipping (with a very minor cost to performance)
-{$DEFINE use_lines}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 {$IFDEF FPC}
   {$DEFINE INLINING}
@@ -52,22 +36,9 @@ uses
   SysUtils, Types, Classes, Math;
 
 type
-{$IFDEF use_int32}
-  {$IF CompilerVersion < 20}
-    cInt = Integer;
-  {$ELSE}
-    cInt = Int32; //Int32 supported since D2009.
-  {$IFEND}
-{$ELSE}
   cInt = Int64;
-{$ENDIF}
-
   PIntPoint = ^TIntPoint;
-{$IFDEF use_xyz}
-  TIntPoint = record X, Y, Z: cInt; end;
-{$ELSE}
   TIntPoint = record X, Y: cInt; end;
-{$ENDIF}
 
   TPath = array of TIntPoint;
   TPaths = array of TPath;
@@ -75,11 +46,6 @@ type
   TIntRect = record Left, Top, Right, Bottom: cInt; end;
   TDoublePoint = record X, Y: Double; end;
   TArrayOfDoublePoint = array of TDoublePoint;
-
-{$IFDEF use_xyz}
-  TZFillCallback =
-    procedure (const E1Bot, E1Top, E2Bot, E2Top: TIntPoint; var Pt: TIntPoint);
-{$ENDIF}
 
   TClipType = (ctIntersection, ctUnion, ctDifference, ctXor);
   TPolyType = (ptSubject, ptClip);
@@ -89,7 +55,7 @@ type
   //https://www.w3.org/TR/SVG/painting.html
   TPolyFillType = (pftEvenOdd, pftNonZero, pftPositive, pftNegative);
 
-  TVertexFlag = (vfOpen, vfStart, vfEnd, vfMaxima, vfMinima);
+  TVertexFlag = (vfOpen, vfOpenStart, vfOpenEnd, vfMaxima, vfMinima);
   TVertexFlags = set of TVertexFlag;
 
   PVertex = ^TVertex;
@@ -157,6 +123,9 @@ type
     Prev     : POutPt;
   end;
 
+  TPolyTree = class;
+  TPolyPath = class;
+
   TOutRecFlag = (orOpen, orOuter, orHorz, orHorzJoin);
   TOutRecFlags = set of TOutRecFlag;
 
@@ -169,6 +138,7 @@ type
     StartE   : PActive;
     EndE     : PActive;
     Flags    : TOutRecFlags;
+    PolyPath : TPolyPath;
   end;
 
   TDirection = (dRightToLeft, dLeftToRight); //used for horizontal processing
@@ -201,6 +171,7 @@ type
     procedure InsertLocalMinimaIntoAEL(const BotY: cInt);
     procedure DeleteFromAEL(E: PActive);
     procedure AddOutPt(e: PActive; const pt: TIntPoint);
+    procedure StartOpenPath(e: PActive; const pt: TIntPoint);
     function SetOwner(e: PActive): POutRec;
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TIntPoint);
     procedure AddLocalMaxPoly(E1, E2: PActive; const Pt: TIntPoint);
@@ -219,9 +190,11 @@ type
     procedure DoTopOfScanbeam(Y: cInt);
     function DoMaxima(e: PActive): PActive;
     procedure JoinOutrecPaths(E1, E2: PActive);
-    function BuildResult: TPaths;
+    procedure BuildResult(out closedPaths, openPaths: TPaths);
+    procedure BuildResult2(PolyTree: TPolyTree);
     procedure PushHorz(E: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function PopHorz(out E: PActive): Boolean;
+    function ExecuteInternal(clipType: TClipType; fillType: TPolyFillType): Boolean;
   protected
     FPolyOutList      : TList;
     FLocMinList       : TList;
@@ -232,30 +205,73 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    procedure CleanUp;
     procedure Clear; virtual;
     function GetBounds: TIntRect;
     procedure AddPath(const path: TPath; polyType: TPolyType = ptSubject;
       isOpen: Boolean = false); virtual;
     procedure AddPaths(const paths: TPaths; polyType: TPolyType = ptSubject;
       isOpen: Boolean = false); virtual;
+
     function Execute(clipType: TClipType; out solution: TPaths;
-      fillType: TPolyFillType = pftEvenOdd): Boolean;
+      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+
+    function Execute(clipType: TClipType; out solClosed, solOpen: TPaths;
+      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+
+    function Execute(clipType: TClipType; var solution: TPolyTree;
+      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+  end;
+
+  TPoly = class
+  private
+    FParent   : TPoly;
+    FIsOpen   : Boolean;
+    FPath     : TPath;
+    FChilds   : TList;
+    function    GetChildCnt: integer;
+    function    GetChild(Index: Integer): TPolyPath;
+    function    IsHoleNode: boolean;
+    property    Parent: TPoly read FParent;
+    property    IsHole: Boolean read IsHoleNode;
+    property    IsOpen: Boolean read FIsOpen;
+    property    Path: TPath read FPath;
+  public
+    constructor Create;  virtual;
+    destructor  Destroy; override;
+    property    ChildCount: Integer read GetChildCnt;
+    property    Childs[index: Integer]: TPolyPath read GetChild;
+  end;
+
+  TPolyPath = class(TPoly)
+  public
+    property    Parent;
+    property    IsHole;
+    property    IsOpen;
+    property    Path;
+  end;
+
+  TPolyTree = class(TPoly)
+  public
+    destructor Destroy; override;
+    function AddChild(AParent: TPoly;
+      const Path: TPath; IsOpen: Boolean = false): TPolyPath;
+    procedure Clear;
   end;
 
   EClipperLibException = class(Exception);
 
 function Orientation(const path: TPath): Boolean; overload;
 function Area(const path: TPath): Double; overload;
-function PointInPolygon(const pt: TIntPoint; const poly: TPath): Integer; overload;
+function PathContainsPoint(const path: TPath; const pt: TIntPoint): Integer;
+function Path1ContainsPath2(const Path1, Path2: TPath): Boolean;
+function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
+function OpenPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
+function ClosedPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
 function GetBounds(const paths: TPaths): TIntRect;
 
-{$IFDEF use_xyz}
-function IntPoint(const X, Y: Int64; Z: Int64 = 0): TIntPoint; overload;
-function IntPoint(const X, Y: Double; Z: Double = 0): TIntPoint; overload;
-{$ELSE}
 function IntPoint(const X, Y: cInt): TIntPoint; overload;
 function IntPoint(const X, Y: Double): TIntPoint; overload;
-{$ENDIF}
 
 function DoublePoint(const X, Y: Double): TDoublePoint; overload;
 function DoublePoint(const Ip: TIntPoint): TDoublePoint; overload;
@@ -269,23 +285,18 @@ const
 implementation
 
 const
-//The math performed in the SlopesEqual function places the most constraints
-//on coordinate values. To avoid overflow errors there, coordinate values must
-//not exceed HiRange below. Also, when coordinate values exceed LoRange,
-//the Int128 math required will render the library approx. 10-15% slower.
-{$IFDEF use_int32}
-  LoRange: cInt = 46340;
-  HiRange: cInt = 46340;              //32bit math  (coord range +/-4.6e+4)
-{$ELSE}
+  //The math performed in the SlopesEqual function places the most constraints
+  //on coordinate values. To avoid overflow errors there, coordinate values must
+  //not exceed HiRange below. Also, when coordinate values exceed LoRange,
+  //the Int128 math required will render the library approx. 10-15% slower.
   LoRange: cInt = $B504F333;          //64bit math  (coord range +/- 3.0e+9)
   HiRange: cInt = $3FFFFFFFFFFFFFFF;  //128bit math (coord range +/- 9.2e+18)
-{$ENDIF}
 
-{$OVERFLOWCHECKS OFF}
-//This is a necessary workaround for a Delphi compiler bug that very
-//occasionally reports overflow errors while still returning correct values
-//eg var A, B: Int64; begin A := -$13456780; B := -$73456789; A := A * B; end;
-//see https://forums.embarcadero.com/message.jspa?messageID=871444
+  //OVERFLOWCHECKS OFF is a necessary workaround for a Delphi compiler bug that very
+  //occasionally reports overflow errors while still returning correct values
+  //eg var A, B: Int64; begin A := -$13456780; B := -$73456789; A := A * B; end;
+  //see https://forums.embarcadero.com/message.jspa?messageID=871444
+  {$OVERFLOWCHECKS OFF}
 
   HORIZONTAL = NegInfinity;
   UNASSIGNED  : integer = -1;
@@ -300,7 +311,6 @@ type
 
 resourcestring
   rsRangeErr        = 'Coordinate exceeds range bounds';
-  rsOpenPath        = 'Open paths require setting a pre-compiler directive.';
   rsOpenPathSubOnly = 'Only subject paths can be open.';
   rsOpenPathErr     = 'TPolyTree struct is needed for open path clipping.';
   rsClippingErr     = 'Undefined clipping error';
@@ -377,8 +387,6 @@ begin
   else result := EmptyRect;
 end;
 //------------------------------------------------------------------------------
-
-{$IFNDEF use_int32}
 
 function UInt64LT(const i, j: Int64): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -461,9 +469,6 @@ begin
 
   if Negate then Int128Negate(Result);
 end;
-//------------------------------------------------------------------------------
-
-{$ENDIF} //$IFNDEF use_int32
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
@@ -474,25 +479,6 @@ begin
   Result := (P1.X = P2.X) and (P1.Y = P2.Y);
 end;
 //------------------------------------------------------------------------------
-
-{$IFDEF use_xyz}
-function IntPoint(const X, Y: Int64; Z: Int64 = 0): TIntPoint;
-begin
-  Result.X := X;
-  Result.Y := Y;
-  Result.Z := Z;
-end;
-//------------------------------------------------------------------------------
-
-function IntPoint(const X, Y: Double; Z: Double = 0): TIntPoint;
-begin
-  Result.X := Round(X);
-  Result.Y := Round(Y);
-  Result.Z := Round(Z);
-end;
-//------------------------------------------------------------------------------
-
-{$ELSE}
 
 function IntPoint(const X, Y: cInt): TIntPoint;
 begin
@@ -506,8 +492,6 @@ begin
   Result.X := Round(X);
   Result.Y := Round(Y);
 end;
-
-{$ENDIF}
 //------------------------------------------------------------------------------
 
 function DoublePoint(const X, Y: Double): TDoublePoint;
@@ -626,21 +610,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-//PointInPolygon: 0=false; +1=true; -1 when 'pt' is on a polygon edge
-function PointInPolygon(const pt: TIntPoint; const poly: TPath): Integer;
+//PathContainsPoint: 0=false; +1=true; -1 when 'pt' is on a polygon edge
+function PathContainsPoint(const path: TPath; const pt: TIntPoint): Integer;
 var
   i, cnt: Integer;
   d, d2, d3: double; //nb: double not cInt to avoid potential overflow errors
   ip, ipNext: TIntPoint;
 begin
   result := 0;
-  cnt := Length(poly);
+  cnt := Length(path);
   if cnt < 3 then Exit;
-  ip := poly[0];
+  ip := path[0];
   for i := 1 to cnt do
   begin
-    if i < cnt then ipNext := poly[i]
-    else ipNext := poly[0];
+    if i < cnt then ipNext := path[i]
+    else ipNext := path[0];
 
     if (ipNext.Y = pt.Y) then
     begin
@@ -685,62 +669,6 @@ begin
 end;
 //---------------------------------------------------------------------------
 
-function PointInPolygon(const pt: TIntPoint; ops: POutPt): Integer; overload;
-var
-  d, d2, d3: double;
-  opStart: POutPt;
-  pt1, ptN: TIntPoint;
-begin
-  result := 0;
-  opStart := ops;
-  pt1.X := ops.Pt.X; pt1.Y := ops.Pt.Y;
-  repeat
-    ops := ops.Next;
-    ptN.X := ops.Pt.X; ptN.Y := ops.Pt.Y;
-
-    if (ptN.Y = pt.Y) then
-    begin
-      if (ptN.X = pt.X) or ((pt1.Y = pt.Y) and
-        ((ptN.X > pt.X) = (pt1.X < pt.X))) then
-      begin
-        result := -1;
-        Exit;
-      end;
-    end;
-
-    if ((pt1.Y < pt.Y) <> (ptN.Y < pt.Y)) then
-    begin
-      if (pt1.X >= pt.X) then
-      begin
-        if (ptN.X > pt.X) then
-          result := 1 - result
-        else
-        begin
-          d2 := (pt1.X - pt.X);
-          d3 := (ptN.X - pt.X);
-          d := d2 * (ptN.Y - pt.Y) - d3 * (pt1.Y - pt.Y);
-          if (d = 0) then begin result := -1; Exit; end;
-          if ((d > 0) = (ptN.Y > pt1.Y)) then
-            result := 1 - result;
-        end;
-      end else
-      begin
-        if (ptN.X > pt.X) then
-        begin
-          d2 := (pt1.X - pt.X);
-          d3 := (ptN.X - pt.X);
-          d := d2 * (ptN.Y - pt.Y) - d3 * (pt1.Y - pt.Y);
-          if (d = 0) then begin result := -1; Exit; end;
-          if ((d > 0) = (ptN.Y > pt1.Y)) then
-            result := 1 - result;
-        end;
-      end;
-    end;
-    pt1 := ptN;
-  until ops = opStart;
-end;
-//---------------------------------------------------------------------------
-
 function GetTopDeltaX(E1, E2: PActive): cInt; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if E1.Top.Y > E2.Top.Y then
@@ -759,9 +687,6 @@ function GetIntersectPoint(E1, E2: PActive): TIntPoint;
 var
   B1,B2,M: Double;
 begin
-{$IFDEF use_xyz}
-  ip.Z := 0;
-{$ENDIF}
   //if parallel then return the current pt of E1 ...
   if (E1.Dx = E2.Dx) then
   begin
@@ -806,12 +731,10 @@ end;
 function SlopesEqual(E1, E2: PActive;
   UseFullInt64Range: Boolean): Boolean; overload;
 begin
-{$IFNDEF use_int32}
   if UseFullInt64Range then
     Result := Int128Equal(Int128Mul(E1.Top.Y-E1.Bot.Y, E2.Top.X-E2.Bot.X),
       Int128Mul(E1.Top.X-E1.Bot.X, E2.Top.Y-E2.Bot.Y))
   else
-{$ENDIF}
     Result := (E1.Top.Y-E1.Bot.Y) * (E2.Top.X-E2.Bot.X) =
       (E1.Top.X-E1.Bot.X) * (E2.Top.Y-E2.Bot.Y);
 end;
@@ -820,12 +743,10 @@ end;
 function SlopesEqual(const Pt1, Pt2, Pt3: TIntPoint;
   UseFullInt64Range: Boolean): Boolean; overload;
 begin
-{$IFNDEF use_int32}
   if UseFullInt64Range then
     Result := Int128Equal(
       Int128Mul(Pt1.Y-Pt2.Y, Pt2.X-Pt3.X), Int128Mul(Pt1.X-Pt2.X, Pt2.Y-Pt3.Y))
   else
-{$ENDIF}
     Result := (Pt1.Y-Pt2.Y)*(Pt2.X-Pt3.X) = (Pt1.X-Pt2.X)*(Pt2.Y-Pt3.Y);
 end;
 //---------------------------------------------------------------------------
@@ -833,12 +754,10 @@ end;
 function SlopesEqual(const L1a, L1b, L2a, L2b: TIntPoint;
   UseFullInt64Range: Boolean): Boolean; overload;
 begin
-{$IFNDEF use_int32}
   if UseFullInt64Range then
     Result := Int128Equal(
       Int128Mul(L1a.Y-L1b.Y, L2a.X-L2b.X), Int128Mul(L2a.Y-L2b.Y, L1a.X-L1b.X))
   else
-{$ENDIF}
   //dy1 * dx2 = dy2 * dx1
   Result := (L1a.Y-L1b.Y)*(L2a.X-L2b.X) = (L2a.Y-L2b.Y)*(L1a.X-L1b.X);
 end;
@@ -938,6 +857,14 @@ begin
   FIntersectList.Free;
   FVertexList.Free;
   inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper2.CleanUp;
+begin
+  while assigned(FActives) do DeleteFromAEL(FActives);
+  DisposeScanLineList;
+  DisposeAllOutRecs;
 end;
 //------------------------------------------------------------------------------
 
@@ -1172,7 +1099,7 @@ begin
 
   if isOpen then
   begin
-    include(result[0].flags, vfStart);
+    include(result[0].flags, vfOpenStart);
     if goingUp then
       AddLocMin(@result[0]) else
       include(result[0].flags, vfMaxima);
@@ -1206,7 +1133,7 @@ begin
 
   if isOpen then
   begin
-    include(result[i].flags, vfEnd);
+    include(result[i].flags, vfOpenEnd);
     if goingUp then
       include(result[i].flags, vfMaxima) else
       AddLocMin(@result[i]);
@@ -1236,9 +1163,6 @@ procedure TClipper2.AddPath(const path: TPath; PolyType: TPolyType;
 var
   vertices: PVertexArray;
 begin
-{$IFNDEF use_lines}
-  if isOpen then raise EClipperLibException.Create(rsOpenPath);
-{$ENDIF}
   if isOpen then
   begin
     if (PolyType = ptClip) then
@@ -1332,7 +1256,6 @@ begin
     end
     else
       Edge.WindCnt := Edge.WindDelta;
-    Edge.WindCnt2 := 0;
     E := FActives; //ie get ready to calc WindCnt2
   end
   else if IsOpen(Edge) and (FClipType <> ctUnion) then
@@ -1409,7 +1332,7 @@ begin
     //even-odd filling ...
     while (E <> Edge) do
     begin
-      if IsOpen(E) then //do nothing (ie ignore lines)
+      if IsSamePolyType(E, Edge) or IsOpen(E) then //do nothing
       else if Edge.WindCnt2 = 0 then Edge.WindCnt2 := 1
       else Edge.WindCnt2 := 0;
       E := E.NextInAEL;
@@ -1419,7 +1342,8 @@ begin
     //NonZero, Positive, or Negative filling ...
     while (E <> Edge) do
     begin
-      Inc(Edge.WindCnt2, E.WindDelta);
+      if not IsSamePolyType(E, Edge) and not IsOpen(E) then
+        Inc(Edge.WindCnt2, E.WindDelta);
       E := E.NextInAEL;
     end;
   end;
@@ -1483,7 +1407,11 @@ begin
   //Add any local minima at BotY ...
   while PopLocalMinima(BotY, LocMin) do
   begin
-    if not (vfStart in LocMin.vertex.flags) then
+
+    if (vfOpenStart in LocMin.vertex.flags) then
+    begin
+      LeftB := nil;
+    end else
     begin
       new(LeftB);
       FillChar(LeftB^, sizeof(TActive), 0);
@@ -1493,13 +1421,16 @@ begin
       LeftB.vertTop := LocMin.vertex.prev; //ie descending
       LeftB.Top := LeftB.vertTop.Pt;
       LeftB.Curr := LeftB.Bot;
+      LeftB.WindCnt2 := 0;
       LeftB.WindDelta := -1;
       SetDx(LeftB);
       if LocMin.IsOpen then include(LeftB.Flags, afOpen);
-    end else
-      LeftB := nil;
+    end;
 
-    if not (vfEnd in LocMin.vertex.flags) then
+    if (vfOpenEnd in LocMin.vertex.flags) then
+    begin
+      RightB := nil;
+    end else
     begin
       new(RightB);
       FillChar(RightB^, sizeof(TActive), 0);
@@ -1509,11 +1440,11 @@ begin
       RightB.vertTop := LocMin.vertex.next; //ie ascending
       RightB.Top := RightB.vertTop.Pt;
       RightB.Curr := RightB.Bot;
+      RightB.WindCnt2 := 0;
       RightB.WindDelta := 1;
       SetDx(RightB);
       if LocMin.IsOpen then include(RightB.Flags, afOpen);
-    end else
-      RightB := nil;
+    end;
 
     //Currently LeftB is just the descending bound and RightB is the ascending.
     //Now if the LeftB isn't on the left of RightB then we need swap them.
@@ -1526,9 +1457,8 @@ begin
           LeftB := RightB;
           RightB := tmp;
        end;
-    end;
-
-    if not assigned(LeftB) then
+    end
+    else if not assigned(LeftB) then
     begin
       LeftB := RightB;
       RightB := nil;
@@ -1551,13 +1481,17 @@ begin
         InsertScanLine(RightB.Top.Y);
     end
     else if IsContributing(LeftB) then
-      AddOutPt(LeftB, LeftB.Bot); //an open path
+    begin
+      //ie open path that's not at a local minima
+      StartOpenPath(LeftB, LeftB.Bot);
+      AddOutPt(LeftB, LeftB.Bot);
+    end;
 
     if IsHorizontal(LeftB) then
       PushHorz(LeftB) else
       InsertScanLine(LeftB.Top.Y);
 
-    if (LeftB.NextInAEL <> RightB) then
+    if assigned(RightB) and (LeftB.NextInAEL <> RightB) then
     begin
       //intersect edges that are between left and right bounds ...
       E := LeftB.NextInAEL;
@@ -1587,6 +1521,27 @@ begin
   E.NextInAEL := nil;
   E.PrevInAEL := nil;
   Dispose(E);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper2.StartOpenPath(e: PActive; const pt: TIntPoint);
+var
+  OutRec: POutRec;
+  op    : POutPt;
+begin
+  new(OutRec);
+  OutRec.Idx := FPolyOutList.Add(OutRec);
+  OutRec.Owner := nil;
+  OutRec.Flags := [orOpen];
+  OutRec.PolyPath := nil;
+  OutRec.StartE := nil;
+  OutRec.EndE := nil;
+  e.OutRec := OutRec;
+  new(op);
+  op.Pt := pt;
+  op.Next := op;
+  op.Prev := op;
+  OutRec.Pts := op;
 end;
 //------------------------------------------------------------------------------
 
@@ -1675,6 +1630,7 @@ begin
     OutRec.Flags := [] else
     OutRec.Flags := [orOuter];
   if afOpen in e1.Flags then Include(OutRec.Flags, orOpen);
+  OutRec.PolyPath := nil;
 
   //now set orientation ...
   if IsHorizontal(e1) then
@@ -1807,13 +1763,8 @@ begin
   E1.Curr := Pt;
   E2.Curr := Pt;
 
-{$IFDEF use_xyz}
-        SetZ(Pt, E1, E2, FZFillCallback);
-{$ENDIF}
-
-{$IFDEF use_lines}
   //if either edge is on an OPEN path ...
-  if IsOpen(E1) or IsOpen(E2) then
+  if FHasOpenPaths and (IsOpen(E1) or IsOpen(E2)) then
   begin
     //ignore subject-subject open path intersections ...
     if IsOpen(E1) AND IsOpen(E2) then Exit
@@ -1825,15 +1776,17 @@ begin
       begin
         if (E2Contributing) then
         begin
+          if not E1contributing then StartOpenPath(E1, Pt);
           AddOutPt(E1, pt);
-          if (E1Contributing) then E1.OutRec := nil; //todo check
+          if (E1Contributing) then E1.OutRec := nil;
         end;
       end else
       begin
         if (E1Contributing) then
         begin
+          if not E2contributing then StartOpenPath(E2, Pt);
           AddOutPt(E2, pt);
-          if (E2Contributing) then E2.OutRec := nil; //todo check
+          if (E2Contributing) then E2.OutRec := nil;
         end;
       end;
     end
@@ -1843,19 +1796,20 @@ begin
       if IsOpen(E1) and (Abs(E2.WindCnt) = 1) and
        ((FClipType <> ctUnion) or (E2.WindCnt2 = 0)) then
       begin
+        if not E1contributing then StartOpenPath(E1, Pt);
         AddOutPt(E1, Pt);
-        if E1Contributing then E1.OutRec := nil; //todo check
+        if E1Contributing then E1.OutRec := nil;
       end
       else if IsOpen(E2) and (Abs(E1.WindCnt) = 1) and
        ((FClipType <> ctUnion) or (E1.WindCnt2 = 0)) then
       begin
+        if not E2contributing then StartOpenPath(E2, Pt);
         AddOutPt(E2, Pt);
-        if E2Contributing then E2.OutRec := nil; //todo check
+        if E2Contributing then E2.OutRec := nil;
       end
     end;
     Exit;
   end;
-{$ENDIF}
 
   //update winding counts...
   //assumes that E1 will be to the right of E2 ABOVE the intersection
@@ -1981,17 +1935,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
-  fillType: TPolyFillType = pftEvenOdd): Boolean;
+function TClipper2.ExecuteInternal(clipType: TClipType; fillType: TPolyFillType): Boolean;
 var
   Y: cInt;
   E: PActive;
 begin
   Result := False;
-  solution := nil;
-  //nb: Open paths can only be returned via the PolyTree structure ...
-  if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
-
   if FExecuteLocked then Exit;
   try try
     FExecuteLocked := True;
@@ -2005,22 +1954,62 @@ begin
     begin
       InsertLocalMinimaIntoAEL(Y);
       while PopHorz(E) do ProcessHorizontal(E);
-      if not PopScanLine(Y) then break; //Y = top of scanbeam
-      ProcessIntersections(Y);
+      if not PopScanLine(Y) then break; //Y == top of scanbeam
+      ProcessIntersections(Y);          //process scanbeam intersections
       DoTopOfScanbeam(Y); //leaves horizontals for next loop iteration
     end;
     ////////////////////////////////////////////////////////
-
-    solution := BuildResult;
     Result := True;
   except;
     Result := False;
   end;
   finally
-    while assigned(FActives) do DeleteFromAEL(FActives);
-    DisposeScanLineList;
-    DisposeAllOutRecs;
     FExecuteLocked := False;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
+  fillType: TPolyFillType): Boolean;
+var
+  dummy: TPaths;
+begin
+  //nb: Open paths can only be returned via the PolyTree structure ...
+  if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
+  solution := nil;
+  try
+    Result := ExecuteInternal(clipType, fillType);
+    if Result then BuildResult(solution, dummy);
+  finally
+    CleanUp;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function TClipper2.Execute(clipType: TClipType; out solClosed, solOpen: TPaths;
+  fillType: TPolyFillType = pftEvenOdd): Boolean;
+begin
+  solClosed := nil;
+  solOpen := nil;
+  try
+    Result := ExecuteInternal(clipType, fillType);
+    if Result then BuildResult(solClosed, solOpen);
+  finally
+    CleanUp;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function TClipper2.Execute(clipType: TClipType; var solution: TPolyTree;
+  fillType: TPolyFillType): Boolean;
+begin
+  try
+    if assigned(solution) then solution.Clear
+    else solution := TPolyTree.Create;
+    Result := ExecuteInternal(clipType, fillType);
+    if Result then BuildResult2(solution);
+  finally
+    CleanUp;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2316,16 +2305,23 @@ begin
     HorzEdge.Curr := pt;
   end;
 
+  maxPair := nil;
   if (vfMaxima in HorzEdge.vertTop.flags) then
   begin
-    maxPair := GetMaximaPair(HorzEdge);
-    if assigned(maxPair) then
+    if (afOpen in HorzEdge.flags) and
+      ([vfOpenStart, vfOpenEnd] * HorzEdge.vertTop.flags <> []) then
     begin
       SetMaximaFlag(HorzEdge);
-      SetMaximaFlag(maxPair);
+    end else
+    begin
+      maxPair := GetMaximaPair(HorzEdge);
+      if assigned(maxPair) then
+      begin
+        SetMaximaFlag(HorzEdge);
+        SetMaximaFlag(maxPair);
+      end;
     end;
-  end else
-    maxPair := nil;
+  end;
 
   ResetHorzDirection;
   if IsHotEdge(HorzEdge) then
@@ -2354,9 +2350,7 @@ begin
       if (e = maxPair) then
       begin
         if IsHotEdge(HorzEdge)  then
-        begin
           AddLocalMaxPoly(HorzEdge, e, HorzEdge.Top);
-        end;
         DeleteFromAEL(e);
         DeleteFromAEL(HorzEdge);
         Exit;
@@ -2389,11 +2383,15 @@ begin
     ResetHorzDirection;
   end;
 
-  //we've now reached the end of an intermediate horizontal ...
   if IsHotEdge(HorzEdge) then
     AddOutPt(HorzEdge, HorzEdge.Top);
 
-  UpdateEdgeIntoAEL(HorzEdge);
+  //unless its an open path we've reached the end of an intermediate horiz ...
+
+  if IsMaximaFlagged(HorzEdge) and not assigned(maxPair) then
+    DeleteFromAEL(HorzEdge) //ie an open path
+  else
+    UpdateEdgeIntoAEL(HorzEdge);
 end;
 //------------------------------------------------------------------------------
 
@@ -2437,29 +2435,47 @@ var
 begin
   ePrev := e.PrevInAEL;
 
-{$IFDEF use_lines}
+  if (afOpen in e.Flags) and
+    ([vfOpenStart, vfOpenEnd] * e.vertTop.flags <> []) then
+  begin
+    Result := e.NextInAEL;
+    if IsHotEdge(e) then AddOutPt(e, e.Top);
+    if not IsHorizontal(e) then DeleteFromAEL(e);
+    Exit;
+  end else
+  begin
+    eMaxPair := GetMaximaPair(e);
+    if not assigned(eMaxPair) then
+    begin
+      //EMaxPair is a horizontal ...
+      Result := e.NextInAEL;
+      Exit;
+    end;
+  end;
+
+  //only non-horizontal maxima here.
+  eNext := e.NextInAEL;
+
   if IsOpen(e) then
   begin
     if IsHotEdge(e) then
-      AddOutPt(e, e.Top);
+    begin
+      if assigned(eMaxPair) then
+        AddLocalMaxPoly(e, eMaxPair, e.Top) else
+        AddOutPt(e, e.Top);
+    end;
+    if assigned(eMaxPair) then
+      DeleteFromAEL(eMaxPair);
     DeleteFromAEL(e);
+
     if assigned(ePrev) then
       Result := ePrev.NextInAEL else
       Result := FActives;
     Exit;
   end;
-{$ENDIF}
 
-  eMaxPair := GetMaximaPair(e);
-  if not assigned(eMaxPair) then
-  begin
-    //EMaxPair is a horizontal ...
-    Result := e.NextInAEL;
-    Exit;
-  end;
-  eNext := e.NextInAEL;
 
-  //only non-horizontal maxima here.
+
 
   //process any edges between maxima pair ...
   while (eNext <> eMaxPair) do
@@ -2528,7 +2544,7 @@ begin
       E1.OutRec.Pts := P2_st;
       E1.OutRec.StartE := E2.OutRec.StartE;
     end;
-    if assigned(E1.OutRec.StartE.OutRec) then //ie closed path
+    if assigned(E1.OutRec.StartE) then //ie closed path
       E1.OutRec.StartE.OutRec := E1.OutRec;
   end else
   begin
@@ -2550,7 +2566,7 @@ begin
       P1_st.Prev := P2_st;
       E1.OutRec.EndE := E2.OutRec.StartE;
     end;
-    if assigned(E1.OutRec.EndE.OutRec) then //ie closed path
+    if assigned(E1.OutRec.EndE) then //ie closed path
       E1.OutRec.EndE.OutRec := E1.OutRec;
   end;
 
@@ -2583,14 +2599,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.BuildResult: TPaths;
+procedure TClipper2.BuildResult(out closedPaths, openPaths: TPaths);
 var
-  I, J, K, Cnt: Integer;
+  I, J, cnt, cntClosed, cntOpen: Integer;
   OutRec: POutRec;
   Op: POutPt;
 begin
-  J := 0;
-  SetLength(Result, FPolyOutList.Count);
+  cntClosed := 0;
+  cntOpen := 0;
+  SetLength(closedPaths, FPolyOutList.Count);
+  SetLength(openPaths, FPolyOutList.Count);
   for I := 0 to FPolyOutList.Count -1 do
     if Assigned(fPolyOutList[I]) then
     begin
@@ -2598,21 +2616,220 @@ begin
       if not assigned(OutRec.Pts) then Continue;
 
       Op := OutRec.Pts.Prev;
-      Cnt := PointCount(Op);
+      cnt := PointCount(Op);
       //fixup for duplicate start and end points ...
-      if PointsEqual(Op.Pt, OutRec.Pts.Pt) then dec(Cnt);
-      if (Cnt < 2) then Continue;
-      SetLength(Result[J], Cnt);
-      for K := 0 to Cnt -1 do
+      if PointsEqual(Op.Pt, OutRec.Pts.Pt) then dec(cnt);
+
+      if (orOpen in OutRec.Flags) then
       begin
-        Result[J][K] := Op.Pt;
-        Op := Op.Prev;
+        if (Cnt < 1) then Continue;
+        SetLength(openPaths[cntOpen], cnt);
+        for J := 0 to cnt -1 do
+        begin
+          openPaths[cntOpen][J] := Op.Pt;
+          Op := Op.Prev;
+        end;
+        Inc(cntOpen);
+      end else
+      begin
+        if (Cnt < 2) then Continue;
+        SetLength(closedPaths[cntClosed], cnt);
+        for J := 0 to cnt -1 do
+        begin
+          closedPaths[cntClosed][J] := Op.Pt;
+          Op := Op.Prev;
+        end;
+        Inc(cntClosed);
       end;
-      Inc(J);
+
     end;
-  SetLength(Result, J);
+  SetLength(closedPaths, cntClosed);
+  SetLength(openPaths, cntOpen);
 end;
 //------------------------------------------------------------------------------
+
+procedure TClipper2.BuildResult2(PolyTree: TPolyTree);
+var
+  i, j, cnt: Integer;
+  OutRec: POutRec;
+  Op: POutPt;
+  path: TPath;
+  parentPoly: TPoly;
+begin
+  for i := 0 to FPolyOutList.Count -1 do
+    if Assigned(fPolyOutList[i]) then
+    begin
+      OutRec := FPolyOutList[i];
+      if not assigned(OutRec.Pts) then Continue;
+
+      Op := OutRec.Pts.Prev;
+      cnt := PointCount(Op);
+      //avoid duplicate start and end points ...
+      if PointsEqual(Op.Pt, OutRec.Pts.Pt) then dec(cnt);
+
+      if (cnt < 2) then
+      begin
+        if not (orOpen in OutRec.Flags) or (cnt < 1) then Continue;
+      end;
+
+      SetLength(path, cnt);
+      for j := 0 to cnt -1 do
+      begin
+        path[j] := Op.Pt;
+        Op := Op.Prev;
+      end;
+
+      if assigned(OutRec.Owner) then parentPoly := OutRec.Owner.PolyPath
+      else parentPoly := PolyTree;
+
+      OutRec.PolyPath := PolyTree.AddChild(parentPoly, path,
+        orOpen in OutRec.Flags);
+    end;
+end;
+
+//------------------------------------------------------------------------------
+//  TPoly class
+//------------------------------------------------------------------------------
+
+constructor TPoly.Create;
+begin
+  FChilds := TList.Create;
+end;
+//------------------------------------------------------------------------------
+
+destructor TPoly.Destroy;
+var
+  i: integer;
+begin
+  for i := 0 to FChilds.Count -1 do
+    TPoly(FChilds[i]).Free;
+  FChilds.Free;
+  inherited Destroy;
+end;
+//------------------------------------------------------------------------------
+
+function  TPoly.GetChild(Index: Integer): TPolyPath;
+begin
+  if (Index < 0) or (index >= FChilds.Count) then
+    REsult := nil else
+    Result := TPolyPath(FChilds[Index]);
+end;
+//------------------------------------------------------------------------------
+
+function  TPoly.IsHoleNode: boolean;
+begin
+  result := not assigned(FParent) or not FParent.IsHoleNode;
+end;
+//------------------------------------------------------------------------------
+
+function  TPoly.GetChildCnt: integer;
+begin
+  Result := FChilds.Count;
+end;
+
+//------------------------------------------------------------------------------
+// TPolyTree class
+//------------------------------------------------------------------------------
+
+destructor TPolyTree.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+function TPolyTree.AddChild(AParent: TPoly;
+  const Path: TPath; IsOpen: Boolean): TPolyPath;
+begin
+  assert((AParent is TPolyTree) or
+    Path1ContainsPath2(AParent.Path, Path), 'oops!');
+  Result := TPolyPath.Create;
+  Result.FPath := Path;
+  Result.FIsOpen := IsOpen;
+  if IsOpen then AParent := self;
+  AParent.FChilds.Add(Result);
+  Result.FParent := AParent;
+end;
+//------------------------------------------------------------------------------
+
+procedure TPolyTree.Clear;
+var
+  i: integer;
+begin
+  for i := 0 to FChilds.Count -1 do
+    TPoly(FChilds[i]).Free;
+  FChilds.Clear;
+end;
+//------------------------------------------------------------------------------
+
+type
+  TNodeType = (ntAny, ntOpen, ntClosed);
+
+procedure AddPolyNodeToPaths(Poly: TPoly; NodeType: TNodeType; var Paths: TPaths);
+var
+  I: Integer;
+  Match: Boolean;
+begin
+  case NodeType of
+    ntOpen: Match := Poly.IsOpen;
+    ntClosed: Match := not Poly.IsOpen;
+    else Match := True;
+  end;
+
+  if (Length(Poly.Path) > 0) and Match then
+  begin
+    I := Length(Paths);
+    SetLength(Paths, I +1);
+    Paths[I] := Poly.Path;
+  end;
+
+  for I := 0 to Poly.ChildCount - 1 do
+    AddPolyNodeToPaths(Poly.Childs[I], NodeType, Paths);
+end;
+//------------------------------------------------------------------------------
+
+function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
+begin
+  Result := nil;
+  AddPolyNodeToPaths(PolyTree, ntAny, Result);
+end;
+//------------------------------------------------------------------------------
+
+function OpenPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
+begin
+  Result := nil;
+  AddPolyNodeToPaths(PolyTree, ntOpen, Result);
+end;
+//------------------------------------------------------------------------------
+
+function ClosedPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
+begin
+  Result := nil;
+  AddPolyNodeToPaths(PolyTree, ntClosed, Result);
+end;
+//------------------------------------------------------------------------------
+
+function Path1ContainsPath2(const Path1, Path2: TPath): Boolean;
+var
+  i: integer;
+  pt: TIntPoint;
+begin
+  //precondition: Path2 may touch but not intersect Path1.
+  result := false;
+  if (length(Path1) < 3) or (length(Path2) = 0) then Exit;
+  for i := 0 to high(Path2) do
+  begin
+    pt := Path2[i];
+    //nb: PathContainsPoint returns 0 if false, +1 if true, -1 if pt on polygon
+    case PathContainsPoint(Path1, pt) of
+      0: Exit;
+      1: begin Result := true; Exit; end;
+      //else point on line
+    end;
+  end;
+  result := true; //ie no vertex in Path2 is outside Path1.
+end;
+//---------------------------------------------------------------------------
 
 end.
 
