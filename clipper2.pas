@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  2 September 2017                                                *
+* Date      :  3 September 2017                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -191,7 +191,7 @@ type
     function DoMaxima(e: PActive): PActive;
     procedure JoinOutrecPaths(E1, E2: PActive);
     procedure BuildResult(out closedPaths, openPaths: TPaths);
-    procedure BuildResult2(PolyTree: TPolyTree);
+    procedure BuildResult2(PolyTree: TPolyTree; out OpenPaths: TPaths);
     procedure PushHorz(E: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function PopHorz(out E: PActive): Boolean;
     function ExecuteInternal(clipType: TClipType; fillType: TPolyFillType): Boolean;
@@ -213,20 +213,20 @@ type
     procedure AddPaths(const paths: TPaths; polyType: TPolyType = ptSubject;
       isOpen: Boolean = false); virtual;
 
-    function Execute(clipType: TClipType; out solution: TPaths;
+    function Execute(clipType: TClipType; out ClosedPaths: TPaths;
       fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
 
-    function Execute(clipType: TClipType; out solClosed, solOpen: TPaths;
+    function Execute(clipType: TClipType; out ClosedPaths, OpenPaths: TPaths;
       fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
 
-    function Execute(clipType: TClipType; var solution: TPolyTree;
-      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+    function Execute(clipType: TClipType; var Polytree: TPolyTree;
+      out OpenPaths: TPaths; fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
   end;
 
   TPoly = class
   private
     FParent   : TPoly;
-    FIsOpen   : Boolean;
+    //FIsOpen   : Boolean;
     FPath     : TPath;
     FChilds   : TList;
     function    GetChildCnt: integer;
@@ -234,7 +234,7 @@ type
     function    IsHoleNode: boolean;
     property    Parent: TPoly read FParent;
     property    IsHole: Boolean read IsHoleNode;
-    property    IsOpen: Boolean read FIsOpen;
+    //property    IsOpen: Boolean read FIsOpen;
     property    Path: TPath read FPath;
   public
     constructor Create;  virtual;
@@ -247,15 +247,14 @@ type
   public
     property    Parent;
     property    IsHole;
-    property    IsOpen;
+    //property    IsOpen;
     property    Path;
   end;
 
   TPolyTree = class(TPoly)
   public
     destructor Destroy; override;
-    function AddChild(AParent: TPoly;
-      const Path: TPath; IsOpen: Boolean = false): TPolyPath;
+    function AddChild(AParent: TPoly; const Path: TPath): TPolyPath;
     procedure Clear;
   end;
 
@@ -266,8 +265,6 @@ function Area(const path: TPath): Double; overload;
 function PathContainsPoint(const path: TPath; const pt: TIntPoint): Integer;
 function Path1ContainsPath2(const Path1, Path2: TPath): Boolean;
 function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
-function OpenPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
-function ClosedPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
 function GetBounds(const paths: TPaths): TIntRect;
 
 function IntPoint(const X, Y: cInt): TIntPoint; overload;
@@ -312,7 +309,7 @@ type
 resourcestring
   rsRangeErr        = 'Coordinate exceeds range bounds';
   rsOpenPathSubOnly = 'Only subject paths can be open.';
-  rsOpenPathErr     = 'TPolyTree struct is needed for open path clipping.';
+  rsPolyTreeErr     = 'The TPolyTree parameter hasn''t been assigned.';
   rsClippingErr     = 'Undefined clipping error';
 
 function IsHotEdge(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
@@ -1749,6 +1746,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TerminateOpenEdge(E: PActive);
+begin
+  if E.OutRec.StartE = E then
+    E.OutRec.StartE := nil else
+    E.OutRec.EndE := nil;
+  E.OutRec := nil;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipper2.IntersectEdges(E1, E2: PActive; Pt: TIntPoint);
 var
   E1Contributing, E2contributing: Boolean;
@@ -1778,7 +1784,7 @@ begin
         begin
           if not E1contributing then StartOpenPath(E1, Pt);
           AddOutPt(E1, pt);
-          if (E1Contributing) then E1.OutRec := nil;
+          if (E1Contributing) then TerminateOpenEdge(E1);
         end;
       end else
       begin
@@ -1786,7 +1792,7 @@ begin
         begin
           if not E2contributing then StartOpenPath(E2, Pt);
           AddOutPt(E2, pt);
-          if (E2Contributing) then E2.OutRec := nil;
+          if (E2Contributing) then TerminateOpenEdge(E2);
         end;
       end;
     end
@@ -1798,14 +1804,14 @@ begin
       begin
         if not E1contributing then StartOpenPath(E1, Pt);
         AddOutPt(E1, Pt);
-        if E1Contributing then E1.OutRec := nil;
+        if E1Contributing then TerminateOpenEdge(E1);
       end
       else if IsOpen(E2) and (Abs(E1.WindCnt) = 1) and
        ((FClipType <> ctUnion) or (E1.WindCnt2 = 0)) then
       begin
         if not E2contributing then StartOpenPath(E2, Pt);
         AddOutPt(E2, Pt);
-        if E2Contributing then E2.OutRec := nil;
+        if E2Contributing then TerminateOpenEdge(E2);
       end
     end;
     Exit;
@@ -1956,7 +1962,7 @@ begin
       while PopHorz(E) do ProcessHorizontal(E);
       if not PopScanLine(Y) then break; //Y == top of scanbeam
       ProcessIntersections(Y);          //process scanbeam intersections
-      DoTopOfScanbeam(Y); //leaves horizontals for next loop iteration
+      DoTopOfScanbeam(Y); //leaves pending horizontals for next loop iteration
     end;
     ////////////////////////////////////////////////////////
     Result := True;
@@ -1969,45 +1975,45 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; out solution: TPaths;
+function TClipper2.Execute(clipType: TClipType; out ClosedPaths: TPaths;
   fillType: TPolyFillType): Boolean;
 var
   dummy: TPaths;
 begin
-  //nb: Open paths can only be returned via the PolyTree structure ...
-  if FHasOpenPaths then raise EClipperLibException.Create(rsOpenPathErr);
-  solution := nil;
+  ClosedPaths := nil;
   try
     Result := ExecuteInternal(clipType, fillType);
-    if Result then BuildResult(solution, dummy);
+    if Result then BuildResult(ClosedPaths, dummy);
   finally
     CleanUp;
   end;
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; out solClosed, solOpen: TPaths;
+function TClipper2.Execute(clipType: TClipType; out ClosedPaths, OpenPaths: TPaths;
   fillType: TPolyFillType = pftEvenOdd): Boolean;
 begin
-  solClosed := nil;
-  solOpen := nil;
+  ClosedPaths := nil;
+  OpenPaths := nil;
   try
     Result := ExecuteInternal(clipType, fillType);
-    if Result then BuildResult(solClosed, solOpen);
+    if Result then BuildResult(ClosedPaths, OpenPaths);
   finally
     CleanUp;
   end;
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; var solution: TPolyTree;
-  fillType: TPolyFillType): Boolean;
+function TClipper2.Execute(clipType: TClipType; var Polytree: TPolyTree;
+  out OpenPaths: TPaths; fillType: TPolyFillType): Boolean;
 begin
+  if not assigned(Polytree) then
+    raise EClipperLibException.Create(rsPolyTreeErr);
+  Polytree.Clear;
+  OpenPaths := nil;
   try
-    if assigned(solution) then solution.Clear
-    else solution := TPolyTree.Create;
     Result := ExecuteInternal(clipType, fillType);
-    if Result then BuildResult2(solution);
+    if Result then BuildResult2(Polytree, OpenPaths);
   finally
     CleanUp;
   end;
@@ -2456,6 +2462,14 @@ begin
   //only non-horizontal maxima here.
   eNext := e.NextInAEL;
 
+  //process any edges between maxima pair ...
+  while (eNext <> eMaxPair) do
+  begin
+    IntersectEdges(e, eNext, e.Top);
+    SwapPositionsInAEL(e, eNext);
+    eNext := e.NextInAEL;
+  end;
+
   if IsOpen(e) then
   begin
     if IsHotEdge(e) then
@@ -2472,17 +2486,6 @@ begin
       Result := ePrev.NextInAEL else
       Result := FActives;
     Exit;
-  end;
-
-
-
-
-  //process any edges between maxima pair ...
-  while (eNext <> eMaxPair) do
-  begin
-    IntersectEdges(e, eNext, e.Top);
-    SwapPositionsInAEL(e, eNext);
-    eNext := e.NextInAEL;
   end;
 
   //here E.NextInAEL == ENext == EMaxPair ...
@@ -2648,14 +2651,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.BuildResult2(PolyTree: TPolyTree);
+procedure TClipper2.BuildResult2(PolyTree: TPolyTree; out OpenPaths: TPaths);
 var
-  i, j, cnt: Integer;
+  i, j, cnt, OpenCnt: Integer;
   OutRec: POutRec;
   Op: POutPt;
   path: TPath;
   parentPoly: TPoly;
 begin
+  setLength(OpenPaths, FPolyOutList.Count);
+  OpenCnt := 0;
   for i := 0 to FPolyOutList.Count -1 do
     if Assigned(fPolyOutList[i]) then
     begin
@@ -2679,12 +2684,18 @@ begin
         Op := Op.Prev;
       end;
 
-      if assigned(OutRec.Owner) then parentPoly := OutRec.Owner.PolyPath
-      else parentPoly := PolyTree;
-
-      OutRec.PolyPath := PolyTree.AddChild(parentPoly, path,
-        orOpen in OutRec.Flags);
+      if orOpen in OutRec.Flags then
+      begin
+        OpenPaths[OpenCnt] := path;
+        inc(OpenCnt);
+      end else
+      begin
+        if assigned(OutRec.Owner) then parentPoly := OutRec.Owner.PolyPath
+        else parentPoly := PolyTree;
+        OutRec.PolyPath := PolyTree.AddChild(parentPoly, path);
+      end;
     end;
+  setLength(OpenPaths, OpenCnt);
 end;
 
 //------------------------------------------------------------------------------
@@ -2739,14 +2750,14 @@ end;
 //------------------------------------------------------------------------------
 
 function TPolyTree.AddChild(AParent: TPoly;
-  const Path: TPath; IsOpen: Boolean): TPolyPath;
+  const Path: TPath): TPolyPath;
 begin
   assert((AParent is TPolyTree) or
     Path1ContainsPath2(AParent.Path, Path), 'oops!');
   Result := TPolyPath.Create;
   Result.FPath := Path;
-  Result.FIsOpen := IsOpen;
-  if IsOpen then AParent := self;
+  //Result.FIsOpen := IsOpen;
+  //if IsOpen then AParent := self;
   AParent.FChilds.Add(Result);
   Result.FParent := AParent;
 end;
@@ -2762,21 +2773,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-type
-  TNodeType = (ntAny, ntOpen, ntClosed);
-
-procedure AddPolyNodeToPaths(Poly: TPoly; NodeType: TNodeType; var Paths: TPaths);
+procedure AddPolyNodeToPaths(Poly: TPoly; var Paths: TPaths);
 var
   I: Integer;
-  Match: Boolean;
 begin
-  case NodeType of
-    ntOpen: Match := Poly.IsOpen;
-    ntClosed: Match := not Poly.IsOpen;
-    else Match := True;
-  end;
-
-  if (Length(Poly.Path) > 0) and Match then
+  if (Length(Poly.Path) > 0) then
   begin
     I := Length(Paths);
     SetLength(Paths, I +1);
@@ -2784,28 +2785,14 @@ begin
   end;
 
   for I := 0 to Poly.ChildCount - 1 do
-    AddPolyNodeToPaths(Poly.Childs[I], NodeType, Paths);
+    AddPolyNodeToPaths(Poly.Childs[I], Paths);
 end;
 //------------------------------------------------------------------------------
 
 function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
 begin
   Result := nil;
-  AddPolyNodeToPaths(PolyTree, ntAny, Result);
-end;
-//------------------------------------------------------------------------------
-
-function OpenPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
-begin
-  Result := nil;
-  AddPolyNodeToPaths(PolyTree, ntOpen, Result);
-end;
-//------------------------------------------------------------------------------
-
-function ClosedPathsFromPolyTree(PolyTree: TPolyTree): TPaths;
-begin
-  Result := nil;
-  AddPolyNodeToPaths(PolyTree, ntClosed, Result);
+  AddPolyNodeToPaths(PolyTree, Result);
 end;
 //------------------------------------------------------------------------------
 
