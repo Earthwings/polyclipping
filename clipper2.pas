@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  3 September 2017                                                *
+* Date      :  5 September 2017                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -49,13 +49,12 @@ type
 
   TClipType = (ctIntersection, ctUnion, ctDifference, ctXor);
   TPolyType = (ptSubject, ptClip);
-
   //By far the most widely used winding rules for polygon filling are EvenOdd
   //and NonZero (see GDI, GDI+, XLib, OpenGL, Cairo, AGG, Quartz, SVG, Gr32).
   //https://www.w3.org/TR/SVG/painting.html
-  TPolyFillType = (pftEvenOdd, pftNonZero, pftPositive, pftNegative);
+  TFillType = (pftEvenOdd, pftNonZero, pftPositive, pftNegative);
 
-  TVertexFlag = (vfOpen, vfOpenStart, vfOpenEnd, vfMaxima, vfMinima);
+  TVertexFlag = (vfOpenStart, vfOpenEnd, vfLocMax, vfLocMin);
   TVertexFlags = set of TVertexFlag;
 
   PVertex = ^TVertex;
@@ -85,9 +84,6 @@ type
 
   POutRec = ^TOutRec;
 
-  TActiveFlag = (afOpen, afMaxima);
-  TActiveFlags = set of TActiveFlag;
-
   PActive = ^TActive;
   TActive = record
     Bot      : TIntPoint;
@@ -98,7 +94,6 @@ type
     WindCnt  : integer;       //edge wind count of
     WindCnt2 : integer;       //wind count of opposite TPolyType
     OutRec   : POutRec;
-    Flags    : TActiveFlags;
     //AEL - active edge list (Vatti's AET - active edge table)
     PrevInAEL: PActive;
     NextInAEL: PActive;
@@ -141,8 +136,6 @@ type
     PolyPath : TPolyPath;
   end;
 
-  TDirection = (dRightToLeft, dLeftToRight); //used for horizontal processing
-
   TClipper2 = class
   private
     FScanLine           : PScanLine;
@@ -152,7 +145,7 @@ type
     FCurrentLocMinIdx   : integer;
     FIntersectList      : TList;
     FClipType           : TClipType;
-    FFillType           : TPolyFillType;
+    FFillType           : TFillType;
     FExecuteLocked      : Boolean;
     procedure RangeCheck(const pt: TIntPoint);
     function PathToVertexArray(const p: TPath;
@@ -194,7 +187,7 @@ type
     procedure BuildResult2(PolyTree: TPolyTree; out OpenPaths: TPaths);
     procedure PushHorz(E: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function PopHorz(out E: PActive): Boolean;
-    function ExecuteInternal(clipType: TClipType; fillType: TPolyFillType): Boolean;
+    function ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
   protected
     FPolyOutList      : TList;
     FLocMinList       : TList;
@@ -214,19 +207,18 @@ type
       isOpen: Boolean = false); virtual;
 
     function Execute(clipType: TClipType; out ClosedPaths: TPaths;
-      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+      fillType: TFillType = pftEvenOdd): Boolean; overload;
 
     function Execute(clipType: TClipType; out ClosedPaths, OpenPaths: TPaths;
-      fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+      fillType: TFillType = pftEvenOdd): Boolean; overload;
 
     function Execute(clipType: TClipType; var Polytree: TPolyTree;
-      out OpenPaths: TPaths; fillType: TPolyFillType = pftEvenOdd): Boolean; overload;
+      out OpenPaths: TPaths; fillType: TFillType = pftEvenOdd): Boolean; overload;
   end;
 
   TPoly = class
   private
     FParent   : TPoly;
-    //FIsOpen   : Boolean;
     FPath     : TPath;
     FChilds   : TList;
     function    GetChildCnt: integer;
@@ -234,7 +226,6 @@ type
     function    IsHoleNode: boolean;
     property    Parent: TPoly read FParent;
     property    IsHole: Boolean read IsHoleNode;
-    //property    IsOpen: Boolean read FIsOpen;
     property    Path: TPath read FPath;
   public
     constructor Create;  virtual;
@@ -247,7 +238,6 @@ type
   public
     property    Parent;
     property    IsHole;
-    //property    IsOpen;
     property    Path;
   end;
 
@@ -293,6 +283,7 @@ const
   //occasionally reports overflow errors while still returning correct values
   //eg var A, B: Int64; begin A := -$13456780; B := -$73456789; A := A * B; end;
   //see https://forums.embarcadero.com/message.jspa?messageID=871444
+  //nb: this issue was resolved in Delphi 10.2
   {$OVERFLOWCHECKS OFF}
 
   HORIZONTAL = NegInfinity;
@@ -350,7 +341,7 @@ end;
 
 function IsOpen(Edge: PActive): boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := afOpen in Edge.Flags;
+  result := Edge.LocMin.IsOpen;
 end;
 //------------------------------------------------------------------------------
 
@@ -791,15 +782,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure SetMaximaFlag(Edge: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+function IsMaxima(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  include(Edge.Flags, afMaxima);
-end;
-//------------------------------------------------------------------------------
-
-function IsMaximaFlagged(Edge: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  result := afMaxima in Edge.Flags;
+  result := vfLocMax in Edge.vertTop.flags;
 end;
 //------------------------------------------------------------------------------
 
@@ -830,6 +815,7 @@ begin
     end;
     result := nil; //this happens whenever the maxPair is a horizontal
   end;
+  if assigned(Result) and (Result.vertTop <> E.vertTop) then result := nil;
 end;
 
 //------------------------------------------------------------------------------
@@ -1047,8 +1033,8 @@ var
   var
     lm: PLocalMinimum;
   begin
-    if vfMinima in vert.flags then Exit; //ensures vertex is added only once
-    Include(vert.flags, vfMinima);
+    if vfLocMin in vert.flags then Exit; //ensures vertex is added only once
+    Include(vert.flags, vfLocMin);
     new(lm);
     lm.vertex := vert;
     lm.PolyType := polyType;
@@ -1099,7 +1085,7 @@ begin
     include(result[0].flags, vfOpenStart);
     if goingUp then
       AddLocMin(@result[0]) else
-      include(result[0].flags, vfMaxima);
+      include(result[0].flags, vfLocMax);
   end;
 
   //nb: polygon orientation is determined later (see InsertLocalMinimaIntoAEL).
@@ -1114,7 +1100,7 @@ begin
     result[j].prev := @result[i];
     if (p[j].Y > p[i].Y) and goingUp then
     begin
-      include(result[i].flags, vfMaxima);
+      include(result[i].flags, vfLocMax);
       goingUp := false;
     end
     else if (p[j].Y < p[i].Y) and not goingUp then
@@ -1132,7 +1118,7 @@ begin
   begin
     include(result[i].flags, vfOpenEnd);
     if goingUp then
-      include(result[i].flags, vfMaxima) else
+      include(result[i].flags, vfLocMax) else
       AddLocMin(@result[i]);
   end else
   begin
@@ -1141,7 +1127,7 @@ begin
       //going up so find local maxima ...
       v := @result[i];
       while (v.Next.Pt.Y <= v.Pt.Y) do v := v.next;
-      include(v.flags, vfMaxima);
+      include(v.flags, vfLocMax);
       if P0IsMinima then AddLocMin(@result[0]); //ie just turned to going up
     end else
     begin
@@ -1149,7 +1135,7 @@ begin
       v := @result[i];
       while (v.Next.Pt.Y >= v.Pt.Y) do v := v.next;
       AddLocMin(v);
-      if P0IsMaxima then include(result[0].flags, vfMaxima);
+      if P0IsMaxima then include(result[0].flags, vfLocMax);
     end;
   end;
 end;
@@ -1184,7 +1170,7 @@ end;
 
 function TClipper2.IsContributing(Edge: PActive): Boolean;
 var
-  pft: TPolyFillType;
+  pft: TFillType;
 begin
   pft := FFillType;
   case pft of
@@ -1236,7 +1222,7 @@ procedure TClipper2.SetWindingCount(Edge: PActive);
 var
   E, E2: PActive;
   Inside: Boolean;
-  pft: TPolyFillType;
+  pft: TFillType;
 begin
   E := Edge.PrevInAEL;
   //find the Edge of the same PolyType that immediately preceeds 'Edge' in AEL
@@ -1421,7 +1407,6 @@ begin
       LeftB.WindCnt2 := 0;
       LeftB.WindDelta := -1;
       SetDx(LeftB);
-      if LocMin.IsOpen then include(LeftB.Flags, afOpen);
     end;
 
     if (vfOpenEnd in LocMin.vertex.flags) then
@@ -1440,7 +1425,6 @@ begin
       RightB.WindCnt2 := 0;
       RightB.WindDelta := 1;
       SetDx(RightB);
-      if LocMin.IsOpen then include(RightB.Flags, afOpen);
     end;
 
     //Currently LeftB is just the descending bound and RightB is the ascending.
@@ -1626,7 +1610,7 @@ begin
   if assigned(OutRec.Owner) and (orOuter in OutRec.Owner.Flags) then
     OutRec.Flags := [] else
     OutRec.Flags := [orOuter];
-  if afOpen in e1.Flags then Include(OutRec.Flags, orOpen);
+  if IsOpen(e1) then Include(OutRec.Flags, orOpen);
   OutRec.PolyPath := nil;
 
   //now set orientation ...
@@ -1687,9 +1671,7 @@ end;
 procedure TClipper2.UpdateEdgeIntoAEL(var E: PActive);
 begin
   E.Bot := E.Top;
-  if E.WindDelta < 0 then
-    E.vertTop := E.vertTop.prev else
-    E.vertTop := E.vertTop.next;
+  E.vertTop := NextVertex(E);
   E.Top := E.vertTop.Pt;
   E.Curr := E.Bot;
   SetDx(E);
@@ -1746,7 +1728,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TerminateOpenEdge(E: PActive);
+procedure TerminateHotOpen(E: PActive);
 begin
   if E.OutRec.StartE = E then
     E.OutRec.StartE := nil else
@@ -1784,7 +1766,7 @@ begin
         begin
           if not E1contributing then StartOpenPath(E1, Pt);
           AddOutPt(E1, pt);
-          if (E1Contributing) then TerminateOpenEdge(E1);
+          if (E1Contributing) then TerminateHotOpen(E1);
         end;
       end else
       begin
@@ -1792,7 +1774,7 @@ begin
         begin
           if not E2contributing then StartOpenPath(E2, Pt);
           AddOutPt(E2, pt);
-          if (E2Contributing) then TerminateOpenEdge(E2);
+          if (E2Contributing) then TerminateHotOpen(E2);
         end;
       end;
     end
@@ -1804,14 +1786,14 @@ begin
       begin
         if not E1contributing then StartOpenPath(E1, Pt);
         AddOutPt(E1, Pt);
-        if E1Contributing then TerminateOpenEdge(E1);
+        if E1Contributing then TerminateHotOpen(E1);
       end
       else if IsOpen(E2) and (Abs(E1.WindCnt) = 1) and
        ((FClipType <> ctUnion) or (E1.WindCnt2 = 0)) then
       begin
         if not E2contributing then StartOpenPath(E2, Pt);
         AddOutPt(E2, Pt);
-        if E2Contributing then TerminateOpenEdge(E2);
+        if E2Contributing then TerminateHotOpen(E2);
       end
     end;
     Exit;
@@ -1941,7 +1923,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.ExecuteInternal(clipType: TClipType; fillType: TPolyFillType): Boolean;
+function TClipper2.ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
 var
   Y: cInt;
   E: PActive;
@@ -1976,7 +1958,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper2.Execute(clipType: TClipType; out ClosedPaths: TPaths;
-  fillType: TPolyFillType): Boolean;
+  fillType: TFillType): Boolean;
 var
   dummy: TPaths;
 begin
@@ -1991,7 +1973,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper2.Execute(clipType: TClipType; out ClosedPaths, OpenPaths: TPaths;
-  fillType: TPolyFillType = pftEvenOdd): Boolean;
+  fillType: TFillType = pftEvenOdd): Boolean;
 begin
   ClosedPaths := nil;
   OpenPaths := nil;
@@ -2005,7 +1987,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper2.Execute(clipType: TClipType; var Polytree: TPolyTree;
-  out OpenPaths: TPaths; fillType: TPolyFillType): Boolean;
+  out OpenPaths: TPaths; fillType: TFillType): Boolean;
 begin
   if not assigned(Polytree) then
     raise EClipperLibException.Create(rsPolyTreeErr);
@@ -2250,9 +2232,9 @@ procedure TClipper2.ProcessHorizontal(HorzEdge: PActive);
 var
   e, eNext, maxPair: PActive;
   horzLeft, horzRight: cInt;
-  direction: TDirection;
+  isLeftToRight: Boolean;
   pt: TIntPoint;
-  isMaxima: Boolean;
+  isMax: Boolean;
 
   procedure ResetHorzDirection;
   var
@@ -2266,20 +2248,18 @@ var
       e := HorzEdge.NextInAEL;
       while assigned(e) and (e <> maxPair) do
         e := e.NextInAEL;
-      if assigned(e) then
-        direction := dLeftToRight else
-        direction := dRightToLeft;
+      isLeftToRight := assigned(e);
     end
     else if HorzEdge.Curr.X < HorzEdge.Top.X then
     begin
       horzLeft := HorzEdge.Curr.X;
       horzRight := HorzEdge.Top.X;
-      direction := dLeftToRight;
+      isLeftToRight := true;
     end else
     begin
       horzLeft := HorzEdge.Top.X;
       horzRight := HorzEdge.Curr.X;
-      direction := dRightToLeft;
+      isLeftToRight := false;
     end;
   end;
   //------------------------------------------------------------------------
@@ -2301,10 +2281,10 @@ begin
 *******************************************************************************)
 
   //with closed paths, simplify consecutive horizontals into a 'single' edge ...
-  if not HorzEdge.LocMin.IsOpen then
+  if not IsOpen(HorzEdge) then
   begin
     pt := HorzEdge.Bot;
-    while not (vfMaxima in HorzEdge.vertTop.flags) and
+    while not IsMaxima(HorzEdge) and
       (NextVertex(HorzEdge).Pt.Y = pt.Y) do
         UpdateEdgeIntoAEL(HorzEdge);
     HorzEdge.Bot := pt;
@@ -2312,22 +2292,9 @@ begin
   end;
 
   maxPair := nil;
-  if (vfMaxima in HorzEdge.vertTop.flags) then
-  begin
-    if (afOpen in HorzEdge.flags) and
-      ([vfOpenStart, vfOpenEnd] * HorzEdge.vertTop.flags <> []) then
-    begin
-      SetMaximaFlag(HorzEdge);
-    end else
-    begin
-      maxPair := GetMaximaPair(HorzEdge);
-      if assigned(maxPair) then
-      begin
-        SetMaximaFlag(HorzEdge);
-        SetMaximaFlag(maxPair);
-      end;
-    end;
-  end;
+  if IsMaxima(HorzEdge) and (not IsOpen(HorzEdge) or
+      ([vfOpenStart, vfOpenEnd] * HorzEdge.vertTop.flags = [])) then
+        maxPair := GetMaximaPair(HorzEdge);
 
   ResetHorzDirection;
   if IsHotEdge(HorzEdge) then
@@ -2335,22 +2302,22 @@ begin
 
   while true do //loops through consec. horizontal edges (if open)
   begin
-    isMaxima := vfMaxima in HorzEdge.vertTop.flags;
-    if direction = dRightToLeft then
-      e := HorzEdge.PrevInAEL else
-      e := HorzEdge.NextInAEL;
+    isMax := IsMaxima(HorzEdge);
+    if isLeftToRight  then
+      e := HorzEdge.NextInAEL else
+      e := HorzEdge.PrevInAEL;
 
     while assigned(e) do
     begin
       //break if we've gone past the end of the horizontal ...
-      if ((direction = dLeftToRight) and (e.Curr.X > horzRight)) or
-        ((direction = dRightToLeft) and (e.Curr.X < horzLeft)) then break;
+      if (isLeftToRight and (e.Curr.X > horzRight)) or
+        (not isLeftToRight and (e.Curr.X < horzLeft)) then break;
       //or if we've got to the end of an intermediate horizontal edge ...
-      if (E.Curr.X = HorzEdge.Top.X) and not isMaxima and not IsHorizontal(e) then
+      if (E.Curr.X = HorzEdge.Top.X) and not isMax and not IsHorizontal(e) then
       begin
         pt := NextVertex(HorzEdge).Pt;
-        if((direction = dLeftToRight) and (TopX(E, pt.Y) >= pt.X)) or
-          ((direction = dRightToLeft) and (TopX(E, pt.Y) <= pt.X)) then Break;
+        if(isLeftToRight and (TopX(E, pt.Y) >= pt.X)) or
+          (not isLeftToRight and (TopX(E, pt.Y) <= pt.X)) then Break;
       end;
 
       if (e = maxPair) then
@@ -2362,9 +2329,7 @@ begin
         Exit;
       end;
 
-      if IsMaximaFlagged(e) then
-        //do nothing (nb: a maxima from another horizontal)
-      else if (direction = dLeftToRight) then
+      if (isLeftToRight) then
       begin
         pt := IntPoint(e.Curr.X, HorzEdge.Curr.Y);
         IntersectEdges(HorzEdge, e, pt);
@@ -2374,9 +2339,9 @@ begin
         IntersectEdges(e, HorzEdge, pt);
       end;
 
-      if direction = dRightToLeft then
-        eNext := e.PrevInAEL else
-        eNext := e.NextInAEL;
+      if isLeftToRight then
+        eNext := e.NextInAEL else
+        eNext := e.PrevInAEL;
       SwapPositionsInAEL(HorzEdge, e);
       e := eNext;
     end;
@@ -2387,17 +2352,27 @@ begin
     //still more horizontals in bound to process ...
     UpdateEdgeIntoAEL(HorzEdge);
     ResetHorzDirection;
+
+    if IsOpen(HorzEdge) then
+    begin
+      if IsMaxima(HorzEdge) then maxPair := GetMaximaPair(HorzEdge);
+      if IsHotEdge(HorzEdge) then AddOutPt(HorzEdge, HorzEdge.Bot);
+    end;
   end;
 
   if IsHotEdge(HorzEdge) then
     AddOutPt(HorzEdge, HorzEdge.Top);
 
-  //unless its an open path we've reached the end of an intermediate horiz ...
-
-  if IsMaximaFlagged(HorzEdge) and not assigned(maxPair) then
-    DeleteFromAEL(HorzEdge) //ie an open path
-  else
-    UpdateEdgeIntoAEL(HorzEdge);
+  if IsOpen(HorzEdge) then
+  begin
+    if not IsMaxima(HorzEdge) then
+      UpdateEdgeIntoAEL(HorzEdge)
+    else if assigned(maxPair) then
+          AddLocalMaxPoly(HorzEdge, maxPair, HorzEdge.Top)
+    else
+      DeleteFromAEL(HorzEdge);
+  end else
+    UpdateEdgeIntoAEL(HorzEdge); //this is the end of an intermediate horiz.
 end;
 //------------------------------------------------------------------------------
 
@@ -2408,12 +2383,11 @@ begin
   e := FActives;
   while Assigned(e) do
   begin
-    E.Flags := E.Flags - [afMaxima];
     //nb: E will never be horizontal at this point
     if (e.Top.Y = Y) then
     begin
       e.Curr := e.Top; //needed for horizontal processing
-      if (vfMaxima in e.vertTop.flags) then
+      if IsMaxima(e) then
       begin
         e := DoMaxima(e); //TOP OF BOUND (MAXIMA)
         Continue;
@@ -2441,12 +2415,15 @@ var
 begin
   ePrev := e.PrevInAEL;
 
-  if (afOpen in e.Flags) and
-    ([vfOpenStart, vfOpenEnd] * e.vertTop.flags <> []) then
+  if IsOpen(e) and ([vfOpenStart, vfOpenEnd] * e.vertTop.flags <> []) then
   begin
     Result := e.NextInAEL;
     if IsHotEdge(e) then AddOutPt(e, e.Top);
-    if not IsHorizontal(e) then DeleteFromAEL(e);
+    if not IsHorizontal(e) then
+    begin
+      if IsHotEdge(e) then TerminateHotOpen(e);
+      DeleteFromAEL(e);
+    end;
     Exit;
   end else
   begin
