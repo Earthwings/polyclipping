@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  5 September 2017                                                *
+* Date      :  9 September 2017                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -14,9 +14,6 @@
 
 using System;
 using System.Collections.Generic;
-//using System.Text;          //for Int128.AsString() & StringBuilder
-//using System.IO;            //debugging with streamReader & StreamWriter
-//using System.Windows.Forms; //debugging to clipboard
 
 namespace ClipperLib
 {
@@ -110,29 +107,30 @@ namespace ClipperLib
     }
   }
 
-  public enum ClipType { ctIntersection, ctUnion, ctDifference, ctXor };
-  public enum PolyType { ptSubject, ptClip };  
+  public enum ClipType { Intersection, Union, Difference, Xor };
+  public enum PolyType { Subject, Clip };  
   //By far the most widely used winding rules for polygon filling are
   //EvenOdd & NonZero (GDI, GDI+, XLib, OpenGL, Cairo, AGG, Quartz, SVG, Gr32)
   //Others rules include Positive, Negative and ABS_GTR_EQ_TWO (only in OpenGL)
   //see http://glprogramming.com/red/chapter11.html
-  public enum FillType { pftEvenOdd, pftNonZero, pftPositive, pftNegative };
+  public enum FillType { EvenOdd, NonZero, Positive, Negative };
 
   [Flags]
-  internal enum VertexFlags { vfOpenStart = 1, vfOpenEnd = 2, vfLocMax = 4, vfLocMin = 8};
+  internal enum VertexFlags { OpenStart = 1, OpenEnd = 2, LocMax = 4, LocMin = 8};
 
   internal class Vertex {
-        internal IntPoint Pt;
-        internal Vertex Next;
-        internal Vertex Prev;
-        internal VertexFlags Flags;
+    internal IntPoint Pt;
+    internal Vertex Next;
+    internal Vertex Prev;
+    internal VertexFlags Flags;
+    public Vertex(IntPoint ip) { Pt.X = ip.X; Pt.Y = ip.Y; }
   }
 
   public class LocalMinima
   {
-      internal Vertex Vertex;
-      internal PolyType PolyType;
-      internal Boolean IsOpen;
+    internal Vertex Vertex;
+    internal PolyType PolyType;
+    internal Boolean IsOpen;
   };
 
   internal class Active {
@@ -166,7 +164,7 @@ namespace ClipperLib
   };
 
   [Flags]
-  internal enum OutrecFlags { orOpen = 1, orOuter = 2, orHorz = 4, orHorzJoin = 8};
+  internal enum OutrecFlags { Open = 1, Outer = 2, Horz = 4, HorzJoin = 8};
 
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
@@ -205,129 +203,6 @@ namespace ClipperLib
   }
 
   //------------------------------------------------------------------------------
-  // Int128 struct (enables safe math on signed 64bit integers)
-  // eg Int128 val1((Int64)9223372036854775807); //ie 2^63 -1
-  //    Int128 val2((Int64)9223372036854775807);
-  //    Int128 val3 = val1 * val2;
-  //    val3.ToString => "85070591730234615847396907784232501249" (8.5e+37)
-  //------------------------------------------------------------------------------
-
-  internal struct Int128
-  {
-    private Int64 hi;
-    private UInt64 lo;
-
-    public Int128(Int64 _lo)
-    {
-      lo = (UInt64)_lo;
-      if (_lo < 0) hi = -1;
-      else hi = 0;
-    }
-
-    public Int128(Int64 _hi, UInt64 _lo)
-    {
-      lo = _lo;
-      hi = _hi;
-    }
-
-    public Int128(Int128 val)
-    {
-      hi = val.hi;
-      lo = val.lo;
-    }
-
-    public Boolean IsNegative()
-    {
-      return hi < 0;
-    }
-
-    public static Boolean operator ==(Int128 val1, Int128 val2)
-    {
-      if ((object)val1 == (object)val2) return true;
-      else if ((object)val1 == null || (object)val2 == null) return false;
-      return (val1.hi == val2.hi && val1.lo == val2.lo);
-    }
-
-    public static Boolean operator !=(Int128 val1, Int128 val2)
-    {
-      return !(val1 == val2);
-    }
-
-    public override Boolean Equals(System.Object obj)
-    {
-      if (obj == null || !(obj is Int128))
-        return false;
-      Int128 i128 = (Int128)obj;
-      return (i128.hi == hi && i128.lo == lo);
-    }
-
-    public override Int32 GetHashCode()
-    {
-      return hi.GetHashCode() ^ lo.GetHashCode();
-    }
-
-    public static Int128 operator +(Int128 lhs, Int128 rhs)
-    {
-      lhs.hi += rhs.hi;
-      lhs.lo += rhs.lo;
-      if (lhs.lo < rhs.lo) lhs.hi++;
-      return lhs;
-    }
-
-    public static Int128 operator -(Int128 val)
-    {
-      if (val.lo == 0)
-        return new Int128(-val.hi, 0);
-      else
-        return new Int128(~val.hi, ~val.lo + 1);
-    }
-
-    public static explicit operator double(Int128 val)
-    {
-      const double shift64 = 18446744073709551616.0; //2^64
-      if (val.hi < 0)
-      {
-        if (val.lo == 0)
-          return (double)val.hi * shift64;
-        else
-          return -(double)(~val.lo + ~val.hi * shift64);
-      }
-      else
-        return (double)(val.lo + val.hi * shift64);
-    }
-
-    //nb: Constructing two new Int128 objects every time we want to multiply longs  
-    //is slow. So, although calling the Int128Mul method doesn't look as clean, the 
-    //code runs significantly faster than if we'd used the * operator.
-
-    public static Int128 Int128Mul(Int64 lhs, Int64 rhs)
-    {
-      Boolean negate = (lhs < 0) != (rhs < 0);
-      if (lhs < 0) lhs = -lhs;
-      if (rhs < 0) rhs = -rhs;
-      UInt64 int1Hi = (UInt64)lhs >> 32;
-      UInt64 int1Lo = (UInt64)lhs & 0xFFFFFFFF;
-      UInt64 int2Hi = (UInt64)rhs >> 32;
-      UInt64 int2Lo = (UInt64)rhs & 0xFFFFFFFF;
-
-      //nb: see comments in clipper.pas
-      UInt64 a = int1Hi * int2Hi;
-      UInt64 b = int1Lo * int2Lo;
-      UInt64 c = int1Hi * int2Lo + int1Lo * int2Hi;
-
-      UInt64 lo;
-      Int64 hi;
-      hi = (Int64)(a + (c >> 32));
-
-      unchecked { lo = (c << 32) + b; }
-      if (lo < b) hi++;
-      Int128 result = new Int128(hi, lo);
-      return negate ? -result : result;
-    }
-
-  };
-
-  //------------------------------------------------------------------------------
   // PolyTree & PolyNode classes
   //------------------------------------------------------------------------------
 
@@ -337,6 +212,7 @@ namespace ClipperLib
     internal List<PolyPath> childs = new List<PolyPath>();
     internal Path path = new Path();
 
+    //-----------------------------------------------------
     private Boolean IsHoleNode()
     {
       Boolean result = true;
@@ -348,6 +224,7 @@ namespace ClipperLib
       }
       return result;
     }
+    //-----------------------------------------------------
 
     internal PolyPath AddChild(Path p)
     {
@@ -357,8 +234,33 @@ namespace ClipperLib
       Childs.Add(child);
       return child;
     }
+    //-----------------------------------------------------
 
     public void Clear() { Childs.Clear(); }
+
+    //the following two methods are really only for debugging ...
+
+    private static void AddPolyNodeToPaths(PolyPath pp, Paths paths)
+    {
+      Int32 cnt = pp.path.Count;
+      if (cnt > 0)
+      {
+        Path p = new Path(cnt);
+        foreach (IntPoint ip in pp.path) p.Add(ip);
+        paths.Add(p);
+      }
+      foreach (PolyPath polyp in pp.childs)
+        AddPolyNodeToPaths(polyp, paths);
+    }
+    //-----------------------------------------------------
+
+    public Paths PolyTreeToPaths()
+    {
+      Paths paths = new Paths();
+      AddPolyNodeToPaths(this, paths);
+      return paths;
+    }
+    //-----------------------------------------------------
 
     public Path Path { get { return path; } }
 
@@ -369,10 +271,10 @@ namespace ClipperLib
     public PolyPath Parent { get { return parent; } }
 
     public Boolean IsHole { get { return IsHoleNode(); } }
-
   }
 
   public class PolyTree : PolyPath { };
+
 
   //------------------------------------------------------------------------------
   // Clipper2 
@@ -381,8 +283,6 @@ namespace ClipperLib
   public class Clipper2
   {
     internal const double horizontal = double.NegativeInfinity;
-    internal const Int32 Unassigned = -1;
-
     internal ScanLine Scanline;
     internal Boolean HasOpenPaths;
     internal Boolean LocMinListSorted;
@@ -639,7 +539,7 @@ namespace ClipperLib
 
     private Boolean IsMaxima(Active e)
     {
-      return (VertexFlags.vfLocMax & e.VertTop.Flags) != 0;
+      return (VertexFlags.LocMax & e.VertTop.Flags) != 0;
     }
     //------------------------------------------------------------------------------
 
@@ -779,8 +679,8 @@ namespace ClipperLib
     private void AddLocMin(Vertex vert, PolyType pt, Boolean isOpen)
     {
       //make sure the vertex is added only once ...
-      if ((VertexFlags.vfLocMin & vert.Flags) != 0) return;
-      vert.Flags |= VertexFlags.vfLocMin;
+      if ((VertexFlags.LocMin & vert.Flags) != 0) return;
+      vert.Flags |= VertexFlags.LocMin;
       LocalMinima lm = new LocalMinima();
       lm.Vertex = vert;
       lm.PolyType = pt;
@@ -823,75 +723,70 @@ namespace ClipperLib
       }
 
       List<Vertex> va = new List<Vertex>(pathLen);
-      va[0].Pt = p[0];
-      va[0].Flags = 0;
-
+      Vertex v = new Vertex(p[0]);
       if (isOpen)
       {
-        va[0].Flags = VertexFlags.vfOpenStart;
-        if (goingUp) AddLocMin(va[0], pt, isOpen);
-        else va[0].Flags |= VertexFlags.vfLocMax;
+        v.Flags = VertexFlags.OpenStart;
+        if (goingUp) AddLocMin(v, pt, isOpen);
+        else v.Flags |= VertexFlags.LocMax;
       };
-
+      va.Add(v);
       //nb: polygon orientation is determined later (see InsertLocalMinimaIntoAEL).
-      i = 0;
       for (Int32 j = 1; j < pathLen; j++)
       {
-        if (p[j] == va[i].Pt) continue; //ie skips duplicates
-        va[j].Pt = p[j];
-        va[j].Flags = 0;
-        va[i].Next = va[j];
-        va[j].Prev = va[i];
-        if (p[j].Y > p[i].Y && goingUp)
+        if (p[j] == v.Pt) continue; //ie skips duplicates
+        Vertex v2 = new Vertex(p[j]);
+        v.Next = v2;
+        v2.Prev = v;
+        if (v2.Pt.Y > v.Pt.Y && goingUp)
         {
-          va[i].Flags |= VertexFlags.vfLocMax;
+          v.Flags |= VertexFlags.LocMax;
           goingUp = false;
         }
-        else if (p[j].Y < p[i].Y && !goingUp)
+        else if (v2.Pt.Y < v.Pt.Y && !goingUp)
         {
           goingUp = true;
-          AddLocMin(va[i], pt, isOpen);
+          AddLocMin(v, pt, isOpen);
         }
-        i = j;
+        va.Add(v2);
+        v = v2;
       }
       //i: index of the last vertex in the path.
-      va[i].Next = va[0];
-      va[0].Prev = va[i];
+      v.Next = va[0];
+      va[0].Prev = v;
 
       if (isOpen)
       {
-        va[i].Flags |= VertexFlags.vfOpenEnd;
-        if (goingUp) va[i].Flags |= VertexFlags.vfLocMax;
-        else AddLocMin(va[i], pt, isOpen);
+        v.Flags |= VertexFlags.OpenEnd;
+        if (goingUp) v.Flags |= VertexFlags.LocMax;
+        else AddLocMin(v, pt, isOpen);
       }
       else
       {
         if (goingUp)
         {
           //going up so find local maxima ...
-          Vertex v = va[i];
           while (v.Next.Pt.Y <= v.Pt.Y) v = v.Next;
-          v.Flags |= VertexFlags.vfLocMax;
+          v.Flags |= VertexFlags.LocMax;
           if (P0IsMinima) AddLocMin(va[0], pt, isOpen); //ie just turned to going up
         }
         else
         {
           //going down so find local minima ...
-          Vertex v = va[i];
           while (v.Next.Pt.Y >= v.Pt.Y) v = v.Next;
           AddLocMin(v, pt, isOpen);
-          if (P0IsMaxima) va[0].Flags |= VertexFlags.vfLocMax;
+          if (P0IsMaxima) va[0].Flags |= VertexFlags.LocMax;
         }
       }
       VertexList.Add(va);
     }
     //------------------------------------------------------------------------------
 
-    public void AddPath(Path path, PolyType pt, Boolean isOpen)
+    public void AddPath(Path path, PolyType pt, Boolean isOpen = false)
     {
       if (isOpen)
       {
-        if (pt == PolyType.ptClip)
+        if (pt == PolyType.Clip)
           throw new ClipperException("AddPath: Only PolyType.Subject paths can be open.");
         HasOpenPaths = true;
       }
@@ -900,7 +795,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public void AddPaths(Paths paths, PolyType pt, Boolean isOpen)
+    public void AddPaths(Paths paths, PolyType pt, Boolean isOpen = false)
     {
       foreach (Path path in paths) AddPath(path, pt, isOpen);
     }
@@ -911,13 +806,13 @@ namespace ClipperLib
 
       switch (this.FillType)
       {
-        case FillType.pftEvenOdd:
+        case FillType.EvenOdd:
           if (IsOpen(edge) && edge.WindCnt != 1) return false;
           break;
-        case FillType.pftNonZero:
+        case FillType.NonZero:
           if (Math.Abs(edge.WindCnt) != 1) return false;
           break;
-        case FillType.pftPositive:
+        case FillType.Positive:
           if (edge.WindCnt != 1) return false;
           break;
         default: if (edge.WindCnt != -1) return false;
@@ -926,63 +821,63 @@ namespace ClipperLib
 
       switch (this.ClipType)
       {
-        case ClipType.ctIntersection:
+        case ClipType.Intersection:
           switch (FillType)
           {
-            case FillType.pftEvenOdd:
-            case FillType.pftNonZero:
+            case FillType.EvenOdd:
+            case FillType.NonZero:
               return (edge.WindCnt2 != 0);
-            case FillType.pftPositive:
+            case FillType.Positive:
               return (edge.WindCnt2 > 0); 
-            case FillType.pftNegative:
+            case FillType.Negative:
               return (edge.WindCnt2 < 0); 
           }
           break;
-        case ClipType.ctUnion:
+        case ClipType.Union:
           switch (FillType)
           {
-            case FillType.pftEvenOdd:
-            case FillType.pftNonZero:
+            case FillType.EvenOdd:
+            case FillType.NonZero:
               return (edge.WindCnt2 == 0); 
-            case FillType.pftPositive:
+            case FillType.Positive:
               return (edge.WindCnt2 <= 0); 
-            case FillType.pftNegative:
+            case FillType.Negative:
               return (edge.WindCnt2 >= 0);
           }
           break;
-        case ClipType.ctDifference:
-          if (edge.LocalMin.PolyType == PolyType.ptSubject)
+        case ClipType.Difference:
+          if (edge.LocalMin.PolyType == PolyType.Subject)
             switch (FillType)
             {
-              case FillType.pftEvenOdd:
-              case FillType.pftNonZero:
+              case FillType.EvenOdd:
+              case FillType.NonZero:
                 return (edge.WindCnt2 == 0);
-              case FillType.pftPositive:
+              case FillType.Positive:
                 return (edge.WindCnt2 <= 0);
-              case FillType.pftNegative:
+              case FillType.Negative:
                 return (edge.WindCnt2 >= 0);
             }
           else
             switch (FillType)
             {
-              case FillType.pftEvenOdd:
-              case FillType.pftNonZero:
+              case FillType.EvenOdd:
+              case FillType.NonZero:
                 return (edge.WindCnt2 != 0);
-              case FillType.pftPositive:
+              case FillType.Positive:
                 return (edge.WindCnt2 > 0); 
-              case FillType.pftNegative:
+              case FillType.Negative:
                 return (edge.WindCnt2 < 0); 
             }; break;
-        case ClipType.ctXor:
+        case ClipType.Xor:
           if (!IsOpen(edge)) return true; //XOr is always contributing unless open
           switch (FillType)
           {
-            case FillType.pftEvenOdd:
-            case FillType.pftNonZero:
+            case FillType.EvenOdd:
+            case FillType.NonZero:
               return (edge.WindCnt2 == 0);
-            case FillType.pftPositive:
+            case FillType.Positive:
               return (edge.WindCnt2 <= 0);
-            case FillType.pftNegative:
+            case FillType.Negative:
               return (edge.WindCnt2 >= 0);
           } break;
       }
@@ -999,18 +894,18 @@ namespace ClipperLib
       if (e == null)
       {
         if (IsOpen(edge))
-          edge.WindCnt = (FillType == FillType.pftNegative ? -1 : 1);
+          edge.WindCnt = (FillType == FillType.Negative ? -1 : 1);
         else
           edge.WindCnt = edge.WindDx;
         e = Actives; //ie get ready to calc WindCnt2
       }
-      else if (IsOpen(edge) && ClipType != ClipType.ctUnion)
+      else if (IsOpen(edge) && ClipType != ClipType.Union)
       {
         edge.WindCnt = 1;
         edge.WindCnt2 = e.WindCnt2;
         e = e.NextInAEL; //ie get ready to calc WindCnt2
       }
-      else if (FillType == FillType.pftEvenOdd)
+      else if (FillType == FillType.EvenOdd)
       {
         //even-odd filling ...
         if (IsOpen(edge))  //if edge is part of a line
@@ -1068,7 +963,7 @@ namespace ClipperLib
       }
 
       //update WindCnt2 ...
-      if (FillType == FillType.pftEvenOdd)
+      if (FillType == FillType.EvenOdd)
       {
         //even-odd filling ...
         while (e != edge)
@@ -1126,17 +1021,13 @@ namespace ClipperLib
     //----------------------------------------------------------------------
 
     private void InsertLocalMinimaIntoAEL(cInt BotY)
-    //E: PActive;
-    //LeftB, RightB, tmp: PActive;
-    //;
-    //contributing: Boolean;
     {
       LocalMinima locMin;
       Active leftB, rightB;
       //Add any local minima at BotY ...
       while (PopLocalMinima(BotY, out locMin))
       {
-        if ((locMin.Vertex.Flags & VertexFlags.vfOpenStart) > 0)
+        if ((locMin.Vertex.Flags & VertexFlags.OpenStart) > 0)
         {
           leftB = null;
         }
@@ -1152,7 +1043,7 @@ namespace ClipperLib
           SetDx(leftB);
         }
 
-        if ((locMin.Vertex.Flags & VertexFlags.vfOpenEnd) > 0)
+        if ((locMin.Vertex.Flags & VertexFlags.OpenEnd) > 0)
         {
           rightB = null;
         }
@@ -1207,7 +1098,6 @@ namespace ClipperLib
         {
           //ie open path that's not at a local minima
           StartOpenPath(leftB, leftB.Bot);
-          AddOutPt(leftB, leftB.Bot);
         }
 
         if (IsHorizontal(leftB))
@@ -1230,21 +1120,25 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void Clockwise(OutRec outRec, Active e1, Active e2)
+    private void SetOutrecClockwise(OutRec outRec, Active e1, Active e2)
     {
       outRec.StartE = e1;
       outRec.EndE = e2;
+      e1.OutRec = outRec;
+      e2.OutRec = outRec;
     }
     //------------------------------------------------------------------------------
 
-    private void CounterClockwise(OutRec outRec, Active e1, Active e2)
+    private void SetOutrecCounterClockwise(OutRec outRec, Active e1, Active e2)
     {
       outRec.StartE = e2;
       outRec.EndE = e1;
+      e1.OutRec = outRec;
+      e2.OutRec = outRec;
     }
     //------------------------------------------------------------------------------
 
-    private OutRec SetOwner(Active e)
+    private OutRec GetOwner(Active e)
     {
       if (IsHorizontal(e)  && e.Top.X < e.Bot.X)
       {
@@ -1252,7 +1146,7 @@ namespace ClipperLib
         while (e != null && (!IsHotEdge(e) || IsOpen(e))) 
           e = e.NextInAEL;
         if (e == null) return null;
-        else if (((e.OutRec.Flags & OutrecFlags.orOuter) != 0) == (e.OutRec.StartE == e))
+        else if (((e.OutRec.Flags & OutrecFlags.Outer) != 0) == (e.OutRec.StartE == e))
           return e.OutRec.Owner; else return e.OutRec;
       }
       else
@@ -1261,7 +1155,7 @@ namespace ClipperLib
         while (e != null && (!IsHotEdge(e) || IsOpen(e)))
           e = e.PrevInAEL;
         if (e == null) return null;
-        else if (((e.OutRec.Flags & OutrecFlags.orOuter) != 0) == (e.OutRec.EndE == e))
+        else if (((e.OutRec.Flags & OutrecFlags.Outer) != 0) == (e.OutRec.EndE == e))
           return e.OutRec.Owner; else return e.OutRec;
       }
     }
@@ -1270,12 +1164,13 @@ namespace ClipperLib
     private void AddLocalMinPoly(Active e1, Active e2, IntPoint pt)
     {
       OutRec outRec = new OutRec();
+      outRec.IDx = OutRecList.Count;
       OutRecList.Add(outRec);
-      outRec.Owner = SetOwner(e1);
-      if (outRec.Owner != null && (outRec.Owner.Flags & OutrecFlags.orOuter) != 0)
+      outRec.Owner = GetOwner(e1);
+      if (outRec.Owner != null && (outRec.Owner.Flags & OutrecFlags.Outer) != 0)
         outRec.Flags = 0; else
-        outRec.Flags |= OutrecFlags.orOuter;
-      if (IsOpen(e1)) outRec.Flags |= OutrecFlags.orOpen;
+        outRec.Flags |= OutrecFlags.Outer;
+      if (IsOpen(e1)) outRec.Flags |= OutrecFlags.Open;
       outRec.PolyPath = null;
 
       //now set orientation ...
@@ -1283,22 +1178,20 @@ namespace ClipperLib
       {
         if (IsHorizontal(e2))
         {
-          if (((outRec.Flags & OutrecFlags.orOuter) != 0) == (e1.Bot.X > e2.Bot.X))
-            Clockwise(outRec, e1, e2); else CounterClockwise(outRec, e1, e2);
+          if (((outRec.Flags & OutrecFlags.Outer) != 0) == (e1.Bot.X > e2.Bot.X))
+            SetOutrecClockwise(outRec, e1, e2); else SetOutrecCounterClockwise(outRec, e1, e2);
         }
-        else if (((outRec.Flags & OutrecFlags.orOuter) != 0) == (e1.Top.X < e1.Bot.X))
-          Clockwise(outRec, e1, e2); else CounterClockwise(outRec, e1, e2);
+        else if (((outRec.Flags & OutrecFlags.Outer) != 0) == (e1.Top.X < e1.Bot.X))
+          SetOutrecClockwise(outRec, e1, e2); else SetOutrecCounterClockwise(outRec, e1, e2);
       }
       else if (IsHorizontal(e2))
       {
-        if (((outRec.Flags & OutrecFlags.orOuter) != 0) == (e2.Top.X > e2.Bot.X))
-          Clockwise(outRec, e1, e2); else CounterClockwise(outRec, e1, e2);
+        if (((outRec.Flags & OutrecFlags.Outer) != 0) == (e2.Top.X > e2.Bot.X))
+          SetOutrecClockwise(outRec, e1, e2); else SetOutrecCounterClockwise(outRec, e1, e2);
       }
-      else if (((outRec.Flags & OutrecFlags.orOuter) != 0) == (e1.Dx >= e2.Dx))
-        Clockwise(outRec, e1, e2); else CounterClockwise(outRec, e1, e2);
-
-      e1.OutRec = outRec;
-      e2.OutRec = outRec;
+      else if (((outRec.Flags & OutrecFlags.Outer) != 0) == (e1.Dx >= e2.Dx))
+        SetOutrecClockwise(outRec, e1, e2); else
+        SetOutrecCounterClockwise(outRec, e1, e2);
 
       OutPt op = new OutPt();
       op.Pt = pt;
@@ -1438,7 +1331,7 @@ namespace ClipperLib
       OutRec outRec = new OutRec();
       outRec.IDx = OutRecList.Count;
       OutRecList.Add(outRec);
-      outRec.Flags = OutrecFlags.orOpen;
+      outRec.Flags = OutrecFlags.Open;
       e.OutRec = outRec;
 
       OutPt op = new OutPt();
@@ -1544,14 +1437,14 @@ namespace ClipperLib
           }
           //if intersecting a subj line with a subj poly ...
           else if (e1.LocalMin.PolyType == e2.LocalMin.PolyType &&
-            e1.WindDx != e2.WindDx && ClipType == ClipType.ctUnion)
+            e1.WindDx != e2.WindDx && ClipType == ClipType.Union)
           {
             if (IsOpen(e1))
             {
               if (e2Contributing)
               {
-                if (!e1Contributing) StartOpenPath(e1, pt);
-                AddOutPt(e1, pt);
+                if (e1Contributing) AddOutPt(e1, pt); 
+                else StartOpenPath(e1, pt);
                 if (e1Contributing) TerminateHotOpen(e1);
               }
             }
@@ -1559,26 +1452,26 @@ namespace ClipperLib
             {
               if (e1Contributing)
               {
-                if (!e2Contributing) StartOpenPath(e2, pt);
-                AddOutPt(e2, pt);
+                if (e2Contributing) AddOutPt(e2, pt);
+                else StartOpenPath(e2, pt); 
                 if (e2Contributing) TerminateHotOpen(e2);
               }
             }
           }
           else if (e1.LocalMin.PolyType != e2.LocalMin.PolyType)
           {
-            if (IsOpen(e1) && Math.Abs(e2.WindDx) == 1 &&
-              (ClipType != ClipType.ctUnion || e2.WindCnt2 == 0))
+            if (IsOpen(e1) && Math.Abs(e2.WindCnt) == 1 &&
+              (ClipType != ClipType.Union || e2.WindCnt2 == 0))
             {
-              if (!e1Contributing) StartOpenPath(e1, pt);
-              AddOutPt(e1, pt);
-              if (e1Contributing) TerminateHotOpen(e1);
+              if (e1Contributing) AddOutPt(e1, pt); 
+              else StartOpenPath(e1, pt);
+            if (e1Contributing) TerminateHotOpen(e1);
             }
             else if (IsOpen(e2) && Math.Abs(e1.WindCnt) == 1 &&
-                (ClipType != ClipType.ctUnion || e1.WindCnt2 == 0))
+                (ClipType != ClipType.Union || e1.WindCnt2 == 0))
             {
-              if (!e2Contributing) StartOpenPath(e2, pt);
-              AddOutPt(e2, pt);
+              if (e2Contributing) AddOutPt(e2, pt);
+              else StartOpenPath(e2, pt);
               if (e2Contributing) TerminateHotOpen(e2);
             }
           }
@@ -1590,7 +1483,7 @@ namespace ClipperLib
         Int32 oldE1WindCnt, oldE2WindCnt;
         if (e1.LocalMin.PolyType == e2.LocalMin.PolyType)
         {
-          if (FillType == FillType.pftEvenOdd)
+          if (FillType == FillType.EvenOdd)
           {
             oldE1WindCnt = e1.WindCnt;
             e1.WindCnt = e2.WindCnt;
@@ -1606,19 +1499,19 @@ namespace ClipperLib
         }
         else
         {
-          if (FillType != FillType.pftEvenOdd) e1.WindCnt2 += e2.WindDx;
+          if (FillType != FillType.EvenOdd) e1.WindCnt2 += e2.WindDx;
           else e1.WindCnt2 = (e1.WindCnt2 == 0) ? 1 : 0;
-          if (FillType != FillType.pftEvenOdd) e2.WindCnt2 -= e1.WindDx;
+          if (FillType != FillType.EvenOdd) e2.WindCnt2 -= e1.WindDx;
           else e2.WindCnt2 = (e2.WindCnt2 == 0) ? 1 : 0;
         }
 
         switch (FillType)
         {
-          case FillType.pftPositive:
+          case FillType.Positive:
             oldE1WindCnt = e1.WindCnt;
             oldE2WindCnt = e2.WindCnt;
             break;
-          case FillType.pftNegative:
+          case FillType.Negative:
             oldE1WindCnt = -e1.WindCnt;
             oldE2WindCnt = -e2.WindCnt;
             break;
@@ -1631,7 +1524,7 @@ namespace ClipperLib
         if (e1Contributing && e2Contributing)
         {
           if ((oldE1WindCnt != 0 && oldE1WindCnt != 1) || (oldE2WindCnt != 0 && oldE2WindCnt != 1) ||
-            (e1.LocalMin.PolyType != e2.LocalMin.PolyType && ClipType != ClipType.ctXor))
+            (e1.LocalMin.PolyType != e2.LocalMin.PolyType && ClipType != ClipType.Xor))
           {
             AddLocalMaxPoly(e1, e2, pt);
           }
@@ -1669,11 +1562,11 @@ namespace ClipperLib
           cInt e1Wc2, e2Wc2;
           switch (FillType)
           {
-            case FillType.pftPositive:
+            case FillType.Positive:
               e1Wc2 = e1.WindCnt2;
               e2Wc2 = e2.WindCnt2;
               break;
-            case FillType.pftNegative:
+            case FillType.Negative:
               e1Wc2 = -e1.WindCnt2;
               e2Wc2 = -e2.WindCnt2;
               break;
@@ -1690,20 +1583,20 @@ namespace ClipperLib
           else if (oldE1WindCnt == 1 && oldE2WindCnt == 1)
             switch (ClipType)
             {
-              case ClipType.ctIntersection:
+              case ClipType.Intersection:
                 if (e1Wc2 > 0 && e2Wc2 > 0)
                   AddLocalMinPoly(e1, e2, pt);
                 break;
-              case ClipType.ctUnion:
+              case ClipType.Union:
                 if (e1Wc2 <= 0 && e2Wc2 <= 0)
                   AddLocalMinPoly(e1, e2, pt);
                 break;
-              case ClipType.ctDifference:
-                if (((e1.LocalMin.PolyType == PolyType.ptClip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
-                    ((e1.LocalMin.PolyType == PolyType.ptSubject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
+              case ClipType.Difference:
+                if (((e1.LocalMin.PolyType == PolyType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
+                    ((e1.LocalMin.PolyType == PolyType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
                   AddLocalMinPoly(e1, e2, pt);
                 break;
-              case ClipType.ctXor:
+              case ClipType.Xor:
                 AddLocalMinPoly(e1, e2, pt);
                 break;
             }
@@ -1767,7 +1660,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-        public Boolean Execute(ClipType clipType, Paths Closed, FillType ft = FillType.pftEvenOdd)
+        public Boolean Execute(ClipType clipType, Paths Closed, FillType ft = FillType.EvenOdd)
         {
         try
         {
@@ -1781,7 +1674,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      public Boolean Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.pftEvenOdd)
+      public Boolean Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.EvenOdd)
         {
           try
           {
@@ -1796,7 +1689,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      public Boolean Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.pftEvenOdd)
+      public Boolean Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.EvenOdd)
         {
         try
         {
@@ -2074,7 +1967,7 @@ namespace ClipperLib
 
       Active maxPair = null;
       if (IsMaxima(horz) && (!IsOpen(horz) ||
-          ((horz.VertTop.Flags & (VertexFlags.vfOpenStart | VertexFlags.vfOpenEnd)) == 0))) 
+          ((horz.VertTop.Flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) == 0))) 
             maxPair = GetMaximaPair(horz);
 
       cInt horzLeft, horzRight;
@@ -2197,10 +2090,10 @@ namespace ClipperLib
       Active eNext, ePrev, eMaxPair;
       ePrev = e.PrevInAEL;
       eNext = e.NextInAEL;
-      if (IsOpen(e) && ((e.VertTop.Flags & (VertexFlags.vfOpenStart | VertexFlags.vfOpenEnd)) != 0))
+      if (IsOpen(e) && ((e.VertTop.Flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) != 0))
       {
         if (IsHotEdge(e)) AddOutPt(e, e.Top);
-        if (IsHorizontal(e))
+        if (!IsHorizontal(e))
         {
           if (IsHotEdge(e)) TerminateHotOpen(e);
           DeleteFromAEL(e);
@@ -2276,7 +2169,7 @@ namespace ClipperLib
           //fixup for duplicate start and } points ...
           if (op.Pt == outrec.Pts.Pt) cnt--;
 
-          if ((outrec.Flags & OutrecFlags.orOpen) > 0)
+          if ((outrec.Flags & OutrecFlags.Open) > 0)
           {
             if (cnt < 1 || openPaths == null) continue;
             Path p = new Path(cnt);
@@ -2308,17 +2201,17 @@ namespace ClipperLib
         {
             OutPt op = outrec.Pts.Prev;
             Int32 cnt = PointCount(op);
-            //fixup for duplicate start and } points ...
+            //fixup for duplicate start and end points ...
             if (op.Pt == outrec.Pts.Pt) cnt--;
 
             if (cnt < 3)
             {
-              if ((outrec.Flags & OutrecFlags.orOpen) == 0 || cnt < 2) continue;
+              if ((outrec.Flags & OutrecFlags.Open) == 0 || cnt < 2) continue;
             }
 
             Path p = new Path(cnt);
             for (Int32 i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
-            if ((outrec.Flags & OutrecFlags.orOpen) > 0)
+            if ((outrec.Flags & OutrecFlags.Open) > 0)
               openPaths.Add(p);
             else
             {
