@@ -1,12 +1,22 @@
-Clipper2 (30 January 2017)
-This is just a preview of a major update I'm (slowly) working on. 
-This new version currently performs only the "bare bones" of the clipping algorithm. 
-It's "bare bones" because there's no merging of polygons that have common/touching edges in the clip solutions.
-The merging of adjacent/touching polygons is/was incomplete and cumbersome in the earlier versions and needs to be completely rewritten.
 
-Performance is a little faster than earlier versions. Below are 2 benchmark test comparisons between the Old and New Clipper. The Old Clipper (version 6.4.2) has had its solution merging code removed in order to compare 'apples with apples'. Tests were performed using Windows 10 64Bit with Intel i7 2.0GHz CPU and 8GB RAM.
+Clipper2 (9 September 2017)
 
-TEST1: Time (secs) to intersect a single random subject and clip COMPLEX polygon.
+
+This is a preview of a major update that I'm working on (very slowly). While the code in previous version was functional, in many places it is/was downright ugly and needed to be rewritten. This new version is also a little quicker. However, at the moment this new version only performs the "bare bones" of the clipping library - there's no merging of polygons with common/touching edges in clip solutions (though this was always incomplete). There's also no 'offseting' code yet.
+
+
+There are also quite a few changes to public methods in the libary's classes. Here are the more notable ones ...
+1. Execute parameters have changed: an optional OpenPaths parameter has been added; and there's now only one PolyFillType parameter. (On reflection it seemed unnecessary complicated to have separate PolyFillType parameter for Subject and Clip paths.)
+2. The PolyFillType enumeration has been renamed FillType.
+3. The Polytree class now only contains closed paths (ie polygons) since only polygons can contain/own other polygons. (Open paths are now returned via a separate Paths parameter in Execute.)
+4. I've renamed the Closed parameters in AddPath and AddPaths to IsOpen (and it now defaults to false).
+5. There's no longer an additional restriction on the size of Int64 values used for path coordinates (excluding the obvious limitation of the 64bit structure).
+
+
+
+Below I've benchmarked a few comparisons between the old (ver 6.4.2) and this Clipper. (The old version has also had the polygon 'merging' code removed so we're comparing 'apples with apples'. Tests were compiled (for 32bit) using Delphi 10.1 and performed using Windows 10 64Bit with Intel i7 2.0GHz CPU and 8GB RAM.
+
+TEST1: Time (secs) to intersect a single random subject and clip COMPLEX polygon (using evenodd filling).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
