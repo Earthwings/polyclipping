@@ -1,12 +1,12 @@
 
-Clipper2 (9 September 2017)
+Clipper2 (11 September 2017)
 
 
-This is a preview of a major update that I'm working on (very slowly). While the code in previous version was functional, in many places it is/was downright ugly and needed to be rewritten. This new version is also a little quicker. However, at the moment this new version only performs the "bare bones" of the clipping library - there's no merging of polygons with common/touching edges in clip solutions (though this was always incomplete). There's also no 'offsetting' code yet.
+This is a preview of a major update that I'm working on (very slowly). While the code in previous versions was functional, in many places it is/was downright ugly. This new version is a significant rewrite and should be a little easier to understand and maintain. It's also a little quicker. However, at the moment this new version only performs the "bare bones" of the clipping as there's no merging of polygons with common/touching edges in clip solutions (though this was always incomplete in previous versions). The  'offsetting' code has also undergone significant revision.
 
 
-There are also quite a few changes to public methods in the library's classes. Here are the more notable ones ...
-1. Execute parameters have changed: an optional OpenPaths parameters has been added; and there's now only one PolyFillType parameter. (On reflection it seemed unnecessary complicated to have separate PolyFillType parameter for Subject and Clip paths.)
+There are quite a few changes to public methods in the library's classes. Here are the more notable ones ...
+1. Execute parameters have changed: (optional) OpenPaths parameters have been added; and there's now only one PolyFillType parameter. (On reflection it seemed unnecessary complicated to have separate PolyFillType parameter for Subject and Clip paths.)
 2. The PolyFillType enumeration has been renamed FillType.
 3. The Polytree class now only contains closed paths (ie polygons) since only polygons can contain/own other polygons. (Open paths are now returned via a separate Paths parameter in Execute.)
 4. I've renamed the Closed parameters in AddPath and AddPaths to IsOpen (and it now defaults to false).

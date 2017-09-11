@@ -17,54 +17,33 @@ using System.Collections.Generic;
 
 namespace ClipperLib
 {
-  using cInt = Int64;
+  using Path = List<Point64>;
+  using Paths = List<List<Point64>>;
 
-  using Path = List<IntPoint>;
-  using Paths = List<List<IntPoint>>;
-
-  public struct DoublePoint
+  public struct Point64
   {
-    public double X;
-    public double Y;
-
-    public DoublePoint(double x = 0, double y = 0)
-    {
-      this.X = x; this.Y = y;
-    }
-    public DoublePoint(DoublePoint dp)
-    {
-      this.X = dp.X; this.Y = dp.Y;
-    }
-    public DoublePoint(IntPoint ip)
-    {
-      this.X = ip.X; this.Y = ip.Y;
-    }
-  };
-
-  public struct IntPoint
-  {
-    public cInt X;
-    public cInt Y;
-    public IntPoint(cInt X, cInt Y)
+    public Int64 X;
+    public Int64 Y;
+    public Point64(Int64 X, Int64 Y)
     {
         this.X = X; this.Y = Y;
     }
-    public IntPoint(double x, double y)
+    public Point64(double x, double y)
     {
-      this.X = (cInt)x; this.Y = (cInt)y;
+      this.X = (Int64)x; this.Y = (Int64)y;
     }
 
-    public IntPoint(IntPoint pt)
+    public Point64(Point64 pt)
     {
         this.X = pt.X; this.Y = pt.Y;
     }
 
-    public static Boolean operator ==(IntPoint a, IntPoint b)
+    public static Boolean operator ==(Point64 a, Point64 b)
     {
       return a.X == b.X && a.Y == b.Y;
     }
 
-    public static Boolean operator !=(IntPoint a, IntPoint b)
+    public static Boolean operator !=(Point64 a, Point64 b)
     {
       return a.X != b.X  || a.Y != b.Y; 
     }
@@ -72,9 +51,9 @@ namespace ClipperLib
     public override Boolean Equals(object obj)
     {
       if (obj == null) return false;
-      if (obj is IntPoint)
+      if (obj is Point64)
       {
-        IntPoint a = (IntPoint)obj;
+        Point64 a = (Point64)obj;
         return (X == a.X) && (Y == a.Y);
       }
       else return false;
@@ -86,21 +65,21 @@ namespace ClipperLib
       return base.GetHashCode();
     }
 
-  }// } struct IntPoint
+  }// } struct Point64
 
-  public struct IntRect
+  public struct Rect64
   {
-    public cInt left;
-    public cInt top;
-    public cInt right;
-    public cInt bottom;
+    public Int64 left;
+    public Int64 top;
+    public Int64 right;
+    public Int64 bottom;
 
-    public IntRect(cInt l, cInt t, cInt r, cInt b)
+    public Rect64(Int64 l, Int64 t, Int64 r, Int64 b)
     {
       this.left = l; this.top = t;
       this.right = r; this.bottom = b;
     }
-    public IntRect(IntRect ir)
+    public Rect64(Rect64 ir)
     {
       this.left = ir.left; this.top = ir.top;
       this.right = ir.right; this.bottom = ir.bottom;
@@ -119,11 +98,11 @@ namespace ClipperLib
   internal enum VertexFlags { OpenStart = 1, OpenEnd = 2, LocMax = 4, LocMin = 8};
 
   internal class Vertex {
-    internal IntPoint Pt;
+    internal Point64 Pt;
     internal Vertex Next;
     internal Vertex Prev;
     internal VertexFlags Flags;
-    public Vertex(IntPoint ip) { Pt.X = ip.X; Pt.Y = ip.Y; }
+    public Vertex(Point64 ip) { Pt.X = ip.X; Pt.Y = ip.Y; }
   }
 
   public class LocalMinima
@@ -134,9 +113,9 @@ namespace ClipperLib
   };
 
   internal class Active {
-    internal IntPoint Bot;
-    internal IntPoint Curr; //current (updated for every new Scanline)
-    internal IntPoint Top;
+    internal Point64 Bot;
+    internal Point64 Curr; //current (updated for every new Scanline)
+    internal Point64 Top;
     internal double Dx;
     internal Int32 WindDx; //1 or -1 depending on winding direction
     internal Int32 WindCnt;
@@ -152,13 +131,13 @@ namespace ClipperLib
 
   public class ScanLine
   {
-    internal cInt Y;
+    internal Int64 Y;
     internal ScanLine Next;
   };
 
   internal class OutPt
   {
-    internal IntPoint Pt;
+    internal Point64 Pt;
     internal OutPt Next;
     internal OutPt Prev;
   };
@@ -183,7 +162,7 @@ namespace ClipperLib
   {
       internal Active Edge1;
       internal Active Edge2;
-      internal IntPoint Pt;
+      internal Point64 Pt;
   };
 
   public class MyIntersectNodeSort : IComparer<IntersectNode>
@@ -246,7 +225,7 @@ namespace ClipperLib
       if (cnt > 0)
       {
         Path p = new Path(cnt);
-        foreach (IntPoint ip in pp.path) p.Add(ip);
+        foreach (Point64 ip in pp.path) p.Add(ip);
         paths.Add(p);
       }
       foreach (PolyPath polyp in pp.childs)
@@ -311,13 +290,13 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal static cInt Round(double value)
+    internal static Int64 Round(double value)
     {
-      return value < 0 ? (cInt)(value - 0.5) : (cInt)(value + 0.5);
+      return value < 0 ? (Int64)(value - 0.5) : (Int64)(value + 0.5);
     }
     //------------------------------------------------------------------------------
 
-    private static cInt TopX(Active edge, cInt currentY)
+    private static Int64 TopX(Active edge, Int64 currentY)
     {
       if (currentY == edge.Top.Y)
         return edge.Top.X;
@@ -383,12 +362,12 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public static IntRect GetBounds(Paths paths)
+    public static Rect64 GetBounds(Paths paths)
     {
       Int32 i = 0, cnt = paths.Count;
       while (i < cnt && paths[i].Count == 0) i++;
-      if (i == cnt) return new IntRect(0, 0, 0, 0);
-      IntRect result = new IntRect();
+      if (i == cnt) return new Rect64(0, 0, 0, 0);
+      Rect64 result = new Rect64();
       result.left = paths[i][0].X;
       result.right = result.left;
       result.top = paths[i][0].Y;
@@ -405,17 +384,17 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public static Int32 PointInPolygon(IntPoint pt, Path path)
+    public static Int32 PointInPolygon(Point64 pt, Path path)
     {
       //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
       //See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
       //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
       Int32 result = 0, cnt = path.Count;
       if (cnt < 3) return 0;
-      IntPoint ip = path[0];
+      Point64 ip = path[0];
       for (Int32 i = 1; i <= cnt; ++i)
       {
-        IntPoint ipNext = (i == cnt ? path[0] : path[i]);
+        Point64 ipNext = (i == cnt ? path[0] : path[i]);
         if (ipNext.Y == pt.Y)
         {
           if ((ipNext.X == pt.X) || (ip.Y == pt.Y &&
@@ -451,7 +430,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal cInt GetTopDeltaX(Active e1, Active e2)
+    internal Int64 GetTopDeltaX(Active e1, Active e2)
     {
       if (e1.Top.Y > e2.Top.Y)
         return TopX(e2, e1.Top.Y) - e1.Top.X;
@@ -470,9 +449,9 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private IntPoint GetIntersectPoint(Active edge1, Active edge2)
+    private Point64 GetIntersectPoint(Active edge1, Active edge2)
     {
-      IntPoint ip = new IntPoint();
+      Point64 ip = new Point64();
       double b1, b2;
       //nb: with very large coordinate values, it's possible for SlopesEqual() to 
       //return false but for the edge.Dx value be equal due to double precision rounding.
@@ -526,7 +505,7 @@ namespace ClipperLib
 
     private void SetDx(Active e)
     {
-      cInt dy = (e.Top.Y - e.Bot.Y);
+      Int64 dy = (e.Top.Y - e.Bot.Y);
       e.Dx = (dy == 0 ? double.NegativeInfinity : (double)(e.Top.X - e.Bot.X) / dy);
     }
     //---------------------------------------------------------------------------
@@ -607,7 +586,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void InsertScanline(cInt Y)
+    private void InsertScanline(Int64 Y)
     {
       //single-linked list: sorted descending, ignoring dups.
       if (Scanline == null)
@@ -636,7 +615,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal Boolean PopScanline(out cInt Y)
+    internal Boolean PopScanline(out Int64 Y)
     {
       if (Scanline == null)
       {
@@ -662,7 +641,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean PopLocalMinima(cInt Y, out LocalMinima locMin)
+    private Boolean PopLocalMinima(Int64 Y, out LocalMinima locMin)
     {
       locMin = null;
       if (CurrentLocMinIdx == LocMinimaList.Count) return false;
@@ -1020,7 +999,7 @@ namespace ClipperLib
     }
     //----------------------------------------------------------------------
 
-    private void InsertLocalMinimaIntoAEL(cInt BotY)
+    private void InsertLocalMinimaIntoAEL(Int64 BotY)
     {
       LocalMinima locMin;
       Active leftB, rightB;
@@ -1161,7 +1140,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void AddLocalMinPoly(Active e1, Active e2, IntPoint pt)
+    private void AddLocalMinPoly(Active e1, Active e2, Point64 pt)
     {
       OutRec outRec = new OutRec();
       outRec.IDx = OutRecList.Count;
@@ -1210,7 +1189,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void AddLocalMaxPoly(Active e1, Active e2, IntPoint Pt)
+    private void AddLocalMaxPoly(Active e1, Active e2, Point64 Pt)
     {
       AddOutPt(e1, Pt);
       if (e1.OutRec == e2.OutRec) EndOutRec(e1.OutRec);
@@ -1326,7 +1305,7 @@ namespace ClipperLib
     }
       //------------------------------------------------------------------------------
 
-    private void StartOpenPath(Active e, IntPoint pt)
+    private void StartOpenPath(Active e, Point64 pt)
     {
       OutRec outRec = new OutRec();
       outRec.IDx = OutRecList.Count;
@@ -1379,7 +1358,7 @@ namespace ClipperLib
     }
       //------------------------------------------------------------------------------
 
-      private void AddOutPt(Active e, IntPoint pt)
+      private void AddOutPt(Active e, Point64 pt)
       {
 
         //Outrec.Pts: a circular double-linked-list of POutPt.
@@ -1413,7 +1392,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private void IntersectEdges(Active e1, Active e2, IntPoint pt)
+      private void IntersectEdges(Active e1, Active e2, Point64 pt)
       {
         //e1 will be to the left of e2 BELOW the intersection. Therefore e1 is before
         //e2 in AEL except when e1 is being inserted at the intersection point ...
@@ -1559,7 +1538,7 @@ namespace ClipperLib
         else if ((oldE1WindCnt == 0 || oldE1WindCnt == 1) && (oldE2WindCnt == 0 || oldE2WindCnt == 1))
         {
           //neither edge is currently contributing ...
-          cInt e1Wc2, e2Wc2;
+          Int64 e1Wc2, e2Wc2;
           switch (FillType)
           {
             case FillType.Positive:
@@ -1641,7 +1620,7 @@ namespace ClipperLib
           FillType = ft;
           ClipType = ct;
           Reset();
-          cInt Y;
+          Int64 Y;
           Active e;
           if (!PopScanline(out Y)) return false;
 
@@ -1704,7 +1683,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private void ProcessIntersections(cInt topY)
+      private void ProcessIntersections(Int64 topY)
       {
         try
         {
@@ -1721,7 +1700,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private void BuildIntersectList(cInt TopY)
+      private void BuildIntersectList(Int64 TopY)
       //var
       //  E, eNext: PActive;
       //  Pt: TIntPoint;
@@ -1742,7 +1721,7 @@ namespace ClipperLib
         }
 
         Boolean IsModified;
-        IntPoint pt;
+        Point64 pt;
         //bubblesort (because adjacent swaps are required) ...
         do {
           IsModified = false;
@@ -1912,7 +1891,7 @@ namespace ClipperLib
       //------------------------------------------------------------------------------
 
       private Boolean ResetHorzDirection(Active horz, Active maxPair, 
-        out cInt horzLeft, out cInt horzRight)
+        out Int64 horzLeft, out Int64 horzRight)
       {
         if (horz.Bot.X == horz.Top.X)
         {
@@ -1954,7 +1933,7 @@ namespace ClipperLib
     *         /              |        /       |       /                            *
     *******************************************************************************/
     {
-      IntPoint pt;
+      Point64 pt;
       //with closed paths, simplify consecutive horizontals into a 'single' edge ...
       if (!IsOpen(horz))
       {
@@ -1970,7 +1949,7 @@ namespace ClipperLib
           ((horz.VertTop.Flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) == 0))) 
             maxPair = GetMaximaPair(horz);
 
-      cInt horzLeft, horzRight;
+      Int64 horzLeft, horzRight;
       Boolean isLeftToRight = ResetHorzDirection(horz, maxPair, out horzLeft, out horzRight);
       if (IsHotEdge(horz)) AddOutPt(horz, horz.Curr);
 
@@ -2006,11 +1985,11 @@ namespace ClipperLib
 
           if (isLeftToRight)
           {
-            pt = new IntPoint(e.Curr.X, horz.Curr.Y);
+            pt = new Point64(e.Curr.X, horz.Curr.Y);
             IntersectEdges(horz, e, pt);
           } else
           {
-            pt = new IntPoint(e.Curr.X, horz.Curr.Y);
+            pt = new Point64(e.Curr.X, horz.Curr.Y);
             IntersectEdges(e, horz, pt);
           };
 
@@ -2052,7 +2031,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void DoTopOfScanbeam(cInt Y)
+    private void DoTopOfScanbeam(Int64 Y)
     {
       Active e = Actives;
       while (e != null) 
@@ -2215,8 +2194,10 @@ namespace ClipperLib
               openPaths.Add(p);
             else
             {
-              PolyPath pp =  (outrec.Owner != null ? outrec.Owner.PolyPath : pt);
-              outrec.PolyPath = pp.AddChild(p);
+              if (outrec.Owner != null && outrec.Owner.PolyPath != null)
+                outrec.PolyPath = outrec.Owner.PolyPath.AddChild(p);
+              else
+                outrec.PolyPath = pt.AddChild(p);
             }
         }
     }
