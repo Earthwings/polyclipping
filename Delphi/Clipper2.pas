@@ -4,7 +4,7 @@ unit Clipper2;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  10 September 2017                                               *
+* Date      :  13 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -87,8 +87,8 @@ type
     Top      : TPoint64;
     Dx       : double;        //inverse of edge slope (zero = vertical)
     WindDx   : integer;       //wind direction (ascending: +1; descending: -1)
-    WindCnt  : integer;       //edge wind count of
-    WindCnt2 : integer;       //wind count of opposite TPolyType
+    WindCnt  : integer;       //current wind count
+    WindCnt2 : integer;       //current wind count of opposite TPolyType
     OutRec   : POutRec;
     //AEL - active edge list (Vatti's AET - active edge table)
     PrevInAEL: PActive;
@@ -160,8 +160,10 @@ type
     procedure DisposePolyPts(pp: POutPt);
     procedure DisposeOutRec(index: integer);
     procedure DisposeAllOutRecs;
-    function IsContributing(e: PActive): Boolean;
-    procedure SetWindingCount(edge: PActive);
+    function IsContributingClosed(e: PActive): Boolean;
+    function IsContributingOpen(e: PActive): Boolean;
+    procedure SetWindingLeftEdgeOpen(e: PActive);
+    procedure SetWindingLeftEdgeClosed(leftE: PActive);
     procedure InsertLocalMinimaIntoAEL(const botY: Int64);
     procedure DeleteFromAEL(e: PActive);
     procedure AddOutPt(e: PActive; const pt: TPoint64);
@@ -331,6 +333,14 @@ begin
   end;
 //------------------------------------------------------------------------------
 
+procedure SwapActive(var e1, e2: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+var
+  e: PActive;
+begin
+  e := e1; e1 := e2; e2 := e;
+end;
+//------------------------------------------------------------------------------
+
 function E2InsertsBeforeE1(e1, e2: PActive; preferLeft: Boolean): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -343,6 +353,12 @@ begin
     Result := e2.Curr.X < e1.Curr.X;
 end;
 //----------------------------------------------------------------------
+
+function GetPolyType(const e: PActive): TPolyType; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  result := e.LocMin.PolyType;
+end;
+//------------------------------------------------------------------------------
 
 function IsSamePolyType(const e1, e2: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -783,170 +799,169 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.IsContributing(e: PActive): Boolean;
-var
-  ft: TFillType;
+function TClipper2.IsContributingClosed(e: PActive): Boolean;
 begin
   Result := false;
-  ft := FFillType;
-  case ft of
-    ftEvenOdd: if IsOpen(e) and (e.WindCnt <> 1) then Exit;
+  case FFillType of
     ftNonZero: if abs(e.WindCnt) <> 1 then Exit;
     ftPositive: if (e.WindCnt <> 1) then Exit;
-    else if (e.WindCnt <> -1) then Exit;
+    ftNegative: if (e.WindCnt <> -1) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
-      case ft of
+      case FFillType of
         ftEvenOdd, ftNonZero: Result := (e.WindCnt2 <> 0);
         ftPositive: Result := (e.WindCnt2 > 0);
         ftNegative: Result := (e.WindCnt2 < 0);
       end;
     ctUnion:
-      case ft of
+      case FFillType of
         ftEvenOdd, ftNonZero: Result := (e.WindCnt2 = 0);
         ftPositive: Result := (e.WindCnt2 <= 0);
         ftNegative: Result := (e.WindCnt2 >= 0);
       end;
     ctDifference:
-      if e.LocMin.PolyType = ptSubject then
-        case ft of
+      if GetPolyType(e) = ptSubject then
+        case FFillType of
           ftEvenOdd, ftNonZero: Result := (e.WindCnt2 = 0);
           ftPositive: Result := (e.WindCnt2 <= 0);
           ftNegative: Result := (e.WindCnt2 >= 0);
         end
       else
-        case ft of
+        case FFillType of
           ftEvenOdd, ftNonZero: Result := (e.WindCnt2 <> 0);
           ftPositive: Result := (e.WindCnt2 > 0);
           ftNegative: Result := (e.WindCnt2 < 0);
         end;
-      ctXor:
-        if IsOpen(e) then
-          case ft of
-            ftEvenOdd, ftNonZero: Result := (e.WindCnt2 = 0);
-            ftPositive: Result := (e.WindCnt2 <= 0);
-            ftNegative: Result := (e.WindCnt2 >= 0);
-          end
-        else
-          Result := true; //XOr is always contributing unless it's open.
+    ctXor:
+        Result := true;
   end;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SetWindingCount(edge: PActive);
+function TClipper2.IsContributingOpen(e: PActive): Boolean;
+begin
+    case FClipType of
+      ctIntersection:
+        Result := (e.WindCnt2 <> 0);
+      ctXor:
+        Result := (e.WindCnt <> 0) <> (e.WindCnt2 <> 0);
+      ctDifference:
+        Result := (e.WindCnt2 = 0);
+      else //ctUnion:
+        Result := (e.WindCnt = 0) and (e.WindCnt2 = 0);
+    end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper2.SetWindingLeftEdgeOpen(e: PActive);
+var
+  e2: PActive;
+  cnt1, cnt2: integer;
+begin
+  e2 := FActives;
+  if FFillType = ftEvenOdd then
+  begin
+    cnt1 := 0;
+    cnt2 := 0;
+    while (e2 <> e) do
+    begin
+      if (GetPolyType(e2) = ptClip) then inc(cnt2)
+      else if not IsOpen(e2) then inc(cnt1);
+      e2 := e2.NextInAEL;
+    end;
+    if Odd(cnt1) then e.WindCnt := 1 else e.WindCnt := 0;
+    if Odd(cnt2) then e.WindCnt2 := 1 else e.WindCnt2 := 0;
+  end else
+  begin
+    //if FClipType in [ctUnion, ctDifference] then e.WindCnt := e.WindDx;
+    while (e2 <> e) do
+    begin
+      if (GetPolyType(e2) = ptClip) then inc(e.WindCnt2, e2.WindDx)
+      else if not IsOpen(e2) then inc(e.WindCnt, e2.WindDx);
+      e2 := e2.NextInAEL;
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper2.SetWindingLeftEdgeClosed(leftE: PActive);
 var
   e, e2: PActive;
   inside: Boolean;
-  ft: TFillType;
 begin
-  e := edge.PrevInAEL;
-  //find the Edge of the same PolyType that immediately preceeds 'Edge' in AEL
-  while Assigned(e) and (not IsSamePolyType(e, edge) or IsOpen(e)) do
+  //Wind counts generally refer to polygon regions not edges, so here an edge's
+  //WindCnt indicates the higher of the two wind counts of the regions touching
+  //the edge. (Note also that adjacent region wind counts only ever differ
+  //by one, and open paths have no meaningful wind directions or counts.)
+
+  e := leftE.PrevInAEL;
+  //find the nearest closed path edge of the same PolyType in AEL (heading left)
+  while Assigned(e) and (not IsSamePolyType(e, leftE) or IsOpen(e)) do
     e := e.PrevInAEL;
+
+  //todo: check open path with negative Winding
   if not Assigned(e) then
   begin
-    if IsOpen(edge) then
-    begin
-      ft := FFillType;
-      if ft = ftNegative then
-        edge.WindCnt := -1 else
-        edge.WindCnt := 1;
-    end
-    else
-      edge.WindCnt := edge.WindDx;
-    e := FActives; //ie get ready to calc WindCnt2
+    leftE.WindCnt := leftE.WindDx;
+    e := FActives;
   end
-  else if IsOpen(edge) and (FClipType <> ctUnion) then
+  else if (FFillType = ftEvenOdd) then
   begin
-    edge.WindCnt := 1;
-    edge.WindCnt2 := e.WindCnt2;
-    e := e.NextInAEL; //ie get ready to calc WindCnt2
-  end
-  else if FFillType = ftEvenOdd then
-  begin
-    //even-odd filling ...
-    if IsOpen(edge) then  //if edge is part of a line
-    begin
-      //are we inside a subj polygon ...
-      inside := true;
-      e2 := e.PrevInAEL;
-      while assigned(e2) do
-      begin
-        if IsSamePolyType(e2, e) and not IsOpen(e2) then
-          inside := not inside;
-        e2 := e2.PrevInAEL;
-      end;
-      if inside then edge.WindCnt := 0
-      else edge.WindCnt := 1;
-    end
-    else //else a polygon
-    begin
-      edge.WindCnt := edge.WindDx;
-    end;
-    edge.WindCnt2 := e.WindCnt2;
-    e := e.NextInAEL; //ie get ready to calc WindCnt2
+    leftE.WindCnt := leftE.WindDx;
+    leftE.WindCnt2 := e.WindCnt2;
+    e := e.NextInAEL;
   end else
   begin
-    //NonZero, Positive, or Negative filling ...
+    //NonZero, positive, or negative filling here ...
+    //if e's WindCnt is in the SAME direction as its WindDx, then e is either
+    //an outer left or a hole right boundary, so leftE must be inside 'e'.
+    //(neither e.WindCnt nor e.WindDx should ever be 0)
     if (e.WindCnt * e.WindDx < 0) then
     begin
-      //prev edge is 'decreasing' WindCount (WC) toward zero
-      //so we're outside the previous polygon ...
+      //opposite directions so leftE is outside 'e' ...
       if (Abs(e.WindCnt) > 1) then
       begin
         //outside prev poly but still inside another.
-        //when reversing direction of prev poly use the same WC
-        if (e.WindDx * edge.WindDx < 0) then
-          edge.WindCnt := e.WindCnt
-        //otherwise continue to 'decrease' WC ...
-        else edge.WindCnt := e.WindCnt + edge.WindDx;
+        if (e.WindDx * leftE.WindDx < 0) then
+          //reversing direction so use the same WC
+          leftE.WindCnt := e.WindCnt else
+          //otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
+          leftE.WindCnt := e.WindCnt + leftE.WindDx;
       end
-      else
-        //now outside all polys of same polytype so set own WC ...
-        if IsOpen(edge) then edge.WindCnt := 1
-        else edge.WindCnt := edge.WindDx;
+      //now outside all polys of same polytype so set own WC ...
+      else leftE.WindCnt := leftE.WindDx;
     end else
     begin
-      //prev edge is 'increasing' WindCount (WC) away from zero
-      //so we're inside the previous polygon ...
-      if IsOpen(edge) then
-      begin
-        if (e.WindCnt < 0) then edge.WindCnt := e.WindCnt -1
-        else edge.WindCnt := e.WindCnt +1;
-      end
-      //if wind direction is reversing prev then use same WC
-      else if (e.WindDx * edge.WindDx < 0) then
-        edge.WindCnt := e.WindCnt
-      //otherwise add to WC ...
-      else edge.WindCnt := e.WindCnt + edge.WindDx;
+      //leftE must be inside 'e'
+      if (e.WindDx * leftE.WindDx < 0) then
+        //reversing direction so use the same WC
+        leftE.WindCnt := e.WindCnt
+      else
+        //otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
+        leftE.WindCnt := e.WindCnt + leftE.WindDx;
     end;
-    edge.WindCnt2 := e.WindCnt2;
-    e := e.NextInAEL; //ie get ready to calc WindCnt2
+    leftE.WindCnt2 := e.WindCnt2;
+    e := e.NextInAEL;
   end;
 
   //update WindCnt2 ...
   if FFillType = ftEvenOdd then
-  begin
-    //even-odd filling ...
-    while (e <> edge) do
+    while (e <> leftE) do
     begin
-      if IsSamePolyType(e, edge) or IsOpen(e) then //do nothing
-      else if edge.WindCnt2 = 0 then edge.WindCnt2 := 1
-      else edge.WindCnt2 := 0;
+      if IsSamePolyType(e, leftE) or IsOpen(e) then //do nothing
+      else if leftE.WindCnt2 = 0 then leftE.WindCnt2 := 1
+      else leftE.WindCnt2 := 0;
+      e := e.NextInAEL;
+    end
+  else
+    while (e <> leftE) do
+    begin
+      if not IsSamePolyType(e, leftE) and not IsOpen(e) then
+        Inc(leftE.WindCnt2, e.WindDx);
       e := e.NextInAEL;
     end;
-  end else
-  begin
-    //NonZero, Positive, or Negative filling ...
-    while (e <> edge) do
-    begin
-      if not IsSamePolyType(e, edge) and not IsOpen(e) then
-        Inc(edge.WindCnt2, e.WindDx);
-      e := e.NextInAEL;
-    end;
-  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1050,8 +1065,15 @@ begin
     end;
 
     InsertEdgeIntoAEL(leftB, nil, false);      //insert left edge
-    SetWindingCount(leftB);
-    contributing := IsContributing(leftB);
+    if IsOpen(leftB) then
+    begin
+      SetWindingLeftEdgeOpen(leftB);
+      contributing := IsContributingOpen(leftB);
+    end else
+    begin
+      SetWindingLeftEdgeClosed(leftB);
+      contributing := IsContributingClosed(leftB);
+    end;
 
     if assigned(rightB) then
     begin
@@ -1065,11 +1087,8 @@ begin
         PushHorz(rightB) else
         InsertScanLine(rightB.Top.Y);
     end
-    else if IsContributing(leftB) then
-    begin
-      //ie open path that's not at a local minima
+    else if contributing then
       StartOpenPath(leftB, leftB.Bot);
-    end;
 
     if IsHorizontal(leftB) then
       PushHorz(leftB) else
@@ -1082,7 +1101,7 @@ begin
       while (e <> rightB) do
       begin
         //nb: For calculating winding counts etc, IntersectEdges() assumes
-        //that param1 will be to the right of param2 ABOVE the intersection ...
+        //that rightB will be to the right of e ABOVE the intersection ...
         IntersectEdges(rightB, e, rightB.Bot);
         e := e.NextInAEL;
       end;
@@ -1191,6 +1210,8 @@ end;
 
 procedure TClipper2.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
 begin
+  if not IsHotEdge(e2) then
+    raise EClipperLibException.Create(rsClippingErr);
   AddOutPt(e1, pt);
   if  (e1.OutRec = e2.OutRec) then EndOutRec(e1.OutRec)
   //and to preserve the winding orientation of Outrec ...
@@ -1377,6 +1398,7 @@ var
   OutRec: POutRec;
   op    : POutPt;
 begin
+  assert(e.OutRec = nil, 'oops');
   new(OutRec);
   OutRec.Idx := FOutRecList.Add(OutRec);
   OutRec.Owner := nil;
@@ -1406,71 +1428,33 @@ end;
 
 procedure TClipper2.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
-  e1Contributing, e2contributing: Boolean;
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: integer;
 begin
-  //e1 will be to the left of e2 BELOW the intersection. Therefore e1 is before
-  //e2 in AEL except when e1 is being inserted at the intersection point ...
-
-  e1Contributing := IsHotEdge(e1);
-  e2contributing := IsHotEdge(e2);
-
   e1.Curr := pt;
   e2.Curr := pt;
 
-  //if either edge is on an OPEN path ...
+  //if either edge is an OPEN path ...
   if FHasOpenPaths and (IsOpen(e1) or IsOpen(e2)) then
   begin
-
-    //ignore subject-subject open path intersections,
-    //unless they're the same OutRec and hence need joining ...
-    if IsOpen(e1) AND IsOpen(e2) then
-    begin
-      if e1Contributing and (e1.OutRec = e2.OutRec) then
-      AddLocalMaxPoly(e1, e2, pt);
-      Exit;
-    end
-
-    //if intersecting a subj line with a subj poly ...
-    else if IsSamePolyType(e1, e2) and
-      (e1.WindDx <> e2.WindDx) and (FClipType = ctUnion) then
-    begin
-      if IsOpen(e1) then
-      begin
-        if (e2contributing) then
-        begin
-          if e1Contributing then AddOutPt(e1, pt)
-          else StartOpenPath(e1, pt);
-          if (e1Contributing) then TerminateHotOpen(e1);
-        end;
-      end else
-      begin
-        if (e1Contributing) then
-        begin
-          if e2contributing then AddOutPt(e2, pt)
-          else StartOpenPath(e2, pt);
-          if (e2contributing) then TerminateHotOpen(e2);
-        end;
-      end;
-    end
-    else if not IsSamePolyType(e1, e2) then
-    begin
-      //toggle subj open path OutIdx on/off when Abs(clip.WndCnt) = 1 ...
-      if IsOpen(e1) and (Abs(e2.WindCnt) = 1) and
-       ((FClipType <> ctUnion) or (e2.WindCnt2 = 0)) then
-      begin
-        if e1Contributing then AddOutPt(e1, pt)
-        else StartOpenPath(e1, pt);
-        if e1Contributing then TerminateHotOpen(e1);
-      end
-      else if IsOpen(e2) and (Abs(e1.WindCnt) = 1) and
-       ((FClipType <> ctUnion) or (e1.WindCnt2 = 0)) then
-      begin
-        if e2contributing then AddOutPt(e2, pt)
-        else StartOpenPath(e2, pt);
-        if e2contributing then TerminateHotOpen(e2);
-      end
+    if (IsOpen(e1) and IsOpen(e2) ) then Exit;
+    //the following line just avoids duplicating a whole lot of code ...
+    if IsOpen(e2) then SwapActive(e1, e2);
+    case FClipType of
+      ctIntersection, ctDifference:
+        if IsSamePolyType(e1, e2) or (abs(e2.WindCnt) <> 1) then Exit;
+      ctUnion:
+        if IsHotEdge(e1) <> ((abs(e2.WindCnt) <> 1) or
+          (IsHotEdge(e1) <> (e2.WindCnt2 <> 0))) then Exit; //just works!
+      ctXor:
+        if (abs(e2.WindCnt) <> 1) then Exit;
     end;
+    //toggle contribution ...
+    if IsHotEdge(e1) then
+    begin
+      AddOutPt(e1, pt);
+      TerminateHotOpen(e1);
+    end
+    else StartOpenPath(e1, pt);
     Exit;
   end;
 
@@ -1521,7 +1505,7 @@ begin
       end;
   end;
 
-  if e1Contributing and e2contributing then
+  if IsHotEdge(e1) and IsHotEdge(e2) then
   begin
     if not (e1WindCnt in [0,1]) or not (e2WindCnt in [0,1]) or
       (not IsSamePolyType(e1, e2) and (fClipType <> ctXor)) then
@@ -1538,7 +1522,7 @@ begin
       AddOutPt(e2, pt);
       SwapOutRecs(e1, e2);
     end;
-  end else if e1Contributing then
+  end else if IsHotEdge(e1) then
   begin
     if (e2WindCnt = 0) or (e2WindCnt = 1) then
     begin
@@ -1546,7 +1530,7 @@ begin
       SwapOutRecs(e1, e2);
     end;
   end
-  else if e2contributing then
+  else if IsHotEdge(e2) then
   begin
     if (e1WindCnt = 0) or (e1WindCnt = 1) then
     begin
@@ -1554,7 +1538,8 @@ begin
       SwapOutRecs(e1, e2);
     end;
   end
-  else if  ((e1WindCnt = 0) or (e1WindCnt = 1)) and ((e2WindCnt = 0) or (e2WindCnt = 1)) then
+  else if  ((e1WindCnt = 0) or (e1WindCnt = 1)) and
+    ((e2WindCnt = 0) or (e2WindCnt = 1)) then
   begin
     //neither Edge is currently contributing ...
     case FFillType of
@@ -1588,8 +1573,8 @@ begin
           if (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0) then
             AddLocalMinPoly(e1, e2, pt);
         ctDifference:
-          if ((e1.LocMin.PolyType = ptClip) and (e1WindCnt2 > 0) and
-            (e2WindCnt2 > 0)) or ((e1.LocMin.PolyType = ptSubject) and
+          if ((GetPolyType(e1) = ptClip) and (e1WindCnt2 > 0) and
+            (e2WindCnt2 > 0)) or ((GetPolyType(e1) = ptSubject) and
             (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0)) then
               AddLocalMinPoly(e1, e2, pt);
         ctXor:
@@ -2071,16 +2056,19 @@ begin
   if IsHotEdge(horzEdge) then
     AddOutPt(horzEdge, horzEdge.Top);
 
-  if IsOpen(horzEdge) then
+  if not IsOpen(horzEdge) then
+    UpdateEdgeIntoAEL(horzEdge) //this is the end of an intermediate horiz.
+  else if not IsMaxima(horzEdge) then
+    UpdateEdgeIntoAEL(horzEdge)
+  else if not assigned(maxPair) then //ie open at top
+    DeleteFromAEL(horzEdge)
+  else if IsHotEdge(horzEdge) then
+      AddLocalMaxPoly(horzEdge, maxPair, horzEdge.Top)
+  else
   begin
-    if not IsMaxima(horzEdge) then
-      UpdateEdgeIntoAEL(horzEdge)
-    else if assigned(maxPair) then
-          AddLocalMaxPoly(horzEdge, maxPair, horzEdge.Top)
-    else
-      DeleteFromAEL(horzEdge);
-  end else
-    UpdateEdgeIntoAEL(horzEdge); //this is the end of an intermediate horiz.
+    DeleteFromAEL(maxPair); DeleteFromAEL(horzEdge);
+  end;
+
 end;
 //------------------------------------------------------------------------------
 
@@ -2169,7 +2157,7 @@ begin
 
   //here E.NextInAEL == ENext == EMaxPair ...
   if IsHotEdge(e) then
-      AddLocalMaxPoly(e, eMaxPair, e.Top);
+    AddLocalMaxPoly(e, eMaxPair, e.Top);
 
   DeleteFromAEL(e);
   DeleteFromAEL(eMaxPair);

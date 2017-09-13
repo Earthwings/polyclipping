@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  9 September 2017                                                *
+* Date      :  13 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -79,10 +79,10 @@ namespace ClipperLib
       this.left = l; this.top = t;
       this.right = r; this.bottom = b;
     }
-    public Rect64(Rect64 ir)
+    public Rect64(Rect64 r)
     {
-      this.left = ir.left; this.top = ir.top;
-      this.right = ir.right; this.bottom = ir.bottom;
+      this.left = r.left; this.top = r.top;
+      this.right = r.right; this.bottom = r.bottom;
     }
   }
 
@@ -114,12 +114,12 @@ namespace ClipperLib
 
   internal class Active {
     internal Point64 Bot;
-    internal Point64 Curr; //current (updated for every new Scanline)
+    internal Point64 Curr;     //current (updated for every new Scanline)
     internal Point64 Top;
     internal double Dx;
-    internal Int32 WindDx; //1 or -1 depending on winding direction
-    internal Int32 WindCnt;
-    internal Int32 WindCnt2; //winding count of the opposite polytype
+    internal Int32 WindDx;     //wind direction (ascending: +1; descending: -1)
+    internal Int32 WindCnt;    //current wind count
+    internal Int32 WindCnt2;   //current wind count of opposite TPolyType
     internal OutRec OutRec;
     internal Active NextInAEL;
     internal Active PrevInAEL;
@@ -330,38 +330,6 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal double Area(OutPt op)
-    {
-      OutPt opFirst = op;
-      if (op == null) return 0;
-      double a = 0;
-      do
-      {
-        a = a + (double)(op.Prev.Pt.X + op.Pt.X) * (double)(op.Prev.Pt.Y - op.Pt.Y);
-        op = op.Next;
-      } while (op != opFirst);
-      return a * 0.5;
-    }
-    //------------------------------------------------------------------------------
-
-    internal double Area(OutRec outRec)
-    {
-      return Area(outRec.Pts);
-    }
-    //------------------------------------------------------------------------------
-
-    public static Boolean Orientation(Path poly)
-    {
-      return Area(poly) >= 0;
-    }
-    //------------------------------------------------------------------------------
-
-    public static void ReversePaths(Paths polys)
-    {
-      foreach (var poly in polys) { poly.Reverse(); }
-    }
-    //------------------------------------------------------------------------------
-
     public static Rect64 GetBounds(Paths paths)
     {
       Int32 i = 0, cnt = paths.Count;
@@ -436,6 +404,13 @@ namespace ClipperLib
         return TopX(e2, e1.Top.Y) - e1.Top.X;
       else
         return e2.Top.X - TopX(e1, e2.Top.Y);
+    }
+    //------------------------------------------------------------------------------
+
+    private void SwapActive(ref Active e1, ref Active e2)
+    {
+      Active e = e1;
+      e1 = e2; e2 = e;
     }
     //------------------------------------------------------------------------------
 
@@ -780,190 +755,213 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsContributing(Active edge)
+    private PolyType GetPolyType(Active e)
     {
+      return e.LocalMin.PolyType;
+    }
+    //------------------------------------------------------------------------------
 
+    private Boolean IsSamePolyType(Active e1, Active e2)
+    {
+      return (e1.LocalMin.PolyType == e2.LocalMin.PolyType);
+    }
+    //------------------------------------------------------------------------------
+
+    private Boolean IsContributingClosed(Active e)
+    {
       switch (this.FillType)
       {
-        case FillType.EvenOdd:
-          if (IsOpen(edge) && edge.WindCnt != 1) return false;
-          break;
         case FillType.NonZero:
-          if (Math.Abs(edge.WindCnt) != 1) return false;
+          if (Math.Abs(e.WindCnt) != 1) return false;
           break;
         case FillType.Positive:
-          if (edge.WindCnt != 1) return false;
+          if (e.WindCnt != 1) return false;
           break;
-        default: if (edge.WindCnt != -1) return false;
+        case FillType.Negative :
+          if (e.WindCnt != -1) return false;
           break;
       }
 
       switch (this.ClipType)
       {
         case ClipType.Intersection:
-          switch (FillType)
+          switch (this.FillType)
           {
             case FillType.EvenOdd:
             case FillType.NonZero:
-              return (edge.WindCnt2 != 0);
+              return (e.WindCnt2 != 0);
             case FillType.Positive:
-              return (edge.WindCnt2 > 0); 
+              return (e.WindCnt2 > 0); 
             case FillType.Negative:
-              return (edge.WindCnt2 < 0); 
+              return (e.WindCnt2 < 0); 
           }
           break;
         case ClipType.Union:
-          switch (FillType)
+          switch (this.FillType)
           {
             case FillType.EvenOdd:
             case FillType.NonZero:
-              return (edge.WindCnt2 == 0); 
+              return (e.WindCnt2 == 0); 
             case FillType.Positive:
-              return (edge.WindCnt2 <= 0); 
+              return (e.WindCnt2 <= 0); 
             case FillType.Negative:
-              return (edge.WindCnt2 >= 0);
+              return (e.WindCnt2 >= 0);
           }
           break;
         case ClipType.Difference:
-          if (edge.LocalMin.PolyType == PolyType.Subject)
-            switch (FillType)
+          if (GetPolyType(e) == PolyType.Subject)
+            switch (this.FillType)
             {
               case FillType.EvenOdd:
               case FillType.NonZero:
-                return (edge.WindCnt2 == 0);
+                return (e.WindCnt2 == 0);
               case FillType.Positive:
-                return (edge.WindCnt2 <= 0);
+                return (e.WindCnt2 <= 0);
               case FillType.Negative:
-                return (edge.WindCnt2 >= 0);
+                return (e.WindCnt2 >= 0);
             }
           else
-            switch (FillType)
+            switch (this.FillType)
             {
               case FillType.EvenOdd:
               case FillType.NonZero:
-                return (edge.WindCnt2 != 0);
+                return (e.WindCnt2 != 0);
               case FillType.Positive:
-                return (edge.WindCnt2 > 0); 
+                return (e.WindCnt2 > 0); 
               case FillType.Negative:
-                return (edge.WindCnt2 < 0); 
+                return (e.WindCnt2 < 0); 
             }; break;
         case ClipType.Xor:
-          if (!IsOpen(edge)) return true; //XOr is always contributing unless open
-          switch (FillType)
-          {
-            case FillType.EvenOdd:
-            case FillType.NonZero:
-              return (edge.WindCnt2 == 0);
-            case FillType.Positive:
-              return (edge.WindCnt2 <= 0);
-            case FillType.Negative:
-              return (edge.WindCnt2 >= 0);
-          } break;
+          return true; //XOr is always contributing unless open
       }
-      return false;
+      return false; //we never get here but this stops a compiler issue.
     }
     //------------------------------------------------------------------------------
 
-    private void SetWindingCount(Active edge)
+    private Boolean IsContributingOpen(Active e)
     {
-      Active e = edge.PrevInAEL;
-      //find the edge of the same polytype that immediately preceeds 'edge' in AEL
-      while (e != null && ((e.LocalMin.PolyType != edge.LocalMin.PolyType) || IsOpen(e))) e = e.PrevInAEL;
+      switch (this.ClipType)
+      {
+        case ClipType.Intersection: return (e.WindCnt2 != 0);
+        case ClipType.Union: return (e.WindCnt == 0 && e.WindCnt2 == 0);
+        case ClipType.Difference: return (e.WindCnt2 == 0);
+        case ClipType.Xor: return (e.WindCnt != 0) != (e.WindCnt2 != 0);
+      }
+      return false; //stops compiler error
+    }
+    //------------------------------------------------------------------------------
 
-      if (e == null)
+    internal static Boolean IsOdd(Int32 val)
+    {
+      return (val % 2 != 0);
+    }
+    //------------------------------------------------------------------------------
+
+    private void SetWindingLeftEdgeOpen(Active e)
+    {
+    Active e2 = Actives;
+      if (FillType == FillType.EvenOdd)
       {
-        if (IsOpen(edge))
-          edge.WindCnt = (FillType == FillType.Negative ? -1 : 1);
-        else
-          edge.WindCnt = edge.WindDx;
-        e = Actives; //ie get ready to calc WindCnt2
-      }
-      else if (IsOpen(edge) && ClipType != ClipType.Union)
-      {
-        edge.WindCnt = 1;
-        edge.WindCnt2 = e.WindCnt2;
-        e = e.NextInAEL; //ie get ready to calc WindCnt2
-      }
-      else if (FillType == FillType.EvenOdd)
-      {
-        //even-odd filling ...
-        if (IsOpen(edge))  //if edge is part of a line
+        Int32 cnt1 = 0, cnt2 = 0;
+        while (e2 != e)
         {
-          //are we inside a subj polygon ...
-          Boolean inside = true;
-          Active e2 = e.PrevInAEL;
-          while (e2 != null)
-          {
-            if (e2.LocalMin.PolyType == e.LocalMin.PolyType && !IsOpen(e2)) inside = !inside;
-            e2 = e2.PrevInAEL;
-          }
-          edge.WindCnt = (inside ? 0 : 1);
+          if (GetPolyType(e2) == PolyType.Clip) cnt2++;
+          else if (!IsOpen(e2)) cnt1++;
+          e2 = e2.NextInAEL;
         }
-        else //else a polygon    
-          edge.WindCnt = edge.WindDx;
-
-        edge.WindCnt2 = e.WindCnt2;
-        e = e.NextInAEL; //ie get ready to calc WindCnt2
+        e.WindCnt = (IsOdd(cnt1) ? 1 : 0);
+        e.WindCnt2 = (IsOdd(cnt2) ? 1 : 0);
       }
       else
       {
-        //NonZero, Positive, or Negative filling ...
+        //if FClipType in [ctUnion, ctDifference] then e.WindCnt := e.WindDx;
+        while (e2 != e)
+        {
+          if (GetPolyType(e2) == PolyType.Clip) e.WindCnt2 += e2.WindDx;
+          else if (!IsOpen(e2)) e.WindCnt += e2.WindDx;
+          e2 = e2.NextInAEL;
+        }
+      }
+    }
+    //------------------------------------------------------------------------------
+
+    private void SetWindingLeftEdgeClosed(Active leftE)
+    {
+      //Wind counts generally refer to polygon regions not edges, so here an edge's
+      //WindCnt indicates the higher of the two wind counts of the regions touching
+      //the edge. (Note also that adjacent region wind counts only ever differ
+      //by one, and open paths have no meaningful wind directions or counts.)
+
+      Active e = leftE.PrevInAEL;
+      //find the nearest closed path edge of the same PolyType in AEL (heading left)
+      PolyType pt = GetPolyType(leftE);
+      while (e != null && (GetPolyType(e) != pt || IsOpen(e))) e = e.PrevInAEL;
+
+      if (e == null)
+      {
+        leftE.WindCnt = leftE.WindDx;
+        e = Actives;
+      }
+      else if (FillType == FillType.EvenOdd)
+      {
+        leftE.WindCnt = leftE.WindDx;
+        leftE.WindCnt2 = e.WindCnt2;
+        e = e.NextInAEL;
+      }
+      else
+      {
+        //NonZero, Positive, or Negative filling here ...
+        //if e's WindCnt is in the SAME direction as its WindDx, then e is either
+        //an outer left or a hole right boundary, so leftE must be inside 'e'.
+        //(neither e.WindCnt nor e.WindDx should ever be 0)
         if (e.WindCnt * e.WindDx < 0)
         {
-          //prev edge is 'decreasing' WindCount (WC) toward zero
-          //so we're outside the previous polygon ...
+          //opposite directions so leftE is outside 'e' ...
           if (Math.Abs(e.WindCnt) > 1)
           {
             //outside prev poly but still inside another.
-            //when reversing direction of prev poly use the same WC
-            if (e.WindDx * edge.WindDx < 0) edge.WindCnt = e.WindCnt;
-            //otherwise continue to 'decrease' WC ...
-            else edge.WindCnt = e.WindCnt + edge.WindDx;
+            if (e.WindDx * leftE.WindDx < 0)
+              //reversing direction so use the same WC
+              leftE.WindCnt = e.WindCnt;
+            else
+              //otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
+              leftE.WindCnt = e.WindCnt + leftE.WindDx;
           }
           else
             //now outside all polys of same polytype so set own WC ...
-            edge.WindCnt = (IsOpen(edge) ? 1 : edge.WindDx);
+            leftE.WindCnt = (IsOpen(leftE) ? 1 : leftE.WindDx);
         }
         else
         {
-          //prev. edge is 'increasing' WindCount (WC) away from zero
-          //so we're inside the previous polygon ...
-          if (IsOpen(edge))
-          {
-            if (e.WindCnt < 0) e.WindCnt--; else e.WindCnt++;
-          }
-          //if wind direction is reversing then use same WC
-          else if (e.WindDx * edge.WindDx < 0) edge.WindCnt = e.WindCnt;
-          //otherwise add to WC ...
-          else edge.WindCnt = e.WindCnt + edge.WindDx;
+          //leftE must be inside 'e'
+          if (e.WindDx * leftE.WindDx < 0)
+            //reversing direction so use the same WC
+            leftE.WindCnt = e.WindCnt;
+          else
+            //otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
+            leftE.WindCnt = e.WindCnt + leftE.WindDx;
         };
-        edge.WindCnt2 = e.WindCnt2;
+        leftE.WindCnt2 = e.WindCnt2;
         e = e.NextInAEL; //ie get ready to calc WindCnt2
       }
 
       //update WindCnt2 ...
       if (FillType == FillType.EvenOdd)
-      {
-        //even-odd filling ...
-        while (e != edge)
+        while (e != leftE)
         {
-          if (e.LocalMin.PolyType != edge.LocalMin.PolyType && !IsOpen(e))
-            edge.WindCnt2 = (edge.WindCnt2 == 0 ? 1 : 0);
+          if (GetPolyType(e) != pt && !IsOpen(e))
+            leftE.WindCnt2 = (leftE.WindCnt2 == 0 ? 1 : 0);
           e = e.NextInAEL;
         }
-      }
       else
-      {
-        //NonZero, Positive, or Negative filling ...
-        while (e != edge)
+        while (e != leftE)
         {
-          if (e.LocalMin.PolyType != edge.LocalMin.PolyType && !IsOpen(e))
-            edge.WindCnt2 += e.WindDx;
+          if (GetPolyType(e) != pt && !IsOpen(e))
+            leftE.WindCnt2 += e.WindDx;
           e = e.NextInAEL;
         }
-      }
     }
-      //------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
     private void InsertEdgeIntoAEL(Active edge, Active startEdge, Boolean preferLeft)
     {
@@ -1056,9 +1054,18 @@ namespace ClipperLib
           rightB = null;
         }
 
+        Boolean contributing;
         InsertEdgeIntoAEL(leftB, null, false);      //insert left edge
-        SetWindingCount(leftB);
-        Boolean contributing = IsContributing(leftB);
+        if (IsOpen(leftB))
+        {
+          SetWindingLeftEdgeOpen(leftB);
+          contributing = IsContributingOpen(leftB);
+        }
+        else
+        { 
+          SetWindingLeftEdgeClosed(leftB);
+          contributing = IsContributingClosed(leftB);
+        }
 
         if (rightB != null) 
         {
@@ -1073,11 +1080,8 @@ namespace ClipperLib
             else
               InsertScanline(rightB.Top.Y);
         }
-        else if (IsContributing(leftB))
-        {
-          //ie open path that's not at a local minima
+        else if (contributing)
           StartOpenPath(leftB, leftB.Bot);
-        }
 
         if (IsHorizontal(leftB))
           PushHorz(leftB); else
@@ -1090,7 +1094,7 @@ namespace ClipperLib
           while (e != rightB)
           {
             //nb: For calculating winding counts etc, IntersectEdges() assumes
-            //that param1 will be to the right of param2 ABOVE the intersection ...
+            //that rightB will be to the right of e ABOVE the intersection ...
             IntersectEdges(rightB, e, rightB.Bot);
             e = e.NextInAEL;
           }
@@ -1191,6 +1195,9 @@ namespace ClipperLib
 
     private void AddLocalMaxPoly(Active e1, Active e2, Point64 Pt)
     {
+      if (!IsHotEdge(e2))
+        throw new ClipperException("Error in AddLocalMaxPoly().");
+
       AddOutPt(e1, Pt);
       if (e1.OutRec == e2.OutRec) EndOutRec(e1.OutRec);
       //and to preserve the winding orientation of Outrec ...
@@ -1390,195 +1397,167 @@ namespace ClipperLib
         SetDx(e);
         if (!IsHorizontal(e)) InsertScanline(e.Top.Y);
       }
-      //------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
-      private void IntersectEdges(Active e1, Active e2, Point64 pt)
+    private void IntersectEdges(Active e1, Active e2, Point64 pt)
+    {
+
+      e1.Curr = pt;
+      e2.Curr = pt;
+
+      //if either edge is an OPEN path ...
+      if (HasOpenPaths && (IsOpen(e1) || IsOpen(e2)))
       {
-        //e1 will be to the left of e2 BELOW the intersection. Therefore e1 is before
-        //e2 in AEL except when e1 is being inserted at the intersection point ...
-
-        Boolean e1Contributing = IsHotEdge(e1);
-        Boolean e2Contributing = IsHotEdge(e2);
-
-        e1.Curr = pt;
-        e2.Curr = pt;
-
-        //if either edge is on an OPEN path ...
-        if (HasOpenPaths && (IsOpen(e1) || IsOpen(e2)))
-        {
-          //ignore subject-subject open path intersections,
-          //unless they're the same OutRec and hence need joining ...
-          if (IsOpen(e1) && IsOpen(e2))
-          {
-            if (e1Contributing && (e1.OutRec == e2.OutRec))
-              AddLocalMaxPoly(e1, e2, pt);
-            return;
-          }
-          //if intersecting a subj line with a subj poly ...
-          else if (e1.LocalMin.PolyType == e2.LocalMin.PolyType &&
-            e1.WindDx != e2.WindDx && ClipType == ClipType.Union)
-          {
-            if (IsOpen(e1))
-            {
-              if (e2Contributing)
-              {
-                if (e1Contributing) AddOutPt(e1, pt); 
-                else StartOpenPath(e1, pt);
-                if (e1Contributing) TerminateHotOpen(e1);
-              }
-            }
-            else
-            {
-              if (e1Contributing)
-              {
-                if (e2Contributing) AddOutPt(e2, pt);
-                else StartOpenPath(e2, pt); 
-                if (e2Contributing) TerminateHotOpen(e2);
-              }
-            }
-          }
-          else if (e1.LocalMin.PolyType != e2.LocalMin.PolyType)
-          {
-            if (IsOpen(e1) && Math.Abs(e2.WindCnt) == 1 &&
-              (ClipType != ClipType.Union || e2.WindCnt2 == 0))
-            {
-              if (e1Contributing) AddOutPt(e1, pt); 
-              else StartOpenPath(e1, pt);
-            if (e1Contributing) TerminateHotOpen(e1);
-            }
-            else if (IsOpen(e2) && Math.Abs(e1.WindCnt) == 1 &&
-                (ClipType != ClipType.Union || e1.WindCnt2 == 0))
-            {
-              if (e2Contributing) AddOutPt(e2, pt);
-              else StartOpenPath(e2, pt);
-              if (e2Contributing) TerminateHotOpen(e2);
-            }
-          }
-          return;
+        if (IsOpen(e1) && IsOpen(e2)) return; //ignore lines that intersect
+        //the following line just avoids duplicating a whole lot of code ...
+        if (IsOpen(e2)) SwapActive(ref e1, ref e2);
+        switch (ClipType)
+        { 
+          case ClipType.Intersection:
+          case ClipType.Difference:
+            if (IsSamePolyType(e1, e2) || (Math.Abs(e2.WindCnt) != 1)) return;
+            break;
+          case ClipType.Union:
+            if (IsHotEdge(e1) != ((Math.Abs(e2.WindCnt) != 1) ||
+              (IsHotEdge(e1) != (e2.WindCnt2 != 0)))) return; //just works!
+            break; 
+          case ClipType.Xor:            
+            if (Math.Abs(e2.WindCnt) != 1) return;
+            break;
         }
-
-        //update winding counts...
-        //assumes that e1 will be to the Right of e2 ABOVE the intersection
-        Int32 oldE1WindCnt, oldE2WindCnt;
-        if (e1.LocalMin.PolyType == e2.LocalMin.PolyType)
+        //toggle contribution ...
+        if (IsHotEdge(e1))
         {
-          if (FillType == FillType.EvenOdd)
-          {
-            oldE1WindCnt = e1.WindCnt;
-            e1.WindCnt = e2.WindCnt;
-            e2.WindCnt = oldE1WindCnt;
-          }
-          else
-          {
-            if (e1.WindCnt + e2.WindDx == 0) e1.WindCnt = -e1.WindCnt;
-            else e1.WindCnt += e2.WindDx;
-            if (e2.WindCnt - e1.WindDx == 0) e2.WindCnt = -e2.WindCnt;
-            else e2.WindCnt -= e1.WindDx;
-          }
+          AddOutPt(e1, pt);
+          TerminateHotOpen(e1);
+        }
+          else StartOpenPath(e1, pt);
+        return;
+      }
+
+      //update winding counts...
+      //assumes that e1 will be to the right of e2 ABOVE the intersection
+      Int32 oldE1WindCnt, oldE2WindCnt;
+      if (e1.LocalMin.PolyType == e2.LocalMin.PolyType)
+      {
+        if (FillType == FillType.EvenOdd)
+        {
+          oldE1WindCnt = e1.WindCnt;
+          e1.WindCnt = e2.WindCnt;
+          e2.WindCnt = oldE1WindCnt;
         }
         else
         {
-          if (FillType != FillType.EvenOdd) e1.WindCnt2 += e2.WindDx;
-          else e1.WindCnt2 = (e1.WindCnt2 == 0) ? 1 : 0;
-          if (FillType != FillType.EvenOdd) e2.WindCnt2 -= e1.WindDx;
-          else e2.WindCnt2 = (e2.WindCnt2 == 0) ? 1 : 0;
+          if (e1.WindCnt + e2.WindDx == 0) e1.WindCnt = -e1.WindCnt;
+          else e1.WindCnt += e2.WindDx;
+          if (e2.WindCnt - e1.WindDx == 0) e2.WindCnt = -e2.WindCnt;
+          else e2.WindCnt -= e1.WindDx;
         }
+      }
+      else
+      {
+        if (FillType != FillType.EvenOdd) e1.WindCnt2 += e2.WindDx;
+        else e1.WindCnt2 = (e1.WindCnt2 == 0) ? 1 : 0;
+        if (FillType != FillType.EvenOdd) e2.WindCnt2 -= e1.WindDx;
+        else e2.WindCnt2 = (e2.WindCnt2 == 0) ? 1 : 0;
+      }
 
+      switch (FillType)
+      {
+        case FillType.Positive:
+          oldE1WindCnt = e1.WindCnt;
+          oldE2WindCnt = e2.WindCnt;
+          break;
+        case FillType.Negative:
+          oldE1WindCnt = -e1.WindCnt;
+          oldE2WindCnt = -e2.WindCnt;
+          break;
+        default:
+          oldE1WindCnt = Math.Abs(e1.WindCnt);
+          oldE2WindCnt = Math.Abs(e2.WindCnt);
+          break;
+      }
+
+      if (IsHotEdge(e1) && IsHotEdge(e2))
+      {
+        if ((oldE1WindCnt != 0 && oldE1WindCnt != 1) || (oldE2WindCnt != 0 && oldE2WindCnt != 1) ||
+          (e1.LocalMin.PolyType != e2.LocalMin.PolyType && ClipType != ClipType.Xor))
+        {
+          AddLocalMaxPoly(e1, e2, pt);
+        }
+        else if (e1.OutRec == e2.OutRec) //optional
+        {
+          AddLocalMaxPoly(e1, e2, pt);
+          AddLocalMinPoly(e1, e2, pt);
+        }
+        else
+        {
+          AddOutPt(e1, pt);
+          AddOutPt(e2, pt);
+          SwapOutrecs(e1, e2);
+        }
+      }
+      else if (IsHotEdge(e1))
+      {
+        if (oldE2WindCnt == 0 || oldE2WindCnt == 1)
+        {
+          AddOutPt(e1, pt);
+          SwapOutrecs(e1, e2);
+        }
+      }
+      else if (IsHotEdge(e2))
+      {
+        if (oldE1WindCnt == 0 || oldE1WindCnt == 1)
+        {
+          AddOutPt(e2, pt);
+          SwapOutrecs(e1, e2);
+        }
+      }
+      else if ((oldE1WindCnt == 0 || oldE1WindCnt == 1) && 
+        (oldE2WindCnt == 0 || oldE2WindCnt == 1))
+      {
+        //neither edge is currently contributing ...
+        Int64 e1Wc2, e2Wc2;
         switch (FillType)
         {
           case FillType.Positive:
-            oldE1WindCnt = e1.WindCnt;
-            oldE2WindCnt = e2.WindCnt;
+            e1Wc2 = e1.WindCnt2;
+            e2Wc2 = e2.WindCnt2;
             break;
           case FillType.Negative:
-            oldE1WindCnt = -e1.WindCnt;
-            oldE2WindCnt = -e2.WindCnt;
+            e1Wc2 = -e1.WindCnt2;
+            e2Wc2 = -e2.WindCnt2;
             break;
           default:
-            oldE1WindCnt = Math.Abs(e1.WindCnt);
-            oldE2WindCnt = Math.Abs(e2.WindCnt);
+            e1Wc2 = Math.Abs(e1.WindCnt2);
+            e2Wc2 = Math.Abs(e2.WindCnt2);
             break;
         }
 
-        if (e1Contributing && e2Contributing)
+        if (e1.LocalMin.PolyType != e2.LocalMin.PolyType)
         {
-          if ((oldE1WindCnt != 0 && oldE1WindCnt != 1) || (oldE2WindCnt != 0 && oldE2WindCnt != 1) ||
-            (e1.LocalMin.PolyType != e2.LocalMin.PolyType && ClipType != ClipType.Xor))
-          {
-            AddLocalMaxPoly(e1, e2, pt);
-          }
-          else if (e1.OutRec == e2.OutRec) //optional
-          {
-            AddLocalMaxPoly(e1, e2, pt);
-            AddLocalMinPoly(e1, e2, pt);
-          }
-          else
-          {
-            AddOutPt(e1, pt);
-            AddOutPt(e2, pt);
-            SwapOutrecs(e1, e2);
-          }
+          AddLocalMinPoly(e1, e2, pt);
         }
-        else if (e1Contributing)
-        {
-          if (oldE2WindCnt == 0 || oldE2WindCnt == 1)
+        else if (oldE1WindCnt == 1 && oldE2WindCnt == 1)
+          switch (ClipType)
           {
-            AddOutPt(e1, pt);
-            SwapOutrecs(e1, e2);
-          }
-        }
-        else if (e2Contributing)
-        {
-          if (oldE1WindCnt == 0 || oldE1WindCnt == 1)
-          {
-            AddOutPt(e2, pt);
-            SwapOutrecs(e1, e2);
-          }
-        }
-        else if ((oldE1WindCnt == 0 || oldE1WindCnt == 1) && (oldE2WindCnt == 0 || oldE2WindCnt == 1))
-        {
-          //neither edge is currently contributing ...
-          Int64 e1Wc2, e2Wc2;
-          switch (FillType)
-          {
-            case FillType.Positive:
-              e1Wc2 = e1.WindCnt2;
-              e2Wc2 = e2.WindCnt2;
-              break;
-            case FillType.Negative:
-              e1Wc2 = -e1.WindCnt2;
-              e2Wc2 = -e2.WindCnt2;
-              break;
-            default:
-              e1Wc2 = Math.Abs(e1.WindCnt2);
-              e2Wc2 = Math.Abs(e2.WindCnt2);
-              break;
-          }
-
-          if (e1.LocalMin.PolyType != e2.LocalMin.PolyType)
-          {
-            AddLocalMinPoly(e1, e2, pt);
-          }
-          else if (oldE1WindCnt == 1 && oldE2WindCnt == 1)
-            switch (ClipType)
-            {
-              case ClipType.Intersection:
-                if (e1Wc2 > 0 && e2Wc2 > 0)
-                  AddLocalMinPoly(e1, e2, pt);
-                break;
-              case ClipType.Union:
-                if (e1Wc2 <= 0 && e2Wc2 <= 0)
-                  AddLocalMinPoly(e1, e2, pt);
-                break;
-              case ClipType.Difference:
-                if (((e1.LocalMin.PolyType == PolyType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
-                    ((e1.LocalMin.PolyType == PolyType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
-                  AddLocalMinPoly(e1, e2, pt);
-                break;
-              case ClipType.Xor:
+            case ClipType.Intersection:
+              if (e1Wc2 > 0 && e2Wc2 > 0)
                 AddLocalMinPoly(e1, e2, pt);
-                break;
-            }
+              break;
+            case ClipType.Union:
+              if (e1Wc2 <= 0 && e2Wc2 <= 0)
+                AddLocalMinPoly(e1, e2, pt);
+              break;
+            case ClipType.Difference:
+              if (((GetPolyType(e1) == PolyType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
+                  ((GetPolyType(e1) == PolyType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
+                AddLocalMinPoly(e1, e2, pt);
+              break;
+            case ClipType.Xor:
+              AddLocalMinPoly(e1, e2, pt);
+              break;
+          }
         }
       }
       //------------------------------------------------------------------------------
@@ -2017,17 +1996,16 @@ namespace ClipperLib
 
       if (IsHotEdge(horz)) AddOutPt(horz, horz.Top);
 
-      if (IsOpen(horz))
-      {
-        if (!IsMaxima(horz))
-          UpdateEdgeIntoAEL(ref horz);
-        else if (maxPair != null)
-          AddLocalMaxPoly(horz, maxPair, horz.Top);
-        else
-          DeleteFromAEL(horz);
-      }
-      else
-        UpdateEdgeIntoAEL(ref horz); //this is the } of an intermediate horiz.
+      if (!IsOpen(horz))
+        UpdateEdgeIntoAEL(ref horz); //this is the } of an intermediate horiz.      
+      else if (!IsMaxima(horz))
+        UpdateEdgeIntoAEL(ref horz);
+      else if (maxPair == null)      //ie open at top
+        DeleteFromAEL(horz);
+      else if (IsHotEdge(horz))
+        AddLocalMaxPoly(horz, maxPair, horz.Top);
+      else { DeleteFromAEL(maxPair); DeleteFromAEL(horz); }
+
     }
     //------------------------------------------------------------------------------
 

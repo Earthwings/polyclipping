@@ -4,7 +4,7 @@ unit Clipper2_Offset;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  9 September 2017                                                *
+* Date      :  13 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -107,7 +107,7 @@ resourcestring
 
 const
   Tolerance           : double = 1.0E-15;
-  DefaultArcTolerance : double = 0.2;
+  DefaultArcFrac      : double = 0.02;
   Two_Pi              : double = 2 * PI;
   LowestIp            : TPoint64 = (X: High(Int64); Y: High(Int64));
 
@@ -204,7 +204,7 @@ begin
   inherited Create;
   FNodeList := TList.Create;
   FMiterLimit := 2;
-  FArcTolerance := DefaultArcTolerance;
+  FArcTolerance := 0;
 end;
 //------------------------------------------------------------------------------
 
@@ -303,11 +303,10 @@ begin
   if FMiterLimit > 1 then FMiterLim := 2/(sqr(FMiterLimit))
   else FMiterLim := 2;
 
-  if (FArcTolerance <= Tolerance) then
-    arcTol := DefaultArcTolerance
-  else if FArcTolerance > absDelta * DefaultArcTolerance then
-    arcTol := absDelta * DefaultArcTolerance
-  else arcTol := FArcTolerance;
+  if (FArcTolerance <= DefaultArcFrac) then
+    arcTol := absDelta * DefaultArcFrac else
+    arcTol := FArcTolerance;
+
 
   //see offset_triginometry2.svg in the documentation folder ...
   steps := PI / ArcCos(1 - arcTol / absDelta);  //steps per 360 degrees
@@ -562,12 +561,11 @@ procedure TClipper2Offset.OffsetPoint(j: integer;
 var
   cosA: double;
 begin
-  //angle between adjacent edges:
-  //360 deg: collinear edges heading in same direction
-  //180 deg: collinear edges heading in opposite directions (a spike)
-  //sin(angle) < 0: external angle > 180 deg so internal angle is convex.
-  //Abs(sin(angle)) ==> 0: then approaching collinear (either 180 or 360 deg.)
-  //  if cos(angle) > 0 then approaching 360 deg. (concave if sin(angle) < 0)
+  //A: angle between adjoining paths on left side (left WRT winding direction).
+  //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
+  //A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
+  //sin(A) < 0: convex on left.
+  //cos(A) > 0: angles on both left and right sides > 90 degrees
 
   //cross product ...
   FSinA := (FNorms[k].X * FNorms[j].Y - FNorms[j].X * FNorms[k].Y);
@@ -577,9 +575,9 @@ begin
     cosA := (FNorms[k].X * FNorms[j].X + FNorms[j].Y * FNorms[k].Y );
     if (cosA > 0) then //given condition above the angle is approaching 360 deg.
     begin
-      //with angles approaching 360 deg. collinear (whether concave or convex),
-      //offsetting with two or more vertices (that are so close together) can
-      //occasionally cause tiny self-intersections due to rounding.
+      //with angles approaching 360 deg collinear (whether concave or convex),
+      //offsetting with two or more vertices (that would be so close together)
+      //occasionally causes tiny self-intersections due to rounding.
       //So we offset with just a single vertex here ...
       AddPoint(Point64(round(FPathIn[j].X + FNorms[k].X * FDelta),
         round(FPathIn[j].Y + FNorms[k].Y * FDelta)));

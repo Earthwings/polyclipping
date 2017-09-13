@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  9 September 2017                                                *
+* Date      :  13 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -104,7 +104,7 @@ namespace ClipperLib
     private Point64 PointZero = new Point64(0, 0);
 
     private const double TwoPi = Math.PI * 2;
-    private const double DefaultArcTolerance = 0.2;
+    private const double DefaultArcFrac = 0.02;
     private const double Tolerance = 1.0E-15;
 
     //------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public Clipper2Offset() { ArcTolerance = DefaultArcTolerance; MiterLimit = 2.0; }
+    public Clipper2Offset() { MiterLimit = 2.0; }
     //------------------------------------------------------------------------------
 
     public void Clear()  { nodes.Clear(); }
@@ -191,6 +191,12 @@ namespace ClipperLib
 
     void OffsetPoint(int j, ref int k, JoinType jointype)
     {
+      //A: angle between adjoining paths on left side (left WRT winding direction).
+      //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
+      //A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
+      //sin(A) < 0: convex on left.
+      //cos(A) > 0: angles on both left and right sides > 90 degrees
+
       //cross product ...
       sinA = (norms[k].X * norms[j].Y - norms[j].X * norms[k].Y);
 
@@ -200,9 +206,9 @@ namespace ClipperLib
         double cosA = (norms[k].X * norms[j].X + norms[j].Y * norms[k].Y);
         if (cosA > 0) //given condition above the angle is approaching 360 deg.
         {
-          //with angles approaching 360 deg. collinear (whether concave or convex),
-          //offsetting with two or more vertices (that are so close together) can
-          //occasionally cause tiny self-intersections due to rounding.
+          //with angles approaching 360 deg collinear (whether concave or convex),
+          //offsetting with two or more vertices (that would be so close together)
+          //occasionally causes tiny self-intersections due to rounding.
           //So we offset with just a single vertex here ...
           pathOut.Add(new Point64(Round(pathIn[j].X + norms[k].X * delta),
             Round(pathIn[j].Y + norms[k].Y * delta)));
@@ -309,9 +315,9 @@ namespace ClipperLib
         miterLim = 0.5;
 
       double arcTol;
-      if (ArcTolerance <= Tolerance) arcTol = DefaultArcTolerance;
-      else if (ArcTolerance > absDelta * DefaultArcTolerance) arcTol = absDelta * DefaultArcTolerance;
-      else arcTol = ArcTolerance;
+      if (ArcTolerance < DefaultArcFrac)
+        arcTol = absDelta * DefaultArcFrac; else
+        arcTol = ArcTolerance;
 
       //see offset_triginometry2.svg in the documentation folder ...
       double steps = Math.PI / Math.Acos(1 - arcTol / absDelta);  //steps per 360 degrees
@@ -463,8 +469,8 @@ namespace ClipperLib
       if (nodes.Count == 0) return;
 
       GetLowestPolygonIdx();
-      if (lowestIdx >= 0 && Area(nodes[lowestIdx].path) < 0) //todo don't use Area :)
-      delta = -delta; 
+      if (lowestIdx >= 0 && Area(nodes[lowestIdx].path) < 0) //todo avoid using Area :)
+        delta = -delta; 
 
       DoOffset(delta);
 
