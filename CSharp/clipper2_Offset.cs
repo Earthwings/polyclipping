@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  13 September 2017                                               *
+* Date      :  14 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -41,14 +41,14 @@ namespace ClipperLib
     {
       this.X = ip.X; this.Y = ip.Y;
     }
-  };
+  } //PointD
 
   internal class PathNode
   {
     internal Path path;
     internal JoinType joinType;
     internal EndType endType;
-    internal Int32 lowestIdx;
+    internal int lowestIdx;
 
     public PathNode(Path p, JoinType jt, EndType et)
     {
@@ -56,7 +56,7 @@ namespace ClipperLib
       joinType = jt;
       endType = et;
 
-      Int32 lenP = p.Count;
+      int lenP = p.Count;
       if (et == EndType.Polygon || et == EndType.OpenJoined)
         while (lenP > 1 && p[lenP - 1] == p[0]) lenP--;
       else if (lenP == 2 && p[1] == p[0])
@@ -74,7 +74,7 @@ namespace ClipperLib
 
       Point64 lastIp = p[0];
       lowestIdx = 0;
-      for (Int32 i = 1; i < lenP; i++)
+      for (int i = 1; i < lenP; i++)
       {
         if (lastIp == p[i]) continue;
         path.Add(p[i]);
@@ -86,7 +86,7 @@ namespace ClipperLib
       }
       if (endType == EndType.Polygon && path.Count < 3) path = null;
     }
-  } //PathNode class
+  } //PathNode
 
 
   public class Clipper2Offset
@@ -98,7 +98,7 @@ namespace ClipperLib
     private Path pathIn, pathOut;
     private List<PointD> norms = new List<PointD>();
     private List<PathNode> nodes = new List<PathNode>();
-    private Int32 lowestIdx;
+    private int lowestIdx;
     public double ArcTolerance { get; set; }
     public double MiterLimit { get; set; }
     private Point64 PointZero = new Point64(0, 0);
@@ -153,7 +153,7 @@ namespace ClipperLib
     {
       lowestIdx = -1;
       Point64 ip1 = PointZero, ip2;
-      for (Int32 i = 0; i < nodes.Count; i++)
+      for (int i = 0; i < nodes.Count; i++)
       {
         PathNode node = nodes[i];
         if (node.endType != EndType.Polygon) continue;
@@ -333,7 +333,7 @@ namespace ClipperLib
       {
         pathIn = node.path;
         pathOut = new Path();
-        Int32 pathInCnt = pathIn.Count;
+        int pathInCnt = pathIn.Count;
 
         //if a single vertex then build circle or a square ...
         if (pathInCnt == 1)
@@ -489,7 +489,8 @@ namespace ClipperLib
       co.Execute(ref result, delta);
       return result;
     }
-//------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
   } //Clipper2Offset
+
 } //namespace

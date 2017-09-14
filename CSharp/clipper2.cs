@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  13 September 2017                                               *
+* Date      :  14 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -38,17 +38,17 @@ namespace ClipperLib
         this.X = pt.X; this.Y = pt.Y;
     }
 
-    public static Boolean operator ==(Point64 a, Point64 b)
+    public static bool operator ==(Point64 a, Point64 b)
     {
       return a.X == b.X && a.Y == b.Y;
     }
 
-    public static Boolean operator !=(Point64 a, Point64 b)
+    public static bool operator !=(Point64 a, Point64 b)
     {
       return a.X != b.X  || a.Y != b.Y; 
     }
 
-    public override Boolean Equals(object obj)
+    public override bool Equals(object obj)
     {
       if (obj == null) return false;
       if (obj is Point64)
@@ -59,13 +59,12 @@ namespace ClipperLib
       else return false;
     }
 
-    public override Int32 GetHashCode()
+    public override int GetHashCode()
     {
-      //simply prevents a compiler warning
-      return base.GetHashCode();
+      return (unchecked( 23 * ((23 * 17) + X.GetHashCode()) + Y.GetHashCode()));
     }
 
-  }// } struct Point64
+  } //Point64
 
   public struct Rect64
   {
@@ -84,7 +83,7 @@ namespace ClipperLib
       this.left = r.left; this.top = r.top;
       this.right = r.right; this.bottom = r.bottom;
     }
-  }
+  } //Rect64
 
   public enum ClipType { Intersection, Union, Difference, Xor };
   public enum PolyType { Subject, Clip };  
@@ -109,17 +108,17 @@ namespace ClipperLib
   {
     internal Vertex Vertex;
     internal PolyType PolyType;
-    internal Boolean IsOpen;
+    internal bool IsOpen;
   };
 
   internal class Active {
     internal Point64 Bot;
-    internal Point64 Curr;     //current (updated for every new Scanline)
+    internal Point64 Curr;       //current (updated for every new Scanline)
     internal Point64 Top;
-    internal double Dx;
-    internal Int32 WindDx;     //wind direction (ascending: +1; descending: -1)
-    internal Int32 WindCnt;    //current wind count
-    internal Int32 WindCnt2;   //current wind count of opposite TPolyType
+    internal double  Dx;
+    internal int     WindDx;     //wind direction (ascending: +1; descending: -1)
+    internal int     WindCnt;    //current wind count
+    internal int     WindCnt2;   //current wind count of opposite TPolyType
     internal OutRec OutRec;
     internal Active NextInAEL;
     internal Active PrevInAEL;
@@ -149,9 +148,9 @@ namespace ClipperLib
   //carry a pointer to an OutRec when they are part of the clipping solution.
   internal class OutRec
   {
-    internal Int32 IDx;
+    internal int IDx;
     internal OutRec Owner; 
-    internal OutPt Pts;
+    internal OutPt  Pts;
     internal Active StartE;
     internal Active EndE;
     internal OutrecFlags Flags;
@@ -167,7 +166,7 @@ namespace ClipperLib
 
   public class MyIntersectNodeSort : IComparer<IntersectNode>
   {
-    public Int32 Compare(IntersectNode node1, IntersectNode node2)
+    public int Compare(IntersectNode node1, IntersectNode node2)
     {
       return node2.Pt.Y.CompareTo(node1.Pt.Y); //descending soft
     }
@@ -175,7 +174,7 @@ namespace ClipperLib
 
   public class MyLocalMinSort : IComparer<LocalMinima>
   {
-    public Int32 Compare(LocalMinima lm1, LocalMinima lm2)
+    public int Compare(LocalMinima lm1, LocalMinima lm2)
     {
       return lm2.Vertex.Pt.Y.CompareTo(lm1.Vertex.Pt.Y); //descending soft
     }
@@ -192,9 +191,9 @@ namespace ClipperLib
     internal Path path = new Path();
 
     //-----------------------------------------------------
-    private Boolean IsHoleNode()
+    private bool IsHoleNode()
     {
-      Boolean result = true;
+      bool result = true;
       PolyPath node = parent;
       while (node != null)
       {
@@ -221,7 +220,7 @@ namespace ClipperLib
 
     private static void AddPolyNodeToPaths(PolyPath pp, Paths paths)
     {
-      Int32 cnt = pp.path.Count;
+      int cnt = pp.path.Count;
       if (cnt > 0)
       {
         Path p = new Path(cnt);
@@ -243,13 +242,13 @@ namespace ClipperLib
 
     public Path Path { get { return path; } }
 
-    public Int32 ChildCount { get { return childs.Count; } }
+    public int ChildCount { get { return childs.Count; } }
 
     public List<PolyPath> Childs { get { return childs; } }
 
     public PolyPath Parent { get { return parent; } }
 
-    public Boolean IsHole { get { return IsHoleNode(); } }
+    public bool IsHole { get { return IsHoleNode(); } }
   }
 
   public class PolyTree : PolyPath { };
@@ -263,28 +262,28 @@ namespace ClipperLib
   {
     internal const double horizontal = double.NegativeInfinity;
     internal ScanLine Scanline;
-    internal Boolean HasOpenPaths;
-    internal Boolean LocMinListSorted;
+    internal bool HasOpenPaths;
+    internal bool LocMinListSorted;
     internal List<List<Vertex>> VertexList = new List<List<Vertex>>();
     internal List<OutRec> OutRecList = new List<OutRec>();
-    internal Int32 CurrentLocMinIdx;
+    internal int CurrentLocMinIdx;
     internal Active Actives;
     private Active SEL;
     private List<LocalMinima> LocMinimaList = new List<LocalMinima>();
     IComparer<LocalMinima> LocalMinimaComparer = new MyLocalMinSort();
     private List<IntersectNode> IntersectList = new List<IntersectNode>();
     IComparer<IntersectNode> IntersectNodeComparer = new MyIntersectNodeSort();
-    private Boolean ExecuteLocked;
+    private bool ExecuteLocked;
     private ClipType ClipType;
     private FillType FillType;
 
-    private Boolean IsHotEdge(Active Edge)
+    private bool IsHotEdge(Active Edge)
     {
       return Edge.OutRec != null;
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsStartSide(Active Edge)
+    private bool IsStartSide(Active Edge)
     {
       return (Edge == Edge.OutRec.StartE);
     }
@@ -304,13 +303,13 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal static Boolean IsHorizontal(Active e)
+    internal static bool IsHorizontal(Active e)
     {
       return e.Dx == double.NegativeInfinity;
     }
     //------------------------------------------------------------------------------
 
-    internal static Boolean IsOpen(Active e)
+    internal static bool IsOpen(Active e)
     {
       return e.LocalMin.IsOpen;
     }
@@ -318,10 +317,10 @@ namespace ClipperLib
 
     public static double Area(Path poly)
     {
-      Int32 cnt = poly.Count;
+      int cnt = poly.Count;
       if (cnt < 3) return 0;
       double a = 0;
-      for (Int32 i = 0, j = cnt - 1; i < cnt; ++i)
+      for (int i = 0, j = cnt - 1; i < cnt; ++i)
       {
         a += ((double)poly[j].X + poly[i].X) * ((double)poly[j].Y - poly[i].Y);
         j = i;
@@ -332,7 +331,7 @@ namespace ClipperLib
 
     public static Rect64 GetBounds(Paths paths)
     {
-      Int32 i = 0, cnt = paths.Count;
+      int i = 0, cnt = paths.Count;
       while (i < cnt && paths[i].Count == 0) i++;
       if (i == cnt) return new Rect64(0, 0, 0, 0);
       Rect64 result = new Rect64();
@@ -341,7 +340,7 @@ namespace ClipperLib
       result.top = paths[i][0].Y;
       result.bottom = result.top;
       for (; i < cnt; i++)
-        for (Int32 j = 0; j < paths[i].Count; j++)
+        for (int j = 0; j < paths[i].Count; j++)
         {
           if (paths[i][j].X < result.left) result.left = paths[i][j].X;
           else if (paths[i][j].X > result.right) result.right = paths[i][j].X;
@@ -352,15 +351,15 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public static Int32 PointInPolygon(Point64 pt, Path path)
+    public static int PointInPolygon(Point64 pt, Path path)
     {
       //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
       //See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
       //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
-      Int32 result = 0, cnt = path.Count;
+      int result = 0, cnt = path.Count;
       if (cnt < 3) return 0;
       Point64 ip = path[0];
-      for (Int32 i = 1; i <= cnt; ++i)
+      for (int i = 1; i <= cnt; ++i)
       {
         Point64 ipNext = (i == cnt ? path[0] : path[i]);
         if (ipNext.Y == pt.Y)
@@ -414,7 +413,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private bool E2InsertsBeforeE1(Active e1, Active e2, Boolean PreferLeft)
+    private bool E2InsertsBeforeE1(Active e1, Active e2, bool PreferLeft)
     {
       if (e2.Curr.X == e1.Curr.X)
       {
@@ -491,7 +490,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsMaxima(Active e)
+    private bool IsMaxima(Active e)
     {
       return (VertexFlags.LocMax & e.VertTop.Flags) != 0;
     }
@@ -590,7 +589,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal Boolean PopScanline(out Int64 Y)
+    internal bool PopScanline(out Int64 Y)
     {
       if (Scanline == null)
       {
@@ -616,7 +615,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean PopLocalMinima(Int64 Y, out LocalMinima locMin)
+    private bool PopLocalMinima(Int64 Y, out LocalMinima locMin)
     {
       locMin = null;
       if (CurrentLocMinIdx == LocMinimaList.Count) return false;
@@ -630,7 +629,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void AddLocMin(Vertex vert, PolyType pt, Boolean isOpen)
+    private void AddLocMin(Vertex vert, PolyType pt, bool isOpen)
     {
       //make sure the vertex is added only once ...
       if ((VertexFlags.LocMin & vert.Flags) != 0) return;
@@ -643,16 +642,16 @@ namespace ClipperLib
     }
     //----------------------------------------------------------------------------
 
-    private void AddPathToVertexList(Path p, PolyType pt, Boolean isOpen)
+    private void AddPathToVertexList(Path p, PolyType pt, bool isOpen)
     {
-      Int32 pathLen = p.Count;
+      int pathLen = p.Count;
       while (pathLen > 1 && p[pathLen - 1] == p[0]) pathLen--;
       if (pathLen < 2) return;
 
-      Boolean P0IsMinima = false;
-      Boolean P0IsMaxima = false;
-      Boolean goingUp = false;
-      Int32 i = 1;
+      bool P0IsMinima = false;
+      bool P0IsMaxima = false;
+      bool goingUp = false;
+      int i = 1;
       //find the first non-horizontal segment in the path ...
       while (i < pathLen && p[i].Y == p[0].Y) i++;
       if (i == pathLen) //it's a totally flat path
@@ -686,7 +685,7 @@ namespace ClipperLib
       };
       va.Add(v);
       //nb: polygon orientation is determined later (see InsertLocalMinimaIntoAEL).
-      for (Int32 j = 1; j < pathLen; j++)
+      for (int j = 1; j < pathLen; j++)
       {
         if (p[j] == v.Pt) continue; //ie skips duplicates
         Vertex v2 = new Vertex(p[j]);
@@ -736,7 +735,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public void AddPath(Path path, PolyType pt, Boolean isOpen = false)
+    public void AddPath(Path path, PolyType pt, bool isOpen = false)
     {
       if (isOpen)
       {
@@ -749,7 +748,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public void AddPaths(Paths paths, PolyType pt, Boolean isOpen = false)
+    public void AddPaths(Paths paths, PolyType pt, bool isOpen = false)
     {
       foreach (Path path in paths) AddPath(path, pt, isOpen);
     }
@@ -761,13 +760,13 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsSamePolyType(Active e1, Active e2)
+    private bool IsSamePolyType(Active e1, Active e2)
     {
       return (e1.LocalMin.PolyType == e2.LocalMin.PolyType);
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsContributingClosed(Active e)
+    private bool IsContributingClosed(Active e)
     {
       switch (this.FillType)
       {
@@ -838,7 +837,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean IsContributingOpen(Active e)
+    private bool IsContributingOpen(Active e)
     {
       switch (this.ClipType)
       {
@@ -851,7 +850,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal static Boolean IsOdd(Int32 val)
+    internal static bool IsOdd(int val)
     {
       return (val % 2 != 0);
     }
@@ -862,7 +861,7 @@ namespace ClipperLib
     Active e2 = Actives;
       if (FillType == FillType.EvenOdd)
       {
-        Int32 cnt1 = 0, cnt2 = 0;
+        int cnt1 = 0, cnt2 = 0;
         while (e2 != e)
         {
           if (GetPolyType(e2) == PolyType.Clip) cnt2++;
@@ -963,7 +962,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void InsertEdgeIntoAEL(Active edge, Active startEdge, Boolean preferLeft)
+    private void InsertEdgeIntoAEL(Active edge, Active startEdge, bool preferLeft)
     {
       if (Actives == null) 
       {
@@ -1054,7 +1053,7 @@ namespace ClipperLib
           rightB = null;
         }
 
-        Boolean contributing;
+        bool contributing;
         InsertEdgeIntoAEL(leftB, null, false);      //insert left edge
         if (IsOpen(leftB))
         {
@@ -1303,7 +1302,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Boolean PopHorz(out Active e)
+    private bool PopHorz(out Active e)
     {
       e = SEL;
       if (e == null) return false;
@@ -1369,7 +1368,7 @@ namespace ClipperLib
       {
 
         //Outrec.Pts: a circular double-linked-list of POutPt.
-        Boolean toStart = IsStartSide(e);
+        bool toStart = IsStartSide(e);
         OutPt opStart = e.OutRec.Pts;
         OutPt opEnd = opStart.Prev;
         if (toStart)
@@ -1437,7 +1436,7 @@ namespace ClipperLib
 
       //update winding counts...
       //assumes that e1 will be to the right of e2 ABOVE the intersection
-      Int32 oldE1WindCnt, oldE2WindCnt;
+      int oldE1WindCnt, oldE2WindCnt;
       if (e1.LocalMin.PolyType == e2.LocalMin.PolyType)
       {
         if (FillType == FillType.EvenOdd)
@@ -1590,7 +1589,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private Boolean ExecuteInternal(ClipType ct, FillType ft)
+      private bool ExecuteInternal(ClipType ct, FillType ft)
       {
         if (ExecuteLocked) return false;
         try
@@ -1618,7 +1617,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-        public Boolean Execute(ClipType clipType, Paths Closed, FillType ft = FillType.EvenOdd)
+        public bool Execute(ClipType clipType, Paths Closed, FillType ft = FillType.EvenOdd)
         {
         try
         {
@@ -1632,7 +1631,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      public Boolean Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.EvenOdd)
+      public bool Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.EvenOdd)
         {
           try
           {
@@ -1647,7 +1646,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      public Boolean Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.EvenOdd)
+      public bool Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.EvenOdd)
         {
         try
         {
@@ -1683,7 +1682,7 @@ namespace ClipperLib
       //var
       //  E, eNext: PActive;
       //  Pt: TIntPoint;
-      //  IsModified: Boolean;
+      //  IsModified: bool;
       //  NewNode: PIntersectNode;
       {
         if (Actives == null) return;
@@ -1699,7 +1698,7 @@ namespace ClipperLib
           e = e.NextInAEL;
         }
 
-        Boolean IsModified;
+        bool IsModified;
         Point64 pt;
         //bubblesort (because adjacent swaps are required) ...
         do {
@@ -1766,18 +1765,18 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private Boolean EdgesAdjacent(IntersectNode inode)
+      private bool EdgesAdjacent(IntersectNode inode)
       {
         return (inode.Edge1.NextInSEL == inode.Edge2) ||
           (inode.Edge1.PrevInSEL == inode.Edge2);
       }
       //------------------------------------------------------------------------------
 
-      private static Int32 IntersectNodeSort(IntersectNode node1, IntersectNode node2)
+      private static int IntersectNodeSort(IntersectNode node1, IntersectNode node2)
       {
         //the following typecast should be safe because the differences in Pt.Y will
         //be limited to the height of the Scanline ...
-        return (Int32)(node2.Pt.Y - node1.Pt.Y);
+        return (int)(node2.Pt.Y - node1.Pt.Y);
       }
       //------------------------------------------------------------------------------
 
@@ -1786,15 +1785,15 @@ namespace ClipperLib
         //pre-condition: intersections are sorted bottom-most first.
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need Bubble sorting ...
-        Int32 cnt = IntersectList.Count;
+        int cnt = IntersectList.Count;
         if (cnt < 3) return; //any edges must be adjacent :)
         IntersectList.Sort(IntersectNodeComparer);
         CopyAELToSEL();
-        for (Int32 i = 0; i < cnt; i++)
+        for (int i = 0; i < cnt; i++)
         {
           if (!EdgesAdjacent(IntersectList[i]))
           {
-            Int32 j = i + 1;
+            int j = i + 1;
             while (j < cnt && !EdgesAdjacent(IntersectList[j])) j++;
             IntersectNode tmp = IntersectList[i];
             IntersectList[i] = IntersectList[j];
@@ -1869,7 +1868,7 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
-      private Boolean ResetHorzDirection(Active horz, Active maxPair, 
+      private bool ResetHorzDirection(Active horz, Active maxPair, 
         out Int64 horzLeft, out Int64 horzRight)
       {
         if (horz.Bot.X == horz.Top.X)
@@ -1929,13 +1928,13 @@ namespace ClipperLib
             maxPair = GetMaximaPair(horz);
 
       Int64 horzLeft, horzRight;
-      Boolean isLeftToRight = ResetHorzDirection(horz, maxPair, out horzLeft, out horzRight);
+      bool isLeftToRight = ResetHorzDirection(horz, maxPair, out horzLeft, out horzRight);
       if (IsHotEdge(horz)) AddOutPt(horz, horz.Curr);
 
       while (true) //loops through consec. horizontal edges (if open)
       {
         Active e;
-        Boolean isMax = IsMaxima(horz);
+        bool isMax = IsMaxima(horz);
         if (isLeftToRight)
           e = horz.NextInAEL; else
           e = horz.PrevInAEL;
@@ -2094,11 +2093,11 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private Int32 PointCount(OutPt op)
+    private int PointCount(OutPt op)
     {
       if (op == null) return 0;
       OutPt p = op;
-      Int32 cnt = 0;
+      int cnt = 0;
       do
       {
         cnt++;
@@ -2122,7 +2121,7 @@ namespace ClipperLib
         if (outrec.Pts != null)
         {
           OutPt op = outrec.Pts.Prev;
-          Int32 cnt = PointCount(op);
+          int cnt = PointCount(op);
           //fixup for duplicate start and } points ...
           if (op.Pt == outrec.Pts.Pt) cnt--;
 
@@ -2130,14 +2129,14 @@ namespace ClipperLib
           {
             if (cnt < 1 || openPaths == null) continue;
             Path p = new Path(cnt);
-            for (Int32 i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
+            for (int i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
             openPaths.Add(p);
           }
           else
           {
             if (cnt < 2) continue;
             Path p = new Path(cnt);
-            for (Int32 i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
+            for (int i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
             closedPaths.Add(p);
           }
         }
@@ -2157,7 +2156,7 @@ namespace ClipperLib
         if (outrec.Pts != null)
         {
             OutPt op = outrec.Pts.Prev;
-            Int32 cnt = PointCount(op);
+            int cnt = PointCount(op);
             //fixup for duplicate start and end points ...
             if (op.Pt == outrec.Pts.Pt) cnt--;
 
@@ -2167,7 +2166,7 @@ namespace ClipperLib
             }
 
             Path p = new Path(cnt);
-            for (Int32 i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
+            for (int i = 0; i < cnt; i++) { p.Add(op.Pt); op = op.Prev; }
             if ((outrec.Flags & OutrecFlags.Open) > 0)
               openPaths.Add(p);
             else
@@ -2189,4 +2188,4 @@ namespace ClipperLib
   }
   //------------------------------------------------------------------------------
 
-} //ClipperLib namespace
+} //namespace
