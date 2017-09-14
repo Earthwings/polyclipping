@@ -1,10 +1,10 @@
-unit Clipper2_Offset;
+unit ClipperOffset;
 
 (*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  13 September 2017                                               *
+* Date      :  14 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -33,54 +33,54 @@ unit Clipper2_Offset;
 interface
 
 uses
-  SysUtils, Types, Classes, Math, Clipper2, Clipper2_Misc;
+  SysUtils, Types, Classes, Math, Clipper, ClipperMisc;
 
 type
 
   TJoinType = (jtSquare, jtRound, jtMiter);
   TEndType = (etPolygon, etOpenJoined, etOpenButt, etOpenSquare, etOpenRound);
 
-  TPointD = record X, Y: double; end;
+  TPointD = record X, Y: Double; end;
   TArrayOfPointD = array of TPointD;
 
-  TClipper2Offset = class
+  TClipperOffset = class
   private
-    FDelta: double;
+    FDelta: Double;
     FSinA, FSin, FCos: Extended;
-    FMiterLim, FMiterLimit: double;
-    FStepsPerRad: double;
+    FMiterLim, FMiterLimit: Double;
+    FStepsPerRad: Double;
     FNorms: TArrayOfPointD;
     FSolution: TPaths;
-    FOutPos: integer;
+    FOutPos: Integer;
     FPathIn: TPath;
     FPathOut: TPath;
 
-    FLowestIdx: integer; //index to the path with the lowermost vertex
+    FLowestIdx: Integer; //index to the path with the lowermost vertex
     FNodeList: TList;
-    FArcTolerance: double;
+    FArcTolerance: Double;
 
     procedure AddPoint(const pt: TPoint64);
-    procedure DoSquare(j, k: integer);
-    procedure DoMiter(j, k: integer; r: double);
-    procedure DoRound(j, k: integer);
-    procedure OffsetPoint(j: integer;
-      var k: integer; JoinType: TJoinType);
+    procedure DoSquare(j, k: Integer);
+    procedure DoMiter(j, k: Integer; r: Double);
+    procedure DoRound(j, k: Integer);
+    procedure OffsetPoint(j: Integer;
+      var k: Integer; JoinType: TJoinType);
 
     procedure GetLowestPolygonIdx;
-    procedure DoOffset(delta: double);
+    procedure DoOffset(delta: Double);
   public
     constructor Create;
     destructor Destroy; override;
     procedure AddPath(const p: TPath; jt: TJoinType; et: TEndType);
     procedure AddPaths(const p: TPaths; jt: TJoinType; et: TEndType);
     procedure Clear;
-    procedure Execute(out solution: TPaths; delta: double);
-    property MiterLimit: double read FMiterLimit write FMiterLimit;
-    property ArcTolerance: double read FArcTolerance write FArcTolerance;
+    procedure Execute(out solution: TPaths; delta: Double);
+    property MiterLimit: Double read FMiterLimit write FMiterLimit;
+    property ArcTolerance: Double read FArcTolerance write FArcTolerance;
   end;
 
   function OffsetPaths(const paths: TPaths;
-    delta: double; jt: TJoinType; et: TEndType): TPaths;
+    delta: Double; jt: TJoinType; et: TEndType): TPaths;
 
 implementation
 
@@ -97,7 +97,7 @@ type
     FPath      : TPath;
     FJoinType  : TJoinType;
     FEndType   : TEndType;
-    fLowestIdx : integer;
+    fLowestIdx : Integer;
   public
     constructor  Create(const p: TPath; jt: TJoinType; et: TEndType);
   end;
@@ -106,16 +106,16 @@ resourcestring
   rsClipperOffset = 'ClipperOffset error';
 
 const
-  Tolerance           : double = 1.0E-15;
-  DefaultArcFrac      : double = 0.02;
-  Two_Pi              : double = 2 * PI;
+  Tolerance           : Double = 1.0E-15;
+  DefaultArcFrac      : Double = 0.02;
+  Two_Pi              : Double = 2 * PI;
   LowestIp            : TPoint64 = (X: High(Int64); Y: High(Int64));
 
 //------------------------------------------------------------------------------
 //  Miscellaneous offset support functions
 //------------------------------------------------------------------------------
 
-function PointD(const X, Y: double): TPointD; overload;
+function PointD(const X, Y: Double): TPointD; overload;
 begin
   Result.X := X;
   Result.Y := Y;
@@ -131,7 +131,7 @@ end;
 
 function GetUnitNormal(const pt1, pt2: TPoint64): TPointD;
 var
-  dx, dy, inverseHypot: double;
+  dx, dy, inverseHypot: Double;
 begin
   if (pt2.X = pt1.X) and (pt2.Y = pt1.Y) then
   begin
@@ -155,7 +155,7 @@ end;
 
 constructor  TPathNode.Create(const p: TPath; jt: TJoinType; et: TEndType);
 var
-  i, lenP, last: integer;
+  i, lenP, last: Integer;
 begin
   inherited Create;
   FPath := nil;
@@ -199,7 +199,7 @@ end;
 // TClipperOffset methods
 //------------------------------------------------------------------------------
 
-constructor TClipper2Offset.Create;
+constructor TClipperOffset.Create;
 begin
   inherited Create;
   FNodeList := TList.Create;
@@ -208,7 +208,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-destructor TClipper2Offset.Destroy;
+destructor TClipperOffset.Destroy;
 begin
   Clear;
   FNodeList.Free;
@@ -216,9 +216,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.Clear;
+procedure TClipperOffset.Clear;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FNodeList.Count -1 do
     TPathNode(FNodeList[i]).Free;
@@ -226,7 +226,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.AddPath(const p: TPath; jt: TJoinType; et: TEndType);
+procedure TClipperOffset.AddPath(const p: TPath; jt: TJoinType; et: TEndType);
 var
   pn: TPathNode;
 begin
@@ -236,17 +236,17 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.AddPaths(const p: TPaths; jt: TJoinType; et: TEndType);
+procedure TClipperOffset.AddPaths(const p: TPaths; jt: TJoinType; et: TEndType);
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to High(p) do AddPath(p[i], jt, et);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.GetLowestPolygonIdx;
+procedure TClipperOffset.GetLowestPolygonIdx;
 var
-  i: integer;
+  i: Integer;
   node: TPathNode;
   ip1, ip2: TPoint64;
 begin
@@ -273,10 +273,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.DoOffset(delta: double);
+procedure TClipperOffset.DoOffset(delta: Double);
 var
-  i, j, k, pathLen, solCnt: integer;
-  X, X2, Y, arcTol, absDelta, steps: double;
+  i, j, k, pathLen, solCnt: Integer;
+  X, X2, Y, arcTol, absDelta, steps: Double;
   node: TPathNode;
   norm: TPointD;
 begin
@@ -468,14 +468,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.Execute(out solution: TPaths; delta: double);
+procedure TClipperOffset.Execute(out solution: TPaths; delta: Double);
 var
-  i, Len: integer;
+  i, Len: Integer;
   outerPath: TPath;
   bounds: TRect64;
 begin
   solution := nil;
-  if FNodeList.Count = 0 then exit;
+  if FNodeList.Count = 0 then Exit;
 
   //if polygon orientations are reversed, then simply reverse the delta ...
   GetLowestPolygonIdx;
@@ -485,10 +485,10 @@ begin
 
   DoOffset(delta);
 //  solution := FSolution;
-//  exit;
+//  Exit;
 
   //clean up 'corners' ...
-  with TClipper2.Create do
+  with TClipper.Create do
   try
     AddPaths(FSolution, ptSubject);
     Execute(ctUnion, solution, ftPositive);
@@ -498,7 +498,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.AddPoint(const pt: TPoint64);
+procedure TClipperOffset.AddPoint(const pt: TPoint64);
 const
   BuffLength = 32;
 begin
@@ -510,7 +510,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.DoSquare(j, k: integer);
+procedure TClipperOffset.DoSquare(j, k: Integer);
 begin
   AddPoint(Point64(
     round(FPathIn[j].X + FDelta * (FNorms[k].X - FNorms[k].Y)),
@@ -521,9 +521,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.DoMiter(j, k: integer; r: double);
+procedure TClipperOffset.DoMiter(j, k: Integer; r: Double);
 var
-  q: double;
+  q: Double;
 begin
   q := FDelta / r;
   AddPoint(Point64(round(FPathIn[j].X + (FNorms[k].X + FNorms[j].X)*q),
@@ -531,10 +531,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.DoRound(j, k: integer);
+procedure TClipperOffset.DoRound(j, k: Integer);
 var
-  i, steps: integer;
-  a, X, X2, Y: double;
+  i, steps: Integer;
+  a, X, X2, Y: Double;
 begin
   a := ArcTan2(FSinA, FNorms[k].X * FNorms[j].X + FNorms[k].Y * FNorms[j].Y);
   steps := Max(Round(FStepsPerRad * Abs(a)), 1);
@@ -556,10 +556,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2Offset.OffsetPoint(j: integer;
-  var k: integer; JoinType: TJoinType);
+procedure TClipperOffset.OffsetPoint(j: Integer;
+  var k: Integer; JoinType: TJoinType);
 var
-  cosA: double;
+  cosA: Double;
 begin
   //A: angle between adjoining paths on left side (left WRT winding direction).
   //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
@@ -623,9 +623,9 @@ end;
 //------------------------------------------------------------------------------
 
 function OffsetPaths(const paths: TPaths;
-  delta: double; jt: TJoinType; et: TEndType): TPaths;
+  delta: Double; jt: TJoinType; et: TEndType): TPaths;
 begin
-  with TClipper2Offset.Create do
+  with TClipperOffset.Create do
   try
     AddPaths(paths, jt, et);
     Execute(Result, delta);

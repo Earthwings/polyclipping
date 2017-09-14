@@ -255,10 +255,10 @@ namespace ClipperLib
 
 
   //------------------------------------------------------------------------------
-  // Clipper2 
+  // Clipper 
   //------------------------------------------------------------------------------
 
-  public class Clipper2
+  public class Clipper
   {
     internal const double horizontal = double.NegativeInfinity;
     internal ScanLine Scanline;
@@ -305,7 +305,7 @@ namespace ClipperLib
 
     internal static bool IsHorizontal(Active e)
     {
-      return e.Dx == double.NegativeInfinity;
+      return e.Dx == horizontal;
     }
     //------------------------------------------------------------------------------
 
@@ -331,23 +331,17 @@ namespace ClipperLib
 
     public static Rect64 GetBounds(Paths paths)
     {
-      int i = 0, cnt = paths.Count;
-      while (i < cnt && paths[i].Count == 0) i++;
-      if (i == cnt) return new Rect64(0, 0, 0, 0);
-      Rect64 result = new Rect64();
-      result.left = paths[i][0].X;
-      result.right = result.left;
-      result.top = paths[i][0].Y;
-      result.bottom = result.top;
-      for (; i < cnt; i++)
-        for (int j = 0; j < paths[i].Count; j++)
+      Rect64 result = 
+        new Rect64(Int64.MaxValue, Int64.MaxValue, Int64.MinValue, Int64.MinValue);
+      foreach (Path p in paths)
+        foreach (Point64 pt in p)
         {
-          if (paths[i][j].X < result.left) result.left = paths[i][j].X;
-          else if (paths[i][j].X > result.right) result.right = paths[i][j].X;
-          if (paths[i][j].Y < result.top) result.top = paths[i][j].Y;
-          else if (paths[i][j].Y > result.bottom) result.bottom = paths[i][j].Y;
+          if (pt.X < result.left) result.left = pt.X;
+          if (pt.X > result.right) result.right = pt.X;
+          if (pt.Y < result.top) result.top = pt.Y;
+          if (pt.Y > result.bottom) result.bottom = pt.Y;
         }
-      return result;
+      return (result.left > result.right ? new Rect64(0, 0, 0, 0) : result);
     }
     //------------------------------------------------------------------------------
 
@@ -480,7 +474,7 @@ namespace ClipperLib
     private void SetDx(Active e)
     {
       Int64 dy = (e.Top.Y - e.Bot.Y);
-      e.Dx = (dy == 0 ? double.NegativeInfinity : (double)(e.Top.X - e.Bot.X) / dy);
+      e.Dx = (dy == 0 ? horizontal : (double)(e.Top.X - e.Bot.X) / dy);
     }
     //---------------------------------------------------------------------------
 
@@ -2180,7 +2174,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
     
-  } //Clipper2
+  } //Clipper
 
   class ClipperException : Exception
   {

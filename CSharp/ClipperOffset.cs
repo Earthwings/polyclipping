@@ -89,7 +89,7 @@ namespace ClipperLib
   } //PathNode
 
 
-  public class Clipper2Offset
+  public class ClipperOffset
   {
     private double delta, sinA, sin, cos;
     //nb: miterLim below is a temp field that differs from the MiterLimit property
@@ -129,7 +129,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public Clipper2Offset() { MiterLimit = 2.0; }
+    public ClipperOffset() { MiterLimit = 2.0; }
     //------------------------------------------------------------------------------
 
     public void Clear()  { nodes.Clear(); }
@@ -475,7 +475,7 @@ namespace ClipperLib
       DoOffset(delta);
 
       //now clean up 'corners' ...
-      Clipper2 clpr = new Clipper2();
+      Clipper clpr = new Clipper();
       clpr.AddPaths(solution, PolyType.Subject);
       clpr.Execute(ClipType.Union, sol, FillType.Positive);
     }
@@ -484,13 +484,13 @@ namespace ClipperLib
     public static Paths OffsetPaths(Paths pp, double delta, JoinType jt, EndType et)
     {
       Paths result = new Paths();
-      Clipper2Offset co = new Clipper2Offset();
+      ClipperOffset co = new ClipperOffset();
       co.AddPaths(pp, jt, et);
       co.Execute(ref result, delta);
       return result;
     }
     //------------------------------------------------------------------------------
 
-  } //Clipper2Offset
+  } //ClipperOffset
 
 } //namespace

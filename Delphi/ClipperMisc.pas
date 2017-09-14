@@ -1,10 +1,10 @@
-unit Clipper2_Misc;
+unit ClipperMisc;
 
 (*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  9 September 2017                                                *
+* Date      :  14 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -33,13 +33,13 @@ unit Clipper2_Misc;
 interface
 
 uses
-  SysUtils, Types, Classes, Math, Clipper2;
+  SysUtils, Types, Classes, Math, Clipper;
 
 function Orientation(const path: TPath): Boolean; overload;
-function Area(const path: TPath): double;
+function Area(const path: TPath): Double;
 
 //PointInPolygon: 0=false; +1=true; -1 when 'pt' is on a polygon edge
-function PointInPolygon(const pt: TPoint64; const path: TPath): integer;
+function PointInPolygon(const pt: TPoint64; const path: TPath): Integer;
 
 function Path1ContainsPath2(const Path1, Path2: TPath): Boolean;
 function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
@@ -58,10 +58,10 @@ implementation
 //nb: this issue was resolved in Delphi 10.2
 {$OVERFLOWCHECKS OFF}
 
-function Area(const path: TPath): double;
+function Area(const path: TPath): Double;
 var
-  i, j, cnt: integer;
-  d: double;
+  i, j, cnt: Integer;
+  d: Double;
 begin
   Result := 0.0;
   cnt := Length(path);
@@ -85,7 +85,7 @@ end;
 
 function ReversePath(const path: TPath): TPath;
 var
-  i, highI: integer;
+  i, highI: Integer;
 begin
   highI := high(path);
   SetLength(Result, highI +1);
@@ -96,7 +96,7 @@ end;
 
 function ReversePaths(const paths: TPaths): TPaths;
 var
-  i, j, highJ: integer;
+  i, j, highJ: Integer;
 begin
   i := length(paths);
   SetLength(Result, i);
@@ -112,38 +112,28 @@ end;
 
 function GetBounds(const paths: TPaths): TRect64;
 var
-  I,j, len: integer;
+  i,j, len: Integer;
 begin
-  len := Length(paths);
-  I := 0;
-  while (I < len) and (Length(paths[I]) = 0) do inc(I);
-  if (I = len) then
-  begin
-    Result := EmptyRect;
-    Exit;
-  end;
-  Result.Left := paths[I][0].X;
-  Result.Right := Result.Left;
-  Result.Top := paths[I][0].Y;
-  Result.Bottom := Result.Top;
-  for I := I to len -1 do
-    for j := 0 to High(paths[I]) do
+  Result := Rect64(High(Int64), High(Int64), Low(Int64), Low(Int64));
+  for i := i to len -1 do
+    for j := 0 to High(paths[i]) do
     begin
-      if paths[I][j].X < Result.Left then Result.Left := paths[I][j].X
-      else if paths[I][j].X > Result.Right then Result.Right := paths[I][j].X;
-      if paths[I][j].Y < Result.Top then Result.Top := paths[I][j].Y
-      else if paths[I][j].Y > Result.Bottom then Result.Bottom := paths[I][j].Y;
+      if paths[i][j].X < Result.Left then Result.Left := paths[i][j].X;
+      if paths[i][j].X > Result.Right then Result.Right := paths[i][j].X;
+      if paths[i][j].Y < Result.Top then Result.Top := paths[i][j].Y;
+      if paths[i][j].Y > Result.Bottom then Result.Bottom := paths[i][j].Y;
     end;
+  if Result.Left > Result.Right then Result := EmptyRect;
 end;
 //------------------------------------------------------------------------------
 
-function PointInPolygon(const pt: TPoint64; const path: TPath): integer;
+function PointInPolygon(const pt: TPoint64; const path: TPath): Integer;
 var
-  i, cnt: integer;
-  d, d2, d3: double; //nb: double not cInt to avoid potential overflow errors
+  i, cnt: Integer;
+  d, d2, d3: Double; //nb: Double not cInt to avoid potential overflow errors
   ip, ipNext: TPoint64;
 begin
-  result := 0;
+  Result := 0;
   cnt := Length(path);
   if cnt < 3 then Exit;
   ip := path[0];
@@ -157,7 +147,7 @@ begin
       if (ipNext.X = pt.X) or ((ip.Y = pt.Y) and
         ((ipNext.X > pt.X) = (ip.X < pt.X))) then
       begin
-        result := -1;
+        Result := -1;
         Exit;
       end;
     end;
@@ -167,15 +157,15 @@ begin
       if (ip.X >= pt.X) then
       begin
         if (ipNext.X > pt.X) then
-          result := 1 - result
+          Result := 1 - Result
         else
         begin
           d2 := (ip.X - pt.X);
           d3 := (ipNext.X - pt.X);
           d := d2 * (ipNext.Y - pt.Y) - d3 * (ip.Y - pt.Y);
-          if (d = 0) then begin result := -1; Exit; end;
+          if (d = 0) then begin Result := -1; Exit; end;
           if ((d > 0) = (ipNext.Y > ip.Y)) then
-            result := 1 - result;
+            Result := 1 - Result;
         end;
       end else
       begin
@@ -184,9 +174,9 @@ begin
           d2 := (ip.X - pt.X);
           d3 := (ipNext.X - pt.X);
           d := d2 * (ipNext.Y - pt.Y) - d3 * (ip.Y - pt.Y);
-          if (d = 0) then begin result := -1; Exit; end;
+          if (d = 0) then begin Result := -1; Exit; end;
           if ((d > 0) = (ipNext.Y > ip.Y)) then
-            result := 1 - result;
+            Result := 1 - Result;
         end;
       end;
     end;
@@ -197,11 +187,11 @@ end;
 
 function Path1ContainsPath2(const Path1, Path2: TPath): Boolean;
 var
-  i: integer;
+  i: Integer;
   pt: TPoint64;
 begin
   //precondition: Path2 may touch but not intersect Path1.
-  result := false;
+  Result := false;
   if (length(Path1) < 3) or (length(Path2) = 0) then Exit;
   for i := 0 to high(Path2) do
   begin
@@ -213,13 +203,13 @@ begin
       //else point on line
     end;
   end;
-  result := true; //ie no vertex in Path2 is outside Path1.
+  Result := true; //ie no vertex in Path2 is outside Path1.
 end;
 //---------------------------------------------------------------------------
 
 procedure AddPolyNodeToPaths(Poly: TPolyPath; var Paths: TPaths);
 var
-  i: integer;
+  i: Integer;
 begin
   if (Length(Poly.Path) > 0) then
   begin

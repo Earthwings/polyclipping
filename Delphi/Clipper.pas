@@ -1,10 +1,10 @@
-unit Clipper2;
+unit Clipper;
 
 (*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  13 September 2017                                               *
+* Date      :  14 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -85,10 +85,10 @@ type
     Bot      : TPoint64;
     Curr     : TPoint64;
     Top      : TPoint64;
-    Dx       : double;        //inverse of edge slope (zero = vertical)
-    WindDx   : integer;       //wind direction (ascending: +1; descending: -1)
-    WindCnt  : integer;       //current wind count
-    WindCnt2 : integer;       //current wind count of opposite TPolyType
+    Dx       : Double;        //inverse of edge slope (zero = vertical)
+    WindDx   : Integer;       //wind direction (ascending: +1; descending: -1)
+    WindCnt  : Integer;       //current wind count
+    WindCnt2 : Integer;       //current wind count of opposite TPolyType
     OutRec   : POutRec;
     //AEL - active edge list (Vatti's AET - active edge table)
     PrevInAEL: PActive;
@@ -123,7 +123,7 @@ type
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
   TOutRec = record
-    Idx      : integer;
+    Idx      : Integer;
     Owner    : POutRec;
     Pts      : POutPt;
     StartE   : PActive;
@@ -132,12 +132,12 @@ type
     PolyPath : TPolyPath;
   end;
 
-  TClipper2 = class
+  TClipper = class
   private
     FScanLine           : PScanLine;
     FLocMinListSorted   : Boolean;
     FHasOpenPaths       : Boolean;
-    FCurrentLocMinIdx   : integer;
+    FCurrentLocMinIdx   : Integer;
     FIntersectList      : TList;
     FClipType           : TClipType;
     FFillType           : TFillType;
@@ -158,7 +158,7 @@ type
     procedure DisposeScanLineList;
     procedure DisposeLocalMinimaList;
     procedure DisposePolyPts(pp: POutPt);
-    procedure DisposeOutRec(index: integer);
+    procedure DisposeOutRec(index: Integer);
     procedure DisposeAllOutRecs;
     function IsContributingClosed(e: PActive): Boolean;
     function IsContributingOpen(e: PActive): Boolean;
@@ -217,9 +217,9 @@ type
     FParent    : TPolyPath;
     FPath      : TPath;
     FChildList : TList;
-    function     GetChildCnt: integer;
-    function     GetChild(index: integer): TPolyPath;
-    function     IsHoleNode: boolean;
+    function     GetChildCnt: Integer;
+    function     GetChild(index: Integer): TPolyPath;
+    function     IsHoleNode: Boolean;
   public
     constructor  Create;  virtual;
     destructor   Destroy; override;
@@ -228,8 +228,8 @@ type
     property     Parent: TPolyPath read FParent;
     property     IsHole: Boolean read IsHoleNode;
     property     Path: TPath read FPath;
-    property     ChildCount: integer read GetChildCnt;
-    property     Child[index: integer]: TPolyPath read GetChild;
+    property     ChildCount: Integer read GetChildCnt;
+    property     Child[index: Integer]: TPolyPath read GetChild;
   end;
 
   TPolyTree = class(TPolyPath);
@@ -240,6 +240,7 @@ function PointsEqual(const p1, p2: TPoint64): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 function Point64(const X, Y: Int64): TPoint64; overload;
 function Point64(const X, Y: Double): TPoint64; overload;
+function Rect64(const left, top, right, bottom: Int64): TRect64;
 
 const
   EmptyRect: TRect64 = (Left: 0; Top: 0; Right: 0; Bottom: 0);
@@ -275,13 +276,13 @@ resourcestring
 
 function IsHotEdge(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := assigned(e.OutRec);
+  Result := assigned(e.OutRec);
 end;
 //------------------------------------------------------------------------------
 
 function IsStartSide(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := (e = e.OutRec.StartE);
+  Result := (e = e.OutRec.StartE);
 end;
 //------------------------------------------------------------------------------
 
@@ -293,15 +294,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsHorizontal(e: PActive): boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsHorizontal(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := e.Dx = HORIZONTAL;
+  Result := e.Dx = HORIZONTAL;
 end;
 //------------------------------------------------------------------------------
 
-function IsOpen(e: PActive): boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsOpen(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := e.LocMin.IsOpen;
+  Result := e.LocMin.IsOpen;
 end;
 //------------------------------------------------------------------------------
 
@@ -325,11 +326,20 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Rect64(const left, top, right, bottom: Int64): TRect64;
+begin
+  Result.Left := left;
+  Result.Top := top;
+  Result.Right := right;
+  Result.Bottom := bottom;
+end;
+//------------------------------------------------------------------------------
+
 function GetTopDeltaX(e1, e2: PActive): Int64; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if e1.Top.Y > e2.Top.Y then
-    result := TopX(e2, e1.Top.Y) - e1.Top.X else
-    result := e2.Top.X - TopX(e1, e2.Top.Y);
+    Result := TopX(e2, e1.Top.Y) - e1.Top.X else
+    Result := e2.Top.X - TopX(e1, e2.Top.Y);
   end;
 //------------------------------------------------------------------------------
 
@@ -356,13 +366,13 @@ end;
 
 function GetPolyType(const e: PActive): TPolyType; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := e.LocMin.PolyType;
+  Result := e.LocMin.PolyType;
 end;
 //------------------------------------------------------------------------------
 
 function IsSamePolyType(const e1, e2: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := e1.LocMin.PolyType = e2.LocMin.PolyType;
+  Result := e1.LocMin.PolyType = e2.LocMin.PolyType;
 end;
 //------------------------------------------------------------------------------
 
@@ -373,40 +383,40 @@ begin
   //if parallel then return the current pt of e1 ...
   if (e1.Dx = e2.Dx) then
   begin
-    result.Y := e1.Curr.Y;
-    result.X := TopX(e1, result.Y);
+    Result.Y := e1.Curr.Y;
+    Result.X := TopX(e1, Result.Y);
     Exit;
   end
   else if e1.Dx = 0 then
   begin
-    result.X := e1.Bot.X;
+    Result.X := e1.Bot.X;
     if IsHorizontal(e2) then
-      result.Y := e2.Bot.Y
+      Result.Y := e2.Bot.Y
     else
     begin
       with e2^ do b2 := Bot.Y - (Bot.X/Dx);
-      result.Y := round(result.X/e2.Dx + b2);
+      Result.Y := round(Result.X/e2.Dx + b2);
     end;
   end
   else if e2.Dx = 0 then
   begin
-    result.X := e2.Bot.X;
+    Result.X := e2.Bot.X;
     if IsHorizontal(e1) then
-      result.Y := e1.Bot.Y
+      Result.Y := e1.Bot.Y
     else
     begin
       with e1^ do b1 := Bot.Y - (Bot.X/Dx);
-      result.Y := round(result.X/e1.Dx + b1);
+      Result.Y := round(Result.X/e1.Dx + b1);
     end;
   end else
   begin
     with e1^ do b1 := Bot.X - Bot.Y * Dx;
     with e2^ do b2 := Bot.X - Bot.Y * Dx;
     m := (b2-b1)/(e1.Dx - e2.Dx);
-    result.Y := round(m);
+    Result.Y := round(m);
     if Abs(e1.Dx) < Abs(e2.Dx) then
-      result.X := round(e1.Dx * m + b1) else
-      result.X := round(e2.Dx * m + b2);
+      Result.X := round(e1.Dx * m + b1) else
+      Result.X := round(e2.Dx * m + b2);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -429,14 +439,14 @@ end;
 function NextVertex(e: PActive): PVertex; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if e.WindDx > 0 then
-    result := e.vertTop.next else
-    result := e.vertTop.prev;
+    Result := e.vertTop.next else
+    Result := e.vertTop.prev;
 end;
 //------------------------------------------------------------------------------
 
 function IsMaxima(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := vfLocMax in e.vertTop.flags;
+  Result := vfLocMax in e.vertTop.flags;
 end;
 //------------------------------------------------------------------------------
 
@@ -445,35 +455,35 @@ begin
   if IsHorizontal(e) then
   begin
     //we can't be sure whether the MaximaPair is on the left or right, so ...
-    result := e.PrevInAEL;
+    Result := e.PrevInAEL;
     while assigned(Result) and (Result.Curr.X >= e.Top.X) do
     begin
       if Result.vertTop = e.vertTop then Exit;  //Found!
-      result := result.PrevInAEL;
+      Result := Result.PrevInAEL;
     end;
-    result := e.NextInAEL;
+    Result := e.NextInAEL;
     while assigned(Result) and (TopX(Result, e.Top.Y) <= e.Top.X) do
     begin
       if Result.vertTop = e.vertTop then Exit;  //Found!
-      result := result.NextInAEL;
+      Result := Result.NextInAEL;
     end;
   end else
   begin
-    result := e.NextInAEL;
+    Result := e.NextInAEL;
     while assigned(Result) do
     begin
       if Result.vertTop = e.vertTop then Exit;  //Found!
-      result := result.NextInAEL;
+      Result := Result.NextInAEL;
     end;
   end;
-  result := nil;
+  Result := nil;
 end;
 
 //------------------------------------------------------------------------------
 // TClipper2 methods ...
 //------------------------------------------------------------------------------
 
-constructor TClipper2.Create;
+constructor TClipper.Create;
 begin
   FLocMinList := TList.Create;
   FOutRecList := TList.Create;
@@ -483,7 +493,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-destructor TClipper2.Destroy;
+destructor TClipper.Destroy;
 begin
   Clear;
   FLocMinList.Free;
@@ -494,7 +504,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.CleanUp;
+procedure TClipper.CleanUp;
 begin
   while assigned(FActives) do DeleteFromAEL(FActives);
   DisposeScanLineList;
@@ -502,7 +512,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.Clear;
+procedure TClipper.Clear;
 begin
   DisposeLocalMinimaList;
   FCurrentLocMinIdx := 0;
@@ -511,20 +521,20 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function LocMinListSort(item1, item2: Pointer): integer;
+function LocMinListSort(item1, item2: Pointer): Integer;
 var
   dy: Int64;
 begin
   dy := PLocalMinima(item2).vertex.Pt.Y - PLocalMinima(item1).vertex.Pt.Y;
-  if dy < 0 then result := -1
-  else if dy > 0 then result := 1
-  else result := 0;
+  if dy < 0 then Result := -1
+  else if dy > 0 then Result := 1
+  else Result := 0;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.Reset;
+procedure TClipper.Reset;
 var
-  i: integer;
+  i: Integer;
 begin
   if not FLocMinListSorted then
   begin
@@ -539,7 +549,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.InsertScanLine(const Y: Int64);
+procedure TClipper.InsertScanLine(const Y: Int64);
 var
   newSl, sl: PScanLine;
 begin
@@ -573,12 +583,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.PopScanLine(out Y: Int64): Boolean;
+function TClipper.PopScanLine(out Y: Int64): Boolean;
 var
   sl: PScanLine;
 begin
   Result := assigned(FScanLine);
-  if not result then exit;
+  if not Result then Exit;
   Y := FScanLine.Y;
   sl := FScanLine;
   FScanLine := FScanLine.Next;
@@ -586,11 +596,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.PopLocalMinima(Y: Int64;
+function TClipper.PopLocalMinima(Y: Int64;
   out localMinima: PLocalMinima): Boolean;
 begin
   Result := false;
-  if FCurrentLocMinIdx = FLocMinList.Count then exit;
+  if FCurrentLocMinIdx = FLocMinList.Count then Exit;
   localMinima := PLocalMinima(FLocMinList[FCurrentLocMinIdx]);
   if (localMinima.vertex.Pt.Y = Y) then
   begin
@@ -600,7 +610,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposeScanLineList;
+procedure TClipper.DisposeScanLineList;
 var
   sl: PScanLine;
 begin
@@ -613,7 +623,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposePolyPts(pp: POutPt);
+procedure TClipper.DisposePolyPts(pp: POutPt);
 var
   tmpPp: POutPt;
 begin
@@ -627,7 +637,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposeOutRec(index: integer);
+procedure TClipper.DisposeOutRec(index: Integer);
 var
   outRec: POutRec;
 begin
@@ -637,18 +647,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposeAllOutRecs;
+procedure TClipper.DisposeAllOutRecs;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FOutRecList.Count -1 do DisposeOutRec(i);
   FOutRecList.Clear;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposeLocalMinimaList;
+procedure TClipper.DisposeLocalMinimaList;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FLocMinList.Count -1 do
     Dispose(PLocalMinima(FLocMinList[i]));
@@ -658,11 +668,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddPathToVertexList(const p: TPath;
+procedure TClipper.AddPathToVertexList(const p: TPath;
   polyType: TPolyType; isOpen: Boolean);
 var
-  i, j, pathLen: integer;
-  isFlat, goingUp, p0IsMinima, p0IsMaxima: boolean;
+  i, j, pathLen: Integer;
+  isFlat, goingUp, p0IsMinima, p0IsMaxima: Boolean;
   v: PVertex;
   va: PVertexArray;
 
@@ -727,7 +737,7 @@ begin
   i := 0;
   for j := 1 to pathLen -1 do
   begin
-    if PointsEqual(p[j], va[i].Pt) then continue; //ie skips duplicates
+    if PointsEqual(p[j], va[i].Pt) then Continue; //ie skips duplicates
     va[j].Pt := p[j];
     va[j].flags := [];
     va[i].next := @va[j];
@@ -776,7 +786,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddPath(const path: TPath; PolyType: TPolyType;
+procedure TClipper.AddPath(const path: TPath; PolyType: TPolyType;
   isOpen: Boolean);
 begin
   if isOpen then
@@ -790,16 +800,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddPaths(const paths: TPaths; polyType: TPolyType;
+procedure TClipper.AddPaths(const paths: TPaths; polyType: TPolyType;
   isOpen: Boolean);
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to high(paths) do AddPath(paths[i], polyType, isOpen);
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.IsContributingClosed(e: PActive): Boolean;
+function TClipper.IsContributingClosed(e: PActive): Boolean;
 begin
   Result := false;
   case FFillType of
@@ -840,7 +850,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.IsContributingOpen(e: PActive): Boolean;
+function TClipper.IsContributingOpen(e: PActive): Boolean;
 begin
     case FClipType of
       ctIntersection:
@@ -855,10 +865,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SetWindingLeftEdgeOpen(e: PActive);
+procedure TClipper.SetWindingLeftEdgeOpen(e: PActive);
 var
   e2: PActive;
-  cnt1, cnt2: integer;
+  cnt1, cnt2: Integer;
 begin
   e2 := FActives;
   if FFillType = ftEvenOdd then
@@ -886,10 +896,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SetWindingLeftEdgeClosed(leftE: PActive);
+procedure TClipper.SetWindingLeftEdgeClosed(leftE: PActive);
 var
-  e, e2: PActive;
-  inside: Boolean;
+  e: PActive;
 begin
   //Wind counts generally refer to polygon regions not edges, so here an edge's
   //WindCnt indicates the higher of the two wind counts of the regions touching
@@ -965,7 +974,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.InsertLocalMinimaIntoAEL(const botY: Int64);
+procedure TClipper.InsertLocalMinimaIntoAEL(const botY: Int64);
 
   procedure InsertEdgeIntoAEL(e, startE: PActive; preferLeft: Boolean);
   begin
@@ -1130,7 +1139,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.GetOwner(e: PActive): POutRec;
+function TClipper.GetOwner(e: PActive): POutRec;
 begin
   if IsHorizontal(e) and (e.Top.X < e.Bot.X) then
   begin
@@ -1154,7 +1163,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64);
+procedure TClipper.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64);
 var
   outRec: POutRec;
   op    : POutPt;
@@ -1208,7 +1217,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
+procedure TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
 begin
   if not IsHotEdge(e2) then
     raise EClipperLibException.Create(rsClippingErr);
@@ -1236,7 +1245,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.JoinOutrecPaths(e1, e2: PActive);
+procedure TClipper.JoinOutrecPaths(e1, e2: PActive);
 var
   p1_start, p1_end, p2_start, p2_end: POutPt;
 begin
@@ -1318,7 +1327,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SwapOutRecs(e1, e2: PActive);
+procedure TClipper.SwapOutRecs(e1, e2: PActive);
 var
   or1, or2: POutRec;
   e: PActive;
@@ -1349,7 +1358,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.AddOutPt(e: PActive; const pt: TPoint64);
+procedure TClipper.AddOutPt(e: PActive; const pt: TPoint64);
 var
   opStart, opEnd, opNew: POutPt;
   toStart: Boolean;
@@ -1375,7 +1384,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.PushHorz(e: PActive);
+procedure TClipper.PushHorz(e: PActive);
 begin
   if assigned(FSel) then
     e.NextInSEL := FSel else
@@ -1384,16 +1393,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.PopHorz(out e: PActive): Boolean;
+function TClipper.PopHorz(out e: PActive): Boolean;
 begin
-  result := assigned(FSel);
-  if not result then Exit;
+  Result := assigned(FSel);
+  if not Result then Exit;
   e := FSel;
   FSel := FSel.NextInSEL;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.StartOpenPath(e: PActive; const pt: TPoint64);
+procedure TClipper.StartOpenPath(e: PActive; const pt: TPoint64);
 var
   OutRec: POutRec;
   op    : POutPt;
@@ -1415,7 +1424,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.UpdateEdgeIntoAEL(var e: PActive);
+procedure TClipper.UpdateEdgeIntoAEL(var e: PActive);
 begin
   e.Bot := e.Top;
   e.vertTop := NextVertex(e);
@@ -1426,9 +1435,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.IntersectEdges(e1, e2: PActive; pt: TPoint64);
+procedure TClipper.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
-  e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: integer;
+  e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
 begin
   e1.Curr := pt;
   e2.Curr := pt;
@@ -1584,7 +1593,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DeleteFromAEL(e: PActive);
+procedure TClipper.DeleteFromAEL(e: PActive);
 var
   aelPrev, aelNext: PActive;
 begin
@@ -1601,7 +1610,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.CopyActivesToSEL;
+procedure TClipper.CopyActivesToSEL;
 var
   e: PActive;
 begin
@@ -1616,7 +1625,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
+function TClipper.ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
 var
   Y: Int64;
   e: PActive;
@@ -1635,7 +1644,7 @@ begin
     begin
       InsertLocalMinimaIntoAEL(Y);
       while PopHorz(e) do ProcessHorizontal(e);
-      if not PopScanLine(Y) then break; //Y == top of scanbeam
+      if not PopScanLine(Y) then Break; //Y == top of scanbeam
       ProcessIntersections(Y);          //process scanbeam intersections
       DoTopOfScanbeam(Y); //leaves pending horizontals for next loop iteration
     end;
@@ -1650,7 +1659,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; out closedPaths: TPaths;
+function TClipper.Execute(clipType: TClipType; out closedPaths: TPaths;
   fillType: TFillType): Boolean;
 var
   dummy: TPaths;
@@ -1665,7 +1674,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; out closedPaths, openPaths: TPaths;
+function TClipper.Execute(clipType: TClipType; out closedPaths, openPaths: TPaths;
   fillType: TFillType = ftEvenOdd): Boolean;
 begin
   closedPaths := nil;
@@ -1679,7 +1688,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.Execute(clipType: TClipType; var polytree: TPolyTree;
+function TClipper.Execute(clipType: TClipType; var polytree: TPolyTree;
   out openPaths: TPaths; fillType: TFillType): Boolean;
 begin
   if not assigned(polytree) then
@@ -1695,7 +1704,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.ProcessIntersections(const topY: Int64);
+procedure TClipper.ProcessIntersections(const topY: Int64);
 begin
   try
     BuildIntersectList(topY);
@@ -1709,9 +1718,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DisposeIntersectNodes;
+procedure TClipper.DisposeIntersectNodes;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FIntersectList.Count - 1 do
     Dispose(PIntersectNode(FIntersectList[i]));
@@ -1719,7 +1728,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.BuildIntersectList(const topY: Int64);
+procedure TClipper.BuildIntersectList(const topY: Int64);
 var
   e, eNext: PActive;
   pt: TPoint64;
@@ -1792,9 +1801,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.ProcessIntersectList;
+procedure TClipper.ProcessIntersectList;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FIntersectList.Count - 1 do
   begin
@@ -1816,7 +1825,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IntersectListSort(node1, node2: Pointer): integer;
+function IntersectListSort(node1, node2: Pointer): Integer;
 var
   i: Int64;
 begin
@@ -1827,16 +1836,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.FixupIntersectionOrder;
+procedure TClipper.FixupIntersectionOrder;
 var
-  i, j, cnt: integer;
+  i, j, cnt: Integer;
   node: PIntersectNode;
 begin
   //Intersections have been sorted so the bottom-most are processed first but
   //it's also crucial that intersections are made between adjacent edges, so
   //the order of these intersections may need some adjusting ...
   cnt := FIntersectList.Count;
-  if cnt < 3 then exit; //any edges must be adjacent :)
+  if cnt < 3 then Exit; //any edges must be adjacent :)
 
   CopyActivesToSEL;
   FIntersectList.Sort(IntersectListSort);
@@ -1857,7 +1866,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SwapPositionsInAEL(e1, e2: PActive);
+procedure TClipper.SwapPositionsInAEL(e1, e2: PActive);
 var
   prev, next: PActive;
 begin
@@ -1889,7 +1898,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.SwapPositionsInSEL(e1, e2: PActive);
+procedure TClipper.SwapPositionsInSEL(e1, e2: PActive);
 var
   prev, next: PActive;
 begin
@@ -1921,7 +1930,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.ProcessHorizontal(horzEdge: PActive);
+procedure TClipper.ProcessHorizontal(horzEdge: PActive);
 var
   e, eNext, maxPair: PActive;
   horzLeft, horzRight: Int64;
@@ -2002,9 +2011,9 @@ begin
 
     while assigned(e) do
     begin
-      //break if we've gone past the end of the horizontal ...
+      //Break if we've gone past the end of the horizontal ...
       if (isLeftToRight and (e.Curr.X > horzRight)) or
-        (not isLeftToRight and (e.Curr.X < horzLeft)) then break;
+        (not isLeftToRight and (e.Curr.X < horzLeft)) then Break;
       //or if we've got to the end of an intermediate horizontal edge ...
       if (E.Curr.X = horzEdge.Top.X) and not isMax and not IsHorizontal(e) then
       begin
@@ -2072,7 +2081,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.DoTopOfScanbeam(Y: Int64);
+procedure TClipper.DoTopOfScanbeam(Y: Int64);
 var
   e: PActive;
 begin
@@ -2105,7 +2114,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.DoMaxima(e: PActive): PActive;
+function TClipper.DoMaxima(e: PActive): PActive;
 var
   eNext, ePrev, eMaxPair: PActive;
 begin
@@ -2167,7 +2176,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointCount(pts: POutPt): integer; {$IFDEF INLINING} inline; {$ENDIF}
+function PointCount(pts: POutPt): Integer; {$IFDEF INLINING} inline; {$ENDIF}
 var
   p: POutPt;
 begin
@@ -2181,9 +2190,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.BuildResult(out closedPaths, openPaths: TPaths);
+procedure TClipper.BuildResult(out closedPaths, openPaths: TPaths);
 var
-  i, j, cnt, cntClosed, cntOpen: integer;
+  i, j, cnt, cntClosed, cntOpen: Integer;
   outRec: POutRec;
   op: POutPt;
 begin
@@ -2230,9 +2239,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper2.BuildResult2(polyTree: TPolyTree; out openPaths: TPaths);
+procedure TClipper.BuildResult2(polyTree: TPolyTree; out openPaths: TPaths);
 var
-  i, j, cnt, cntOpen: integer;
+  i, j, cnt, cntOpen: Integer;
   outRec: POutRec;
   op: POutPt;
   path: TPath;
@@ -2276,34 +2285,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper2.GetBounds: TRect64;
+function TClipper.GetBounds: TRect64;
 var
-  i: integer;
+  i: Integer;
   v, vStart: PVertex;
 begin
-  if FVertexList.Count > 0 then
+  Result := EmptyRect;
+  if FVertexList.Count = 0 then Exit;
+
+  with PVertex(FVertexList[0]).Pt do
+    Result := Rect64(X, Y, X, Y);
+
+  for i := 0 to FVertexList.Count -1 do
   begin
-    with PVertex(FVertexList[0]).Pt do
-    begin
-      result.Left := X;
-      result.Top := Y;
-      result.Right := X;
-      result.Bottom := Y;
-    end;
-    for i := 0 to FVertexList.Count -1 do
-    begin
-      vStart := FVertexList[i];
-      v := vStart;
-      repeat
-        v := v.next;
-        if v.Pt.X < result.Left then result.Left := v.Pt.X
-        else if v.Pt.X > result.Right then result.Right := v.Pt.X;
-        if v.Pt.Y < result.Top then result.Top := v.Pt.Y
-        else if v.Pt.Y > result.Bottom then result.Bottom := v.Pt.Y;
-      until v = vStart;
-    end;
-  end
-  else result := EmptyRect;
+    vStart := FVertexList[i];
+    v := vStart;
+    repeat
+      if v.Pt.X < Result.Left then Result.Left := v.Pt.X
+      else if v.Pt.X > Result.Right then Result.Right := v.Pt.X;
+      if v.Pt.Y < Result.Top then Result.Top := v.Pt.Y
+      else if v.Pt.Y > Result.Bottom then Result.Bottom := v.Pt.Y;
+      v := v.next;
+    until v = vStart;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -2326,7 +2330,7 @@ end;
 
 procedure TPolyPath.Clear;
 var
-  i: integer;
+  i: Integer;
 begin
   for i := 0 to FChildList.Count -1 do
     TPolyPath(FChildList[i]).Free;
@@ -2334,21 +2338,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function  TPolyPath.GetChild(index: integer): TPolyPath;
+function  TPolyPath.GetChild(index: Integer): TPolyPath;
 begin
   if (index < 0) or (index >= FChildList.Count) then
-    REsult := nil else
+    Result := nil else
     Result := TPolyPath(FChildList[index]);
 end;
 //------------------------------------------------------------------------------
 
-function  TPolyPath.IsHoleNode: boolean;
+function  TPolyPath.IsHoleNode: Boolean;
 begin
-  result := not assigned(FParent) or not FParent.IsHoleNode;
+  Result := not assigned(FParent) or not FParent.IsHoleNode;
 end;
 //------------------------------------------------------------------------------
 
-function  TPolyPath.GetChildCnt: integer;
+function  TPolyPath.GetChildCnt: Integer;
 begin
   Result := FChildList.Count;
 end;
