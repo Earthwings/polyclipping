@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  14 September 2017                                               *
+* Date      :  15 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -2049,7 +2049,7 @@ begin
     end;
 
     //check if we've finished with (consecutive) horizontals ...
-    if NextVertex(horzEdge).Pt.Y <> horzEdge.Top.Y then Break;
+    if isMax or (NextVertex(horzEdge).Pt.Y <> horzEdge.Top.Y) then Break;
 
     //still more horizontals in bound to process ...
     UpdateEdgeIntoAEL(horzEdge);

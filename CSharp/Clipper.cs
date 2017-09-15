@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  14 September 2017                                               *
+* Date      :  15 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -1974,11 +1974,11 @@ namespace ClipperLib
         }
 
         //check if we've finished with (consecutive) horizontals ...
-        if (NextVertex(horz).Pt.Y != horz.Top.Y) break;
+        if (isMax || NextVertex(horz).Pt.Y != horz.Top.Y) break;
 
         //still more horizontals in bound to process ...
         UpdateEdgeIntoAEL(ref horz);
-        ResetHorzDirection(horz, maxPair, out horzLeft, out horzRight);
+        isLeftToRight = ResetHorzDirection(horz, maxPair, out horzLeft, out horzRight);
 
         if (IsOpen(horz))
         {

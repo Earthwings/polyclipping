@@ -4,7 +4,7 @@ unit ClipperMisc;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  14 September 2017                                               *
+* Date      :  15 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -112,10 +112,10 @@ end;
 
 function GetBounds(const paths: TPaths): TRect64;
 var
-  i,j, len: Integer;
+  i,j: Integer;
 begin
   Result := Rect64(High(Int64), High(Int64), Low(Int64), Low(Int64));
-  for i := i to len -1 do
+  for i := 0 to High(paths) do
     for j := 0 to High(paths[i]) do
     begin
       if paths[i][j].X < Result.Left then Result.Left := paths[i][j].X;
