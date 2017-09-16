@@ -253,14 +253,26 @@ namespace ClipperLib
 
     internal void DoSquare(int j, int k)
     {
-      double dx = Math.Tan(Math.Atan2(sinA,
-        norms[k].X * norms[j].X + norms[k].Y * norms[j].Y) / 4);
-      pathOut.Add(new Point64(
-        Round(pathIn[j].X + delta * (norms[k].X - norms[k].Y * dx)),
-        Round(pathIn[j].Y + delta * (norms[k].Y + norms[k].X * dx))));
-      pathOut.Add(new Point64(
-        Round(pathIn[j].X + delta * (norms[j].X + norms[j].Y * dx)),
-        Round(pathIn[j].Y + delta * (norms[j].Y - norms[j].X * dx))));
+      //Two vertices, one using the prior offset's (k) normal one the current (j).
+      //Do a 'normal' offset (by delta) and then another by 'de-normaling' the
+      //normal hence parallel to the direction of the respective edges.
+      if (delta > 0)
+      {
+        pathOut.Add(new Point64(
+          Round(pathIn[j].X + delta * (norms[k].X - norms[k].Y)),
+          Round(pathIn[j].Y + delta * (norms[k].Y + norms[k].X))));
+        pathOut.Add(new Point64(
+          Round(pathIn[j].X + delta * (norms[j].X + norms[j].Y)),
+          Round(pathIn[j].Y + delta * (norms[j].Y - norms[j].X))));
+      } else
+      {
+        pathOut.Add(new Point64(
+          Round(pathIn[j].X + delta * (norms[k].X + norms[k].Y)),
+          Round(pathIn[j].Y + delta * (norms[k].Y - norms[k].X))));
+        pathOut.Add(new Point64(
+          Round(pathIn[j].X + delta * (norms[j].X - norms[j].Y)),
+          Round(pathIn[j].Y + delta * (norms[j].Y + norms[j].X))));
+      }
     }
     //------------------------------------------------------------------------------
 
@@ -470,15 +482,19 @@ namespace ClipperLib
       if (nodes.Count == 0) return;
 
       GetLowestPolygonIdx();
-      if (lowestIdx >= 0 && Area(nodes[lowestIdx].path) < 0) //todo avoid using Area :)
-        delta = -delta; 
-
-      DoOffset(delta);
+      bool negate = (lowestIdx >= 0 && Area(nodes[lowestIdx].path) < 0);
+      //if polygon orientations are reversed, then 'negate' ...
+      if (negate) this.delta = -delta; 
+      else this.delta = delta;
+      DoOffset(this.delta);
 
       //now clean up 'corners' ...
       Clipper clpr = new Clipper();
       clpr.AddPaths(solution, PolyType.Subject);
-      clpr.Execute(ClipType.Union, sol, FillType.Positive);
+      if (negate)
+        clpr.Execute(ClipType.Union, sol, FillType.Negative);
+      else
+        clpr.Execute(ClipType.Union, sol, FillType.Positive);
     }
     //------------------------------------------------------------------------------
 

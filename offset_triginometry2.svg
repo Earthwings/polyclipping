@@ -22,7 +22,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -42,219 +42,341 @@
      id="namedview98"
      showgrid="false"
      units="mm"
-     inkscape:zoom="0.39333333"
-     inkscape:cx="200"
-     inkscape:cy="300"
+     inkscape:zoom="1.1196396"
+     inkscape:cx="587.8034"
+     inkscape:cy="426.87841"
      inkscape:window-x="-11"
      inkscape:window-y="-11"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg96" />
-  <g
-     id="g12"
-     style="fill:none;stroke:#000000"
-     transform="translate(322,123.70079)">
-    <path
-       style="color:#000000;stroke-width:3.50900006"
-       d="m 513.5,810.4 a 185.3,203.1 0 1 1 -370.6,0 185.3,203.1 0 1 1 370.6,0 z"
-       transform="matrix(1.074,0,0,0.98,-426.9,-543.2)"
-       id="path2"
-       inkscape:connector-curvature="0" />
+  <flowRoot
+     xml:space="preserve"
+     id="flowRoot4556"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"><flowRegion
+       id="flowRegion4558"><rect
+         id="rect4560"
+         width="371.23105"
+         height="426.96066"
+         x="489.43176"
+         y="128.54102" /></flowRegion><flowPara
+       id="flowPara4602"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start" /></flowRoot>  <flowRoot
+     xml:space="preserve"
+     id="flowRoot4794"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     transform="translate(14,72)"><flowRegion
+       id="flowRegion4796"><rect
+         id="rect4798"
+         width="362.24243"
+         height="493.92609"
+         x="462.91525"
+         y="97.979614" /></flowRegion><flowPara
+       id="flowPara4840"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start" /></flowRoot>  <flowRoot
+     xml:space="preserve"
+     id="flowRoot5001"
+     style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:14.66666667px;line-height:1.25;letter-spacing:0px;word-spacing:0px;-inkscape-font-specification:sans-serif;font-stretch:normal;font-variant:normal"><flowRegion
+       id="flowRegion5003"><rect
+         id="rect5005"
+         width="290.33325"
+         height="449.43228"
+         x="475.04993"
+         y="160.90013" /></flowRegion><flowPara
+       id="flowPara5007"></flowPara></flowRoot>  <flowRoot
+     xml:space="preserve"
+     id="flowRoot5105"
+     style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:14.66666667px;line-height:1.25;letter-spacing:0px;word-spacing:0px;-inkscape-font-specification:sans-serif;font-stretch:normal;font-variant:normal"><flowRegion
+       id="flowRegion5107"><rect
+         id="rect5109"
+         width="564.46735"
+         height="828.83813"
+         x="600.19312"
+         y="14.878738" /></flowRegion><flowPara
+       id="flowPara5111"></flowPara></flowRoot>  <g
+     transform="translate(-3.29161,-7.30034)"
+     id="g5170">
     <g
-       id="g10">
-      <path
-         transform="translate(-295,-530.9)"
-         d="M 280,972.4 57.87,898.1 59.83,664 283.1,593.5 419.2,784.1 Z"
-         id="path4"
-         inkscape:connector-curvature="0" />
-      <path
-         style="color:#000000;stroke-dasharray:4, 4"
-         d="M -30,230 90,140"
-         id="path6"
-         inkscape:connector-curvature="0" />
-      <path
-         style="color:#000000;stroke-dasharray:4, 4"
-         d="M -10,62.08 -65.1,252 l 190.8,1"
-         id="path8"
-         inkscape:connector-curvature="0" />
+       id="g5140">
+      <g
+         id="g12"
+         style="fill:none;stroke:#000000"
+         transform="translate(322,123.70079)">
+        <path
+           style="color:#000000;stroke-width:3.50900006"
+           d="m 513.5,810.4 a 185.3,203.1 0 1 1 -370.6,0 185.3,203.1 0 1 1 370.6,0 z"
+           transform="matrix(1.074,0,0,0.98,-426.9,-543.2)"
+           id="path2"
+           inkscape:connector-curvature="0" />
+        <g
+           id="g10">
+          <path
+             transform="translate(-295,-530.9)"
+             d="M 280,972.4 57.87,898.1 59.83,664 283.1,593.5 419.2,784.1 Z"
+             id="path4"
+             inkscape:connector-curvature="0" />
+          <path
+             style="color:#000000;stroke-dasharray:4, 4"
+             d="M -30,230 90,140"
+             id="path6"
+             inkscape:connector-curvature="0" />
+          <path
+             style="color:#000000;stroke-dasharray:4, 4"
+             d="M -10,62.08 -65.1,252 l 190.8,1"
+             id="path8"
+             inkscape:connector-curvature="0" />
+        </g>
+      </g>
+      <g
+         font-size="14px"
+         id="g34"
+         style="font-size:14px;font-family:Tahoma;fill:#000000"
+         transform="translate(322,123.70079)">
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="264.27399"
+           x="-75.70369"
+           id="text16"><tspan
+             x="-75.70369"
+             y="264.27399"
+             id="tspan14">c</tspan></text>
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="54.873951"
+           x="-9.9036903"
+           id="text20"><tspan
+             x="-9.9036903"
+             y="54.873951"
+             id="tspan18">a</tspan></text>
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="254.97398"
+           x="133.90369"
+           id="text24"><tspan
+             x="133.90369"
+             y="254.97398"
+             id="tspan22">b</tspan></text>
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="131.47398"
+           x="93.003693"
+           id="text28"><tspan
+             x="93.003693"
+             y="131.47398"
+             id="tspan26">d</tspan></text>
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="173.41545"
+           x="52.103699"
+           id="text32"><tspan
+             x="52.103699"
+             y="173.41545"
+             id="tspan30">q</tspan></text>
+      </g>
+      <g
+         id="g44"
+         transform="translate(322,123.70079)">
+        <path
+           style="color:#000000;fill:none;stroke:#000000"
+           d="m -20,251.2 v -0.7 c 0,-20.4 -14.3,-37.6 -33.6,-42.5"
+           id="path36"
+           inkscape:connector-curvature="0" />
+        <text
+           style="color:#000000;font-size:20px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000"
+           xml:space="preserve"
+           font-size="20px"
+           line-height="125%"
+           y="245.65685"
+           x="-54.47578"
+           id="text40"><tspan
+             y="245.65685"
+             x="-54.47578"
+             font-weight="bold"
+             id="tspan38"
+             style="font-weight:bold">ß</tspan></text>
+        <path
+           style="color:#000000;fill:none;stroke:#000000;stroke-width:1.79999995;stroke-dasharray:3.6, 3.6"
+           d="m 44.1,142.9 -16.2,11.7 11.7,16.2"
+           id="path42"
+           inkscape:connector-curvature="0" />
+      </g>
+      <g
+         font-size="14px"
+         id="g94"
+         style="font-size:14px;font-family:Tahoma;fill:#000000"
+         transform="translate(322,123.70079)">
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="159.97398"
+           x="73.603699"
+           id="text88"><tspan
+             y="159.97398"
+             x="73.603699"
+             font-weight="bold"
+             id="tspan86"
+             style="font-weight:bold">L</tspan></text>
+        <text
+           style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
+           xml:space="preserve"
+           line-height="125%"
+           y="265.32526"
+           x="28.051849"
+           id="text92"><tspan
+             y="265.32526"
+             x="28.051849"
+             font-weight="bold"
+             id="tspan90"
+             style="font-weight:bold">R</tspan></text>
+      </g>
     </g>
   </g>
-  <g
-     font-size="14px"
-     id="g34"
-     style="font-size:14px;font-family:Tahoma;fill:#000000"
-     transform="translate(322,123.70079)">
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="264.27399"
-       x="-75.70369"
-       id="text16"><tspan
-         x="-75.70369"
-         y="264.27399"
-         id="tspan14">c</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="54.873951"
-       x="-9.9036903"
-       id="text20"><tspan
-         x="-9.9036903"
-         y="54.873951"
-         id="tspan18">a</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="254.97398"
-       x="133.90369"
-       id="text24"><tspan
-         x="133.90369"
-         y="254.97398"
-         id="tspan22">b</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="131.47398"
-       x="93.003693"
-       id="text28"><tspan
-         x="93.003693"
-         y="131.47398"
-         id="tspan26">d</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="173.41545"
-       x="52.103699"
-       id="text32"><tspan
-         x="52.103699"
-         y="173.41545"
-         id="tspan30">q</tspan></text>
-  </g>
-  <g
-     id="g44"
-     transform="translate(322,123.70079)">
-    <path
-       style="color:#000000;fill:none;stroke:#000000"
-       d="m -20,251.2 v -0.7 c 0,-20.4 -14.3,-37.6 -33.6,-42.5"
-       id="path36"
-       inkscape:connector-curvature="0" />
-    <text
-       style="color:#000000;font-size:20px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000"
-       xml:space="preserve"
-       font-size="20px"
-       line-height="125%"
-       y="245.65685"
-       x="-54.47578"
-       id="text40"><tspan
-         y="245.65685"
-         x="-54.47578"
-         font-weight="bold"
-         id="tspan38"
-         style="font-weight:bold">ß</tspan></text>
-    <path
-       style="color:#000000;fill:none;stroke:#000000;stroke-width:1.79999995;stroke-dasharray:3.6, 3.6"
-       d="m 44.1,142.9 -16.2,11.7 11.7,16.2"
-       id="path42"
-       inkscape:connector-curvature="0" />
-  </g>
-  <g
-     font-size="14px"
-     id="g94"
-     style="font-size:14px;font-family:Tahoma;fill:#000000"
-     transform="translate(322,123.70079)">
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="91.773972"
-       x="154.80371"
-       id="text84"><tspan
-         x="154.80371"
-         y="91.773972"
-         id="tspan46">Calculate the number of steps (S) needed to </tspan><tspan
-         x="154.80371"
-         y="109.27397"
-         id="tspan48">construct a flattened path approximating a</tspan><tspan
-         x="154.80371"
-         y="126.77397"
-         id="tspan50">circle with radius (R) where the maximum </tspan><tspan
-         x="154.80371"
-         y="144.27397"
-         id="tspan52">imprecision of the path is a predefined </tspan><tspan
-         x="154.80371"
-         y="161.77397"
-         id="tspan54">constant L.</tspan><tspan
-         x="154.80371"
-         y="179.27397"
-         id="tspan56" /><tspan
-         x="154.80371"
-         y="196.77397"
-         id="tspan58">ß = 2*pi / S</tspan><tspan
-         x="154.80371"
-         y="214.27397"
-         id="tspan60">q = midpoint(ab)</tspan><tspan
-         x="154.80371"
-         y="231.77397"
-         id="tspan62">length(cd) = R </tspan><tspan
-         x="154.80371"
-         y="249.27397"
-         id="tspan64">length(qd) = L and length(cq) = R-L</tspan><tspan
-         x="154.80371"
-         y="266.77399"
-         id="tspan66">cos(ß/2) = length(cq)/R = (R-L)/R</tspan><tspan
-         x="154.80371"
-         y="284.27396"
-         id="tspan68">ß = 2 * arccos(1 - L/R) = 2*pi / S</tspan><tspan
-         y="301.77396"
-         x="154.80371"
-         font-weight="bold"
-         id="tspan70"
-         style="font-weight:bold">S = pi / arccos(1 - L/R)</tspan><tspan
-         x="154.80371"
-         y="319.27396"
-         id="tspan72" /><tspan
-         x="154.80371"
-         y="336.77396"
-         id="tspan74">eg: Given a circle with radius = 100px </tspan><tspan
-         x="154.80371"
-         y="354.27396"
-         id="tspan76">and allowing a max. imprecision of 1/4px</tspan><tspan
-         x="154.80371"
-         y="371.77396"
-         id="tspan78">the number of steps (vertices) required to </tspan><tspan
-         x="154.80371"
-         y="389.27396"
-         id="tspan80">draw a path approximating the circle is ...</tspan><tspan
-         x="154.80371"
-         y="406.77396"
-         id="tspan82">Steps = pi / arccos(1 - 0.25/100) = 44</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="159.97398"
-       x="73.603699"
-       id="text88"><tspan
-         y="159.97398"
-         x="73.603699"
-         font-weight="bold"
-         id="tspan86"
-         style="font-weight:bold">L</tspan></text>
-    <text
-       style="color:#000000;line-height:125%;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none"
-       xml:space="preserve"
-       line-height="125%"
-       y="265.32526"
-       x="28.051849"
-       id="text92"><tspan
-         y="265.32526"
-         x="28.051849"
-         font-weight="bold"
-         id="tspan90"
-         style="font-weight:bold">R</tspan></text>
-  </g>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     x="539.76306"
+     y="77.847473"
+     id="text4844"><tspan
+       sodipodi:role="line"
+       id="tspan4842"
+       x="539.76306"
+       y="77.847473"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start">Calculate the number of steps (s) needed to </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="104.51414"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5341">construct a flattened path approximating </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="131.1808"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5343">a circle with radius (R) where the maximum </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="157.84747"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5345">imprecision of the path is a predefined </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="184.51414"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5347">constant L.</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="204.69432"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5349" /><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="229.51414"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5351">ß = 2 × π / s</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="256.18082"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5353">q = midpoint(ab)</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="282.84747"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5355">length(cd) = R </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="309.51416"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5357">length(qd) = L and length(cq) = R – L</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="329.69434"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5359" /><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="354.51416"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5361">cos(ß/2) = length(cq) / R = (R – L) / R </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="381.18082"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5363">ß = 2 × Arccos(1 – L / R) = 2 × π / s</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="401.36099"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5385" /><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="426.18082"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5365">steps = π / Arccos(1 – L / R)</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="446.36099"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5367" /><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="471.18082"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5369">Example: Given a circle with radius = 100px </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="497.84747"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5371">and allowing a max. imprecision of 1/4px</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="524.51416"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5373">the number of steps (vertices) required to </tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="551.18085"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5375">draw a path approximating the circle is ...</tspan><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="571.36102"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5377" /><tspan
+       sodipodi:role="line"
+       x="539.76306"
+       y="596.18085"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
+       id="tspan5379">steps = π / Arccos(1 – 0.25/100) =  44</tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     x="47.336662"
+     y="55.963387"
+     id="text5383"><tspan
+       sodipodi:role="line"
+       id="tspan5381"
+       x="47.336662"
+       y="68.939949"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start" /></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     x="52.848732"
+     y="87.185143"
+     id="text5405"><tspan
+       sodipodi:role="line"
+       id="tspan5403"
+       x="52.848732"
+       y="87.185143"
+       style="font-weight:bold;font-size:26.66666603px">Flattening an elliptical path ...</tspan></text>
 </svg>

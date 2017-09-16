@@ -473,23 +473,28 @@ var
   i, Len: Integer;
   outerPath: TPath;
   bounds: TRect64;
+  negate: Boolean;
 begin
   solution := nil;
   if FNodeList.Count = 0 then Exit;
 
-  //if polygon orientations are reversed, then simply reverse the delta ...
   GetLowestPolygonIdx;
-  if (FLowestIdx >= 0) and
-    (Area(TPathNode(FNodeList[FLowestIdx]).FPath) < 0) then //todo don't use Area :)
-      delta := - delta;
+  negate := (FLowestIdx >= 0) and
+    (Area(TPathNode(FNodeList[FLowestIdx]).FPath) < 0);
+  //if polygon orientations are reversed, then 'negate' ...
+  if negate then
+      FDelta := - delta else
+      FDelta := delta;
 
-  DoOffset(delta);
+  DoOffset(FDelta);
 
   //clean up 'corners' ...
   with TClipper.Create do
   try
     AddPaths(FSolution, ptSubject);
-    Execute(ctUnion, solution, ftPositive);
+    if negate then
+      Execute(ctUnion, solution, ftNegative) else
+      Execute(ctUnion, solution, ftPositive);
   finally
     free;
   end;
@@ -513,12 +518,23 @@ begin
   //Two vertices, one using the prior offset's (k) normal one the current (j).
   //Do a 'normal' offset (by delta) and then another by 'de-normaling' the
   //normal hence parallel to the direction of the respective edges.
-  AddPoint(Point64(
-    round(FPathIn[j].X + FDelta * (FNorms[k].X - FNorms[k].Y)),
-    round(FPathIn[j].Y + FDelta * (FNorms[k].Y + FNorms[k].X))));
-  AddPoint(Point64(
-    round(FPathIn[j].X + FDelta * (FNorms[j].X + FNorms[j].Y)),
-    round(FPathIn[j].Y + FDelta * (FNorms[j].Y - FNorms[j].X))));
+  if FDelta > 0 then
+  begin
+    AddPoint(Point64(
+      round(FPathIn[j].X + FDelta * (FNorms[k].X - FNorms[k].Y)),
+      round(FPathIn[j].Y + FDelta * (FNorms[k].Y + FNorms[k].X))));
+    AddPoint(Point64(
+      round(FPathIn[j].X + FDelta * (FNorms[j].X + FNorms[j].Y)),
+      round(FPathIn[j].Y + FDelta * (FNorms[j].Y - FNorms[j].X))));
+  end else
+  begin
+    AddPoint(Point64(
+      round(FPathIn[j].X + FDelta * (FNorms[k].X + FNorms[k].Y)),
+      round(FPathIn[j].Y + FDelta * (FNorms[k].Y - FNorms[k].X))));
+    AddPoint(Point64(
+      round(FPathIn[j].X + FDelta * (FNorms[j].X - FNorms[j].Y)),
+      round(FPathIn[j].Y + FDelta * (FNorms[j].Y + FNorms[j].X))));
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -539,7 +555,7 @@ var
   a, X, X2, Y: Double;
 begin
   a := ArcTan2(FSinA, FNorms[k].X * FNorms[j].X + FNorms[k].Y * FNorms[j].Y);
-  steps := Max(Round(FStepsPerRad * Abs(a)), 1);
+  steps := Trunc(FStepsPerRad * Abs(a));
 
   X := FNorms[k].X;
   Y := FNorms[k].Y;
