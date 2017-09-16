@@ -17,8 +17,8 @@ unit ClipperMisc;
 {$IFDEF FPC}
   {$DEFINE INLINING}
 {$ELSE}
-  {$IF CompilerVersion < 15}
-    Requires Delphi version 7 or above.
+  {$IF CompilerVersion < 14}
+    Requires Delphi version 6 or above.
   {$IFEND}
   {$IF CompilerVersion >= 18}         //Delphi 2007
     //While Inlining has been supported since D2005, both D2005 and D2006
@@ -46,8 +46,6 @@ function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
 function GetBounds(const paths: TPaths): TRect64;
 function ReversePath(const path: TPath): TPath;
 function ReversePaths(const paths: TPaths): TPaths;
-
-
 
 implementation
 
@@ -229,5 +227,6 @@ begin
   AddPolyNodeToPaths(PolyTree, Result);
 end;
 //------------------------------------------------------------------------------
+
 
 end.

@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  14 September 2017                                               *
+* Date      :  16 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -264,9 +264,10 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    internal void DoMiter(int j, int k, double r)
+    internal void DoMiter(int j, int k, double cosAplus1)
     {
-      double q = delta / r;
+      //see offset_triginometry4.svg
+      double q = delta / cosAplus1; //0 < cosAplus1 <= 2
       pathOut.Add(new Point64(Round(pathIn[j].X + (norms[k].X + norms[j].X) * q),
         Round(pathIn[j].Y + (norms[k].Y + norms[j].Y) * q)));
     }

@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  15 September 2017                                               *
+* Date      :  16 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -17,8 +17,8 @@ unit Clipper;
 {$IFDEF FPC}
   {$DEFINE INLINING}
 {$ELSE}
-  {$IF CompilerVersion < 15}
-    Requires Delphi version 7 or above.
+  {$IF CompilerVersion < 14}
+    Requires Delphi version 6 or above.
   {$IFEND}
   {$IF CompilerVersion >= 18}         //Delphi 2007
     //While Inlining has been supported since D2005, both D2005 and D2006

@@ -4,7 +4,7 @@ unit ClipperOffset;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  14 September 2017                                               *
+* Date      :  16 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -17,8 +17,8 @@ unit ClipperOffset;
 {$IFDEF FPC}
   {$DEFINE INLINING}
 {$ELSE}
-  {$IF CompilerVersion < 15}
-    Requires Delphi version 7 or above.
+  {$IF CompilerVersion < 14}
+    Requires Delphi version 6 or above.
   {$IFEND}
   {$IF CompilerVersion >= 18}         //Delphi 2007
     //While Inlining has been supported since D2005, both D2005 and D2006
@@ -61,7 +61,7 @@ type
 
     procedure AddPoint(const pt: TPoint64);
     procedure DoSquare(j, k: Integer);
-    procedure DoMiter(j, k: Integer; r: Double);
+    procedure DoMiter(j, k: Integer; cosAplus1: Double);
     procedure DoRound(j, k: Integer);
     procedure OffsetPoint(j: Integer;
       var k: Integer; JoinType: TJoinType);
@@ -299,7 +299,7 @@ begin
     Exit;
   end;
 
-  //FMiterLimit: see offset_triginometry3.svg in the documentation folder ...
+  //FMiterLimit: see offset_triginometry3.svg
   if FMiterLimit > 1 then FMiterLim := 2/(sqr(FMiterLimit))
   else FMiterLim := 2;
 
@@ -308,7 +308,7 @@ begin
     arcTol := FArcTolerance;
 
 
-  //see offset_triginometry2.svg in the documentation folder ...
+  //see offset_triginometry2.svg
   steps := PI / ArcCos(1 - arcTol / absDelta);  //steps per 360 degrees
   if (steps > absDelta * Pi) then
     steps := absDelta * Pi;                //ie excessive precision check
@@ -484,8 +484,6 @@ begin
       delta := - delta;
 
   DoOffset(delta);
-//  solution := FSolution;
-//  Exit;
 
   //clean up 'corners' ...
   with TClipper.Create do
@@ -512,6 +510,9 @@ end;
 
 procedure TClipperOffset.DoSquare(j, k: Integer);
 begin
+  //Two vertices, one using the prior offset's (k) normal one the current (j).
+  //Do a 'normal' offset (by delta) and then another by 'de-normaling' the
+  //normal hence parallel to the direction of the respective edges.
   AddPoint(Point64(
     round(FPathIn[j].X + FDelta * (FNorms[k].X - FNorms[k].Y)),
     round(FPathIn[j].Y + FDelta * (FNorms[k].Y + FNorms[k].X))));
@@ -521,11 +522,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.DoMiter(j, k: Integer; r: Double);
+procedure TClipperOffset.DoMiter(j, k: Integer; cosAplus1: Double);
 var
   q: Double;
 begin
-  q := FDelta / r;
+  //see offset_triginometry4.svg
+  q := FDelta / cosAplus1; //0 < cosAplus1 <= 2
   AddPoint(Point64(round(FPathIn[j].X + (FNorms[k].X + FNorms[j].X)*q),
     round(FPathIn[j].Y + (FNorms[k].Y + FNorms[j].Y)*q)));
 end;
