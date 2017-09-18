@@ -24,9 +24,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.27"
-     inkscape:cx="439.34504"
-     inkscape:cy="285.42798"
+     inkscape:zoom="1.73"
+     inkscape:cx="470.96261"
+     inkscape:cy="319.57129"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -91,10 +91,10 @@
        sodipodi:nodetypes="cccccccc"
        inkscape:connector-curvature="0"
        id="path3857-2"
-       d="m 643.64053,26.517354 16,24.774999 H 648.97386 V 294.49501 H 638.3072 V 51.292353 h -10.66667 z"
-       style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ffff00;fill-opacity:1;stroke:#000000;stroke-width:2.2968657;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
-       inkscape:transform-center-x="-22.357333"
-       inkscape:transform-center-y="-2.5903982" />
+       d="m 643.29415,108.39511 11.65362,17.7108 h -7.76908 v 173.85728 h -7.76908 V 126.10591 h -7.76908 z"
+       style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ffff00;fill-opacity:1;stroke:#000000;stroke-width:1.65736556;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
+       inkscape:transform-center-x="-16.283991"
+       inkscape:transform-center-y="-1.8517873" />
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
@@ -109,198 +109,198 @@
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
-       x="744.7467"
-       y="246"
+       x="742.43445"
+       y="247.7341"
        id="text3977"><tspan
          sodipodi:role="line"
          id="tspan3979"
-         x="744.7467"
-         y="246"
+         x="742.43445"
+         y="247.7341"
          style="font-size:14.9333334px;line-height:1.25;stroke-width:1.06666672px">c</tspan></text>
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
-       x="654.28326"
-       y="92.300423"
+       x="640.40973"
+       y="84.785988"
        id="text3977-5-1-2"
        inkscape:transform-center-x="-56.021333"
        inkscape:transform-center-y="58.325333"><tspan
          sodipodi:role="line"
          id="tspan3979-1-5-7"
-         x="654.28326"
-         y="92.300423"
+         x="640.40973"
+         y="84.785988"
          style="font-size:14.9333334px;line-height:1.25;stroke-width:1.06666672px">b</tspan></text>
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
        x="835.64465"
-       y="-69.07386"
+       y="-53.07386"
        id="text4077"><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="-69.07386"
+         y="-53.07386"
          id="tspan4087"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">When 'mitering' offset polygons, the maximum distance </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">When mitering polygon offsets, the maximum distance the</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="-50.44886"
+         y="-36.407192"
          id="tspan3063"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">point 'b' can be from point 'a' is set by a limit (λ) where λ</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">offset point can be from its origin can be very large. So we </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="-31.823858"
-         id="tspan3065"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">is a multiple of delta (δ). Therefore, for any given angle</tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="-13.198858"
+         y="-19.740528"
          id="tspan3067"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">we need to know if length(ab) exceeds λ * δ.</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">need to set a limit above which offsets will be 'squared' </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="5.4261427"
+         y="-3.0738614"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4564">instead of mitered. Consequently, we need to know when </tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="13.592805"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4582">mitered offsets will exceed an arbitrary limit.</tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="30.259472"
          id="tspan4083"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"> </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"> </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="24.051144"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan4632">For a given limit (λ), at what angle ß do we start to </tspan><tspan
+         y="46.926136"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4632">For a given limit (λ) expressed as a multiple of the offset </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="42.676144"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan4648">exceed this limit? (We need to express ß as sin(ß) or </tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="61.301144"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan4636">cos(ß) since these values can easily be derived from </tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="79.926147"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan4652">cross and dot product expressions respectively.)</tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="98.551147"
-         id="tspan3884"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"> </tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="117.17615"
+         y="63.592804"
          id="tspan3888"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">∠abc = Ø/2 </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">delta (δ), at what angle ß will mitering exceed this limit?</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="135.80115"
-         id="tspan3083"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">length(ab) = λ × δ</tspan><tspan
+         y="80.259468"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4639"> </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="154.42615"
+         y="96.92614"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4635">Let λ × δ = length(ab)</tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="113.5928"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4586">∠abc = Ø/2 </tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="130.25948"
          id="tspan3087"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">length(ac) = δ</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">length(ac) = δ</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="173.05115"
+         y="146.92613"
          id="tspan3089"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">sin(Ø/2) = δ / (λ × δ) = 1 / λ</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">sin(Ø/2) = δ / (λ × δ) = 1 / λ</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="191.67615"
+         y="163.5928"
          id="tspan3157"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">Given that sin(Ø/2) = √((1 – cos(Ø))/2) **</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">Given that sin(Ø/2) = √((1 – cos(Ø))/2) **</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="210.30115"
+         y="180.25946"
          id="tspan3151"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">1 / λ = √((1 – cos(Ø)) / 2)</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">1 / λ = √((1 – cos(Ø)) / 2)</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="228.92615"
+         y="196.92613"
          id="tspan3161"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">λ = √(2 / (1 – cos(Ø)))</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">λ = √(2 / (1 – cos(Ø)))</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="247.55115"
+         y="213.5928"
          id="tspan3815"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">1 – cos(Ø) = 2 / λ² </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">And squaring both sides ... 1 – cos(Ø) = 2 / λ² </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="266.17615"
+         y="230.25946"
          id="tspan3043"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">Since Ø = π - ß ...</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">Since Ø = π - ß ...</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="284.80115"
+         y="246.92613"
          id="tspan3868"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">1 – cos(π – ß) = 2 / λ²</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">1 – cos(π – ß) = 2 / λ²</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="303.42615"
+         y="263.5928"
          id="tspan3047"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">and given cos(π – ß) = –cos(ß) ** ... </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">and given cos(π – ß) = –cos(ß) ** ... </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="322.05115"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         y="280.25946"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
          id="tspan3122"> 1 + cos(ß) = 2 / λ² </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="340.67615"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3118"> </tspan><tspan
+         y="296.92612"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan3114"> cos(ß) = (2 / λ²) – 1</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="359.30115"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3114">cos(ß) = (2 / λ²) – 1</tspan><tspan
-         sodipodi:role="line"
-         x="835.64465"
-         y="377.92615"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         y="313.5928"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
          id="tspan3051"> </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="396.55115"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3066">Example: if the miter limit = 2½ (ie 2½ × δ) then </tspan><tspan
+         y="330.25946"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan3066">ß = Arccos((2 / λ²) – 1)</tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="415.17615"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3070">cos(ß) = (2 / 6.25) – 1 = –0.68 and so ß = 133 degrees. </tspan><tspan
+         y="346.92612"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4647"> </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="433.80115"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3090">So when ß &gt; 133 deg. (or Ø &lt; 47 deg.), point 'b' will</tspan><tspan
+         y="363.5928"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4649">Example: if the miter limit (λ) = 2 (ie 2 × δ), then </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="452.42615"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan3094">exceed the allowed distance from point 'a' and will </tspan><tspan
+         y="380.25946"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan3070">ß = Arccos((2 / 2²) – 1) = 120 degrees (or 2.094 radians). </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="471.05115"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
-         id="tspan4660">require 'squaring'.</tspan><tspan
+         y="396.92612"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4594">So when ß &gt; 120 deg. (or Ø &lt; 60 deg.), offseting will </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="489.67615"
+         y="413.5928"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4660">exceed the offset distance of 2 × δ and will require </tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="430.25946"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         id="tspan4606">'squaring' instead.</tspan><tspan
+         sodipodi:role="line"
+         x="835.64465"
+         y="446.92612"
          id="tspan3171"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"> </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"> </tspan><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="498.79599"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.90000057px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
+         y="455.47375"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px"
          id="tspan3049" /><tspan
          sodipodi:role="line"
          x="835.64465"
-         y="504.55566"
+         y="462.41312"
          id="tspan4095"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">** see http://en.wikipedia.org/wiki/List_of_trigonometric_identities </tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:1.06666672px">** see http://en.wikipedia.org/wiki/List_of_trigonometric_identities </tspan></text>
     <path
        style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:#000000;stroke-width:1.06666672;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:2.13333333, 2.13333333;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
        d="M 730.34667,237.70667 719.04,244 l 5.76,10.77333"
@@ -310,13 +310,13 @@
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
-       x="627.41058"
-       y="306.58313"
+       x="627.98865"
+       y="308.89526"
        id="text3977-1"><tspan
          sodipodi:role="line"
          id="tspan3979-7"
-         x="627.41058"
-         y="306.58313"
+         x="627.98865"
+         y="308.89526"
          style="font-size:14.9333334px;line-height:1.25;stroke-width:1.06666672px">a</tspan></text>
     <g
        id="g3841"
@@ -374,26 +374,26 @@
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:40px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
        x="451.92178"
-       y="-47.203251"
+       y="-1.2032509"
        id="text84"><tspan
          sodipodi:role="line"
          x="451.92178"
-         y="-47.203251"
+         y="-1.2032509"
          style="font-weight:bold;font-size:21.33333397px"
          id="tspan90">When to 'square' a mitered join ...</tspan></text>
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.80000019px;line-height:0%;font-family:Tahoma;-inkscape-font-specification:Tahoma;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;display:inline;overflow:visible;visibility:visible;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.06666672px;marker:none;enable-background:accumulate"
-       x="672.97156"
-       y="46.266113"
+       x="654.97156"
+       y="212.26611"
        id="text3861-0"><tspan
          sodipodi:role="line"
          id="tspan3863-4"
-         x="672.97156"
-         y="46.266113"
+         x="654.97156"
+         y="212.26611"
          style="font-weight:bold;font-size:26.66666603px;line-height:1.25;-inkscape-font-specification:'Tahoma Bold';stroke-width:1.06666672px"><tspan
            style="font-size:21.33333397px"
-           id="tspan4611">λ = 2.5</tspan></tspan></text>
+           id="tspan4611">λ×δ</tspan></tspan></text>
     <path
        style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:#000000;stroke-width:1.91999996;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
        d="m 447.61565,431.07391 195.52,-337.08801 164.16,270.42134"
@@ -402,7 +402,7 @@
        sodipodi:nodetypes="ccc" />
     <path
        style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#00ff00;fill-opacity:0.33175354;stroke:#000000;stroke-width:2.01324582;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.45497628;marker:none;enable-background:accumulate"
-       d="m 617.72417,190.72696 13.04478,24.26957 -8.40665,-1.24216 1.33765,59.75823 8.31681,1.40394 -12.24614,20.47351 -13.02593,-24.50088 8.36174,1.32306 -1.10586,-59.78092 -8.40665,-1.24217 z"
+       d="m 617.72417,200.72696 13.04478,24.26957 -8.40665,-1.24216 1.33765,59.75823 8.31681,1.40394 -12.24614,20.47351 -13.02593,-24.50088 8.36174,1.32306 -1.10586,-59.78092 -8.40665,-1.24217 z"
        id="path3777-9-4"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccccccccccc"
@@ -410,16 +410,8 @@
        inkscape:transform-center-y="-173.52332" />
     <path
        style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#00ff00;fill-opacity:0.33175354;stroke:#000000;stroke-width:2.01324582;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.45497628;marker:none;enable-background:accumulate"
-       d="m 615.67772,86.06387 13.04478,24.26957 -8.40665,-1.24216 1.33765,59.75823 8.31681,1.40394 -12.24614,20.47351 -13.02593,-24.50088 8.36174,1.32306 -1.10586,-59.78092 -8.40665,-1.24217 z"
+       d="m 615.67772,96.06387 13.04478,24.26957 -8.40665,-1.24216 1.33765,59.75823 8.31681,1.40394 -12.24614,20.47351 -13.02593,-24.50088 8.36174,1.32306 -1.10586,-59.78092 -8.40665,-1.24217 z"
        id="path3777-9-4-8"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccccc"
-       inkscape:transform-center-x="54.110674"
-       inkscape:transform-center-y="-173.52332" />
-    <path
-       style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#00ff00;fill-opacity:0.33175354;stroke:#000000;stroke-width:2.01324582;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.45497628;marker:none;enable-background:accumulate"
-       d="m 613.63127,-18.599227 13.04478,24.269567 -8.40665,-1.24216 1.33765,59.75823 8.31681,1.40394 -12.24614,20.47352 -13.02593,-24.50089 8.36174,1.32306 -1.10586,-59.78092 -8.40665,-1.24217 z"
-       id="path3777-9-4-81"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccccccccccc"
        inkscape:transform-center-x="54.110674"

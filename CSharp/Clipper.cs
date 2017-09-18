@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  15 September 2017                                               *
+* Date      :  18 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -61,7 +61,7 @@ namespace ClipperLib
 
     public override int GetHashCode()
     {
-      return (unchecked( 23 * ((23 * 17) + X.GetHashCode()) + Y.GetHashCode()));
+      return (X.GetHashCode() ^ Y.GetHashCode());
     }
 
   } //Point64
@@ -124,6 +124,7 @@ namespace ClipperLib
     internal Active PrevInAEL;
     internal Active NextInSEL;
     internal Active PrevInSEL;
+    internal Active MergeJump;
     internal Vertex VertTop;
     internal LocalMinima LocalMin;
   };
@@ -1672,12 +1673,41 @@ namespace ClipperLib
       }
       //------------------------------------------------------------------------------
 
+      private void InsertNewIntersectNode(Active e1, Active e2, Int64 topY)
+      {
+        Point64 pt = GetIntersectPoint(e1, e2);
+        //Rounding errors can occasionally place the calculated intersection
+        //point either below or above the scanbeam, so check and correct ...
+        if (pt.Y > e1.Curr.Y)
+        {
+          pt.Y = e1.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
+          //use the more vertical of the 2 edges to derive pt.X ...
+          if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx))
+            pt.X = TopX(e1, pt.Y); else
+            pt.X = TopX(e2, pt.Y);
+        }
+        else if (pt.Y < topY)
+        {
+          pt.Y = topY;          //TopY = top of scanbeam
+          if (e1.Top.Y == topY)
+            pt.X = e1.Top.X;
+          else if (e2.Top.Y == topY)
+            pt.X = e2.Top.X;
+          else if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx))
+            pt.X = e1.Curr.X;
+          else
+            pt.X = e2.Curr.X;
+        }
+
+        IntersectNode NewNode = new IntersectNode();
+        NewNode.Edge1 = e1;
+        NewNode.Edge2 = e2;
+        NewNode.Pt = pt;
+        IntersectList.Add(NewNode);
+      }
+      //------------------------------------------------------------------------------
+
       private void BuildIntersectList(Int64 TopY)
-      //var
-      //  E, eNext: PActive;
-      //  Pt: TIntPoint;
-      //  IsModified: bool;
-      //  NewNode: PIntersectNode;
       {
         if (Actives == null) return;
 
@@ -1692,59 +1722,85 @@ namespace ClipperLib
           e = e.NextInAEL;
         }
 
-        bool IsModified;
-        Point64 pt;
-        //bubblesort (because adjacent swaps are required) ...
-        do {
-          IsModified = false;
-          e = SEL;
-          while (e.NextInSEL != null)
-          {
-            Active eNext = e.NextInSEL;
-            if (e.Curr.X > eNext.Curr.X)
+        //Merge sort the actives to their new positions at top of scanbeam, and
+        //create intersection nodes every time an edge crosses over another ...
+        Active baseE, prevBaseE, first, second; 
+        int mul = 1;
+
+      //for each new level of mul ...
+        for (;;)
+        {
+          first = SEL;
+          prevBaseE = null;
+          //sort each successive mul count of nodes ...
+          while (first != null) 
+          {  
+            baseE = first;
+            if (mul == 1)
+            {         
+              second = first.NextInSEL;
+              if (second != null) first.MergeJump = second.NextInSEL;
+              else first.MergeJump = null;
+            } 
+            else second = first.MergeJump;
+            if (second == null) break;
+            //now sort first and second groups ...
+            int lCnt = mul, rCnt = mul;
+
+            for (; ; )
             {
-              //An intersection is occuring somewhere within the scanbeam ...
-              pt = GetIntersectPoint(e, eNext);
-
-              //Rounding errors can occasionally place the calculated intersection
-              //point either below or above the scanbeam, so check and correct ...
-              if (pt.Y > e.Curr.Y)
+              if (second.Curr.X < first.Curr.X) 
               {
-                pt.Y = e.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
-                //use the more vertical of the 2 edges to derive pt.X ...
-                if (Math.Abs(e.Dx) < Math.Abs(eNext.Dx))
-                  pt.X = TopX(e, pt.Y); else
-                  pt.X = TopX(eNext, pt.Y);
+                Active tmp = second.PrevInSEL;
+                for (int i = 0; i < lCnt; i++)
+                {
+                  //create a new intersect node...
+                  InsertNewIntersectNode(tmp, second, TopY);
+                  tmp = tmp.PrevInSEL;
+                }
+                tmp = second.NextInSEL;
+                Insert2Before1InSel(first, second);
+                if (first == baseE) 
+                {
+                  baseE = second;
+                  if (prevBaseE != null) prevBaseE.MergeJump = baseE;
+                  if (second.PrevInSEL == null) SEL = second;
+                  };
+                rCnt--;
+                if (rCnt == 0)
+                {
+                  first = tmp;
+                  break;
+                }
+                else second = tmp;
+                if (second == null) 
+                {
+                  first = null;
+                  break;
+                }
               }
-              else if (pt.Y < TopY)
+              else
               {
-                pt.Y = TopY;          //TopY = top of scanbeam
-                if (e.Top.Y == TopY)
-                  pt.X = e.Top.X;
-                else if (eNext.Top.Y == TopY)
-                  pt.X = eNext.Top.X;
-                else if (Math.Abs(e.Dx) < Math.Abs(eNext.Dx))
-                  pt.X = e.Curr.X;
-                else
-                  pt.X = eNext.Curr.X;
+                lCnt--;
+                if (lCnt == 0)
+                {
+                  first = second;
+                  while (rCnt > 0 && first != null) 
+                  {
+                    first = first.NextInSEL;
+                    rCnt--;
+                  }
+                  break;
+                }
+                else first = first.NextInSEL;
               }
-
-              IntersectNode NewNode = new IntersectNode();
-              NewNode.Edge1 = e;
-              NewNode.Edge2 = eNext;
-              NewNode.Pt = pt;
-              IntersectList.Add(NewNode);
-              SwapPositionsInSEL(e, eNext);
-              IsModified = true;
             }
-            else
-              e = eNext;
+            baseE.MergeJump = first;
+            prevBaseE = baseE;
           }
-
-          if (e.PrevInSEL == null) break;
-          e.PrevInSEL.NextInSEL = null; 
+          if (SEL.MergeJump == null) break;
+          else mul <<= 1;
         }
-        while (IsModified);
       }
       //------------------------------------------------------------------------------
 
@@ -1780,7 +1836,7 @@ namespace ClipperLib
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need Bubble sorting ...
         int cnt = IntersectList.Count;
-        if (cnt < 3) return; //any edges must be adjacent :)
+        if (cnt < 3) return; //edges must be adjacent :)
         IntersectList.Sort(IntersectNodeComparer);
         CopyAELToSEL();
         for (int i = 0; i < cnt; i++)
@@ -1859,6 +1915,22 @@ namespace ClipperLib
         }
         else
           throw new ClipperException("Clipping error in SwapPositionsInSEL");
+      }
+      //------------------------------------------------------------------------------
+    
+      private void Insert2Before1InSel(Active first, Active second)
+      {
+        //remove second from list ...
+        Active prev = second.PrevInSEL;
+        Active next = second.NextInSEL;
+        prev.NextInSEL = next; //always a prev since we're moving from right to left
+        if (next != null) next.PrevInSEL = prev;
+        //insert back into list ...
+        prev = first.PrevInSEL;
+        if (prev != null) prev.NextInSEL = second;
+        first.PrevInSEL = second;
+        second.PrevInSEL = prev;
+        second.NextInSEL = first;
       }
       //------------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  16 September 2017                                               *
+* Date      :  18 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -97,6 +97,7 @@ type
     //    -  also (re)used in processing horizontals.
     PrevInSEL: PActive;
     NextInSEL: PActive;
+    MergeJump: PActive;
     vertTop  : PVertex;
     LocMin   : PLocalMinima; //bottom of bound
   end;
@@ -177,11 +178,13 @@ type
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure ProcessIntersections(const topY: Int64);
     procedure DisposeIntersectNodes;
+    procedure InsertNewIntersectNode(e1, e2: PActive; topY: Int64);
     procedure BuildIntersectList(const topY: Int64);
     procedure ProcessIntersectList;
     procedure FixupIntersectionOrder;
     procedure SwapPositionsInAEL(e1, e2: PActive);
     procedure SwapPositionsInSEL(e1, e2: PActive);
+    procedure Insert2Before1InSel(first, second: PActive);
     procedure ProcessHorizontal(horzEdge: PActive);
     procedure DoTopOfScanbeam(Y: Int64);
     function DoMaxima(e: PActive): PActive;
@@ -1728,76 +1731,140 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TClipper.InsertNewIntersectNode(e1, e2: PActive; topY: Int64);
+var
+  pt: TPoint64;
+  node: PIntersectNode;
+begin
+  pt := GetIntersectPoint(e1, e2);
+  //Rounding errors can occasionally place the calculated intersection
+  //point either below or above the scanbeam, so check and correct ...
+  if (pt.Y > e1.Curr.Y) then
+  begin
+    pt.Y := e1.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
+    //use the more vertical of the 2 edges to derive pt.X ...
+    if (abs(e1.Dx) < abs(e2.Dx)) then
+      pt.X := TopX(e1, pt.Y) else
+      pt.X := TopX(e2, pt.Y);
+  end
+  else if pt.Y < topY then
+  begin
+    pt.Y := topY;          //TopY = top of scanbeam
+    if e1.Top.Y = topY then
+      pt.X := e1.Top.X
+    else if e2.Top.Y = topY then
+      pt.X := e2.Top.X
+    else if (abs(e1.Dx) < abs(e2.Dx)) then
+      pt.X := e1.Curr.X
+    else
+      pt.X := e2.Curr.X;
+  end;
+
+  new(node);
+  node.Edge1 := e1;
+  node.Edge2 := e2;
+  node.Pt := pt;
+  FIntersectList.Add(node);
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipper.BuildIntersectList(const topY: Int64);
 var
-  e, eNext: PActive;
-  pt: TPoint64;
-  isModified: Boolean;
-  node: PIntersectNode;
+  i, lCnt, rCnt, mul: integer;
+  first, second, base, tmp, prevBase: PActive;
 begin
   if not Assigned(FActives) then Exit;
 
   //copy AEL to SEL while also adjusting Curr.X ...
   FSel := FActives;
-  e := FActives;
-  while Assigned(e) do
+  tmp := FActives;
+  while Assigned(tmp) do
   begin
-    e.PrevInSEL := e.PrevInAEL;
-    e.NextInSEL := e.NextInAEL;
-    e.Curr.X := TopX(e, topY);
-    e := e.NextInAEL;
+    tmp.PrevInSEL := tmp.PrevInAEL;
+    tmp.NextInSEL := tmp.NextInAEL;
+    tmp.Curr.X := TopX(tmp, topY);
+    tmp := tmp.NextInAEL;
   end;
 
-  //bubblesort (because adjacent swaps are required) ...
-  repeat
-    isModified := False;
-    e := FSel;
-    while Assigned(e.NextInSEL) do
+  //Merge sort the actives to their new positions at top of scanbeam, and
+  //create intersection nodes every time an edge crosses over another ...
+
+	mul := 1;
+  //for each new level of mul ...
+	while (true) do
+  begin
+    first := FSel;
+    prevBase := nil;
+		//sort each successive mul count of nodes ...
+		while (first <> nil) do
     begin
-      eNext := e.NextInSEL;
-      if (e.Curr.X > eNext.Curr.X) then
+      base := first;
+			if (mul = 1) then
       begin
-        //An intersection is occuring somewhere within the scanbeam ...
-        pt := GetIntersectPoint(e, eNext);
-
-        //Rounding errors can occasionally place the calculated intersection
-        //point either below or above the scanbeam, so check and correct ...
-        if (pt.Y > e.Curr.Y) then
-        begin
-          pt.Y := e.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
-          //use the more vertical of the 2 edges to derive pt.X ...
-          if (abs(e.Dx) < abs(eNext.Dx)) then
-            pt.X := TopX(e, pt.Y) else
-            pt.X := TopX(eNext, pt.Y);
-        end
-        else if pt.Y < topY then
-        begin
-          pt.Y := topY;          //TopY = top of scanbeam
-          if e.Top.Y = topY then
-            pt.X := e.Top.X
-          else if eNext.Top.Y = topY then
-            pt.X := eNext.Top.X
-          else if (abs(e.Dx) < abs(eNext.Dx)) then
-            pt.X := e.Curr.X
-          else
-            pt.X := eNext.Curr.X;
-        end;
-
-        new(node);
-        node.Edge1 := e;
-        node.Edge2 := eNext;
-        node.Pt := pt;
-        FIntersectList.Add(node);
-
-        SwapPositionsInSEL(e, eNext);
-        isModified := True;
+        second := first.NextInSEL;
+        if assigned(second) then
+          first.MergeJump := second.NextInSEL else
+          first.MergeJump := nil;
       end else
-        e := eNext;
+			  second := first.MergeJump;
+
+      if not assigned(second) then break;
+      //now sort first and second groups ...
+			lCnt := mul; rCnt := mul;
+			while (true) do
+			begin
+				if (second.Curr.X < first.Curr.X) then
+        begin
+          tmp := second.PrevInSEL;
+          for i := 1 to lCnt do
+          begin
+            //create a new intersect node...
+            InsertNewIntersectNode(tmp, second, topY);
+            tmp := tmp.PrevInSEL;
+          end;
+          tmp := second.NextInSEL;
+          Insert2Before1InSel(first, second);
+          if (first = base) then
+          begin
+            base := second;
+            if assigned(prevBase) then
+              prevBase.MergeJump := base;
+            if (second.PrevInSEL = nil) then FSel := second;
+          end;
+          dec(rCnt);
+          if (rCnt = 0) then
+          begin
+            first := tmp;
+            break;
+          end
+          else second := tmp;
+          if not assigned(second) then
+          begin
+            first := nil;
+            break;
+          end;
+        end else
+        begin
+          dec(lCnt);
+          if (lCnt = 0) then
+          begin
+            first := second;
+            while (rCnt > 0) and assigned(first) do
+            begin
+              first := first.NextInSEL;
+              dec(rCnt);
+            end;
+            break;
+          end else
+            first := first.NextInSEL;
+        end;
+      end;
+      base.MergeJump := first;
+      prevBase := base;
     end;
-    if Assigned(e.PrevInSEL) then
-      e.PrevInSEL.NextInSEL := nil
-    else Break;
-  until not isModified;
+    if FSel.MergeJump = nil then Break
+    else mul := mul shl 1;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1845,7 +1912,7 @@ begin
   //it's also crucial that intersections are made between adjacent edges, so
   //the order of these intersections may need some adjusting ...
   cnt := FIntersectList.Count;
-  if cnt < 3 then Exit; //any edges must be adjacent :)
+  if cnt < 3 then Exit; //edges must be adjacent :)
 
   CopyActivesToSEL;
   FIntersectList.Sort(IntersectListSort);
@@ -1927,6 +1994,24 @@ begin
     if not Assigned(e1.PrevInSEL) then FSel := e1;
   end else
     raise EClipperLibException.Create(rsClippingErr);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.Insert2Before1InSel(first, second: PActive);
+var
+  prev, next: PActive;
+begin
+  //remove second from list ...
+  prev := second.PrevInSEL;
+  next := second.NextInSEL;
+  prev.NextInSEL := next; //always a prev since we're moving from right to left
+  if Assigned(next) then next.PrevInSEL := prev;
+  //insert back into list ...
+  prev := first.PrevInSEL;
+  if assigned(prev) then prev.NextInSEL := second;
+  first.PrevInSEL := second;
+  second.PrevInSEL := prev;
+  second.NextInSEL := first;
 end;
 //------------------------------------------------------------------------------
 
