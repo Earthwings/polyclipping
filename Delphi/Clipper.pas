@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  18 September 2017                                               *
+* Date      :  20 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -118,7 +118,7 @@ type
   TPolyTree = class;
   TPolyPath = class;
 
-  TOutRecFlag = (orOpen, orOuter, orHorz, orHorzJoin);
+  TOutRecFlag = (orOpen, orOuter);
   TOutRecFlags = set of TOutRecFlag;
 
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
@@ -157,14 +157,13 @@ type
     function PopLocalMinima(Y: Int64;
       out localMinima: PLocalMinima): Boolean;
     procedure DisposeScanLineList;
-    procedure DisposeLocalMinimaList;
-    procedure DisposePolyPts(pp: POutPt);
+    procedure DisposeVerticesAndLocalMinima;
     procedure DisposeOutRec(index: Integer);
     procedure DisposeAllOutRecs;
     function IsContributingClosed(e: PActive): Boolean;
     function IsContributingOpen(e: PActive): Boolean;
     procedure SetWindingLeftEdgeOpen(e: PActive);
-    procedure SetWindingLeftEdgeClosed(leftE: PActive);
+    procedure SetWindingLeftEdgeClosed(e: PActive);
     procedure InsertLocalMinimaIntoAEL(const botY: Int64);
     procedure DeleteFromAEL(e: PActive);
     procedure AddOutPt(e: PActive; const pt: TPoint64);
@@ -343,10 +342,10 @@ begin
   if e1.Top.Y > e2.Top.Y then
     Result := TopX(e2, e1.Top.Y) - e1.Top.X else
     Result := e2.Top.X - TopX(e1, e2.Top.Y);
-  end;
+end;
 //------------------------------------------------------------------------------
 
-procedure SwapActive(var e1, e2: PActive); {$IFDEF INLINING} inline; {$ENDIF}
+procedure SwapActives(var e1, e2: PActive); {$IFDEF INLINING} inline; {$ENDIF}
 var
   e: PActive;
 begin
@@ -481,6 +480,75 @@ begin
   end;
   Result := nil;
 end;
+//------------------------------------------------------------------------------
+
+procedure ReversePolyPtLinks(pp: POutPt); {$IFDEF INLINING} inline; {$ENDIF}
+var
+  pp1, pp2: POutPt;
+begin
+  if (pp.Next = pp.Prev) then Exit;
+  pp1 := pp;
+  repeat
+    pp2:= pp1.Next;
+    pp1.Next := pp1.Prev;
+    pp1.Prev := pp2;
+    pp1 := pp2;
+  until pp1 = pp;
+end;
+//------------------------------------------------------------------------------
+
+procedure DisposePolyPts(pp: POutPt);
+var
+  tmpPp: POutPt;
+begin
+  pp.Prev.Next := nil;
+  while Assigned(pp) do
+  begin
+    tmpPp := pp;
+    pp := pp.Next;
+    dispose(tmpPp);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure EndOutRec(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  outRec.StartE.OutRec := nil;
+  if assigned(outRec.EndE) then outRec.EndE.OutRec := nil;
+  outRec.StartE := nil;
+  outRec.EndE := nil;
+end;
+//------------------------------------------------------------------------------
+
+function LocMinListSort(item1, item2: Pointer): Integer;
+var
+  dy: Int64;
+begin
+  dy := PLocalMinima(item2).vertex.Pt.Y - PLocalMinima(item1).vertex.Pt.Y;
+  if dy < 0 then Result := -1
+  else if dy > 0 then Result := 1
+  else Result := 0;
+end;
+//------------------------------------------------------------------------------
+
+procedure SetOutrecClockwise(outRec: POutRec; e1, e2: PActive);
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  outRec.StartE := e1;
+  outRec.EndE := e2;
+  e1.OutRec := outRec;
+  e2.OutRec := outRec;
+end;
+//------------------------------------------------------------------------------
+
+procedure SetOutrecCounterClockwise(outRec: POutRec; e1, e2: PActive);
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  outRec.StartE := e2;
+  outRec.EndE := e1;
+  e1.OutRec := outRec;
+  e2.OutRec := outRec;
+end;
 
 //------------------------------------------------------------------------------
 // TClipper2 methods ...
@@ -517,21 +585,10 @@ end;
 
 procedure TClipper.Clear;
 begin
-  DisposeLocalMinimaList;
+  DisposeVerticesAndLocalMinima;
   FCurrentLocMinIdx := 0;
   FLocMinListSorted := false;
   FHasOpenPaths := False;
-end;
-//------------------------------------------------------------------------------
-
-function LocMinListSort(item1, item2: Pointer): Integer;
-var
-  dy: Int64;
-begin
-  dy := PLocalMinima(item2).vertex.Pt.Y - PLocalMinima(item1).vertex.Pt.Y;
-  if dy < 0 then Result := -1
-  else if dy > 0 then Result := 1
-  else Result := 0;
 end;
 //------------------------------------------------------------------------------
 
@@ -626,20 +683,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.DisposePolyPts(pp: POutPt);
-var
-  tmpPp: POutPt;
-begin
-  pp.Prev.Next := nil;
-  while Assigned(pp) do
-  begin
-    tmpPp := pp;
-    pp := pp.Next;
-    dispose(tmpPp);
-  end;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipper.DisposeOutRec(index: Integer);
 var
   outRec: POutRec;
@@ -659,7 +702,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.DisposeLocalMinimaList;
+procedure TClipper.DisposeVerticesAndLocalMinima;
 var
   i: Integer;
 begin
@@ -725,6 +768,7 @@ begin
   end;
 
   GetMem(va, sizeof(TVertex) * pathLen);
+  FVertexList.Add(va);
   va[0].Pt := p[0];
   va[0].flags := [];
 
@@ -767,25 +811,22 @@ begin
     if goingUp then
       include(va[i].flags, vfLocMax) else
       AddLocMin(@va[i]);
+  end
+  else if goingUp then
+  begin
+    //going up so find local maxima ...
+    v := @va[i];
+    while (v.Next.Pt.Y <= v.Pt.Y) do v := v.next;
+    include(v.flags, vfLocMax);
+    if p0IsMinima then AddLocMin(@va[0]); //ie just turned to going up
   end else
   begin
-    if goingUp then
-    begin
-      //going up so find local maxima ...
-      v := @va[i];
-      while (v.Next.Pt.Y <= v.Pt.Y) do v := v.next;
-      include(v.flags, vfLocMax);
-      if p0IsMinima then AddLocMin(@va[0]); //ie just turned to going up
-    end else
-    begin
-      //going down so find local minima ...
-      v := @va[i];
-      while (v.Next.Pt.Y >= v.Pt.Y) do v := v.next;
-      AddLocMin(v);
-      if p0IsMaxima then include(va[0].flags, vfLocMax);
-    end;
+    //going down so find local minima ...
+    v := @va[i];
+    while (v.Next.Pt.Y >= v.Pt.Y) do v := v.next;
+    AddLocMin(v);
+    if p0IsMaxima then include(va[0].flags, vfLocMax);
   end;
-  FVertexList.Add(va);
 end;
 //------------------------------------------------------------------------------
 
@@ -868,6 +909,84 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TClipper.SetWindingLeftEdgeClosed(e: PActive);
+var
+  e2: PActive;
+begin
+  //Wind counts generally refer to polygon regions not edges, so here an edge's
+  //WindCnt indicates the higher of the two wind counts of the regions touching
+  //the edge. (Note also that adjacent region wind counts only ever differ
+  //by one, and open paths have no meaningful wind directions or counts.)
+
+  e2 := e.PrevInAEL;
+  //find the nearest closed path edge of the same PolyType in AEL (heading left)
+  while Assigned(e2) and (not IsSamePolyType(e2, e) or IsOpen(e2)) do
+    e2 := e2.PrevInAEL;
+
+  //todo: check open path with negative Winding
+  if not Assigned(e2) then
+  begin
+    e.WindCnt := e.WindDx;
+    e2 := FActives;
+  end
+  else if (FFillType = ftEvenOdd) then
+  begin
+    e.WindCnt := e.WindDx;
+    e.WindCnt2 := e2.WindCnt2;
+    e2 := e2.NextInAEL;
+  end else
+  begin
+    //NonZero, positive, or negative filling here ...
+    //if e's WindCnt is in the SAME direction as its WindDx, then e is either
+    //an outer left or a hole right boundary, so leftE must be inside 'e'.
+    //(neither e.WindCnt nor e.WindDx should ever be 0)
+    if (e2.WindCnt * e2.WindDx < 0) then
+    begin
+      //opposite directions so leftE is outside 'e' ...
+      if (Abs(e2.WindCnt) > 1) then
+      begin
+        //outside prev poly but still inside another.
+        if (e2.WindDx * e.WindDx < 0) then
+          //reversing direction so use the same WC
+          e.WindCnt := e2.WindCnt else
+          //otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
+          e.WindCnt := e2.WindCnt + e.WindDx;
+      end
+      //now outside all polys of same polytype so set own WC ...
+      else e.WindCnt := e.WindDx;
+    end else
+    begin
+      //leftE must be inside 'e'
+      if (e2.WindDx * e.WindDx < 0) then
+        //reversing direction so use the same WC
+        e.WindCnt := e2.WindCnt
+      else
+        //otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
+        e.WindCnt := e2.WindCnt + e.WindDx;
+    end;
+    e.WindCnt2 := e2.WindCnt2;
+    e2 := e2.NextInAEL;
+  end;
+
+  //update WindCnt2 ...
+  if FFillType = ftEvenOdd then
+    while (e2 <> e) do
+    begin
+      if IsSamePolyType(e2, e) or IsOpen(e2) then //do nothing
+      else if e.WindCnt2 = 0 then e.WindCnt2 := 1
+      else e.WindCnt2 := 0;
+      e2 := e2.NextInAEL;
+    end
+  else
+    while (e2 <> e) do
+    begin
+      if not IsSamePolyType(e2, e) and not IsOpen(e2) then
+        Inc(e.WindCnt2, e2.WindDx);
+      e2 := e2.NextInAEL;
+    end;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipper.SetWindingLeftEdgeOpen(e: PActive);
 var
   e2: PActive;
@@ -896,84 +1015,6 @@ begin
       e2 := e2.NextInAEL;
     end;
   end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipper.SetWindingLeftEdgeClosed(leftE: PActive);
-var
-  e: PActive;
-begin
-  //Wind counts generally refer to polygon regions not edges, so here an edge's
-  //WindCnt indicates the higher of the two wind counts of the regions touching
-  //the edge. (Note also that adjacent region wind counts only ever differ
-  //by one, and open paths have no meaningful wind directions or counts.)
-
-  e := leftE.PrevInAEL;
-  //find the nearest closed path edge of the same PolyType in AEL (heading left)
-  while Assigned(e) and (not IsSamePolyType(e, leftE) or IsOpen(e)) do
-    e := e.PrevInAEL;
-
-  //todo: check open path with negative Winding
-  if not Assigned(e) then
-  begin
-    leftE.WindCnt := leftE.WindDx;
-    e := FActives;
-  end
-  else if (FFillType = ftEvenOdd) then
-  begin
-    leftE.WindCnt := leftE.WindDx;
-    leftE.WindCnt2 := e.WindCnt2;
-    e := e.NextInAEL;
-  end else
-  begin
-    //NonZero, positive, or negative filling here ...
-    //if e's WindCnt is in the SAME direction as its WindDx, then e is either
-    //an outer left or a hole right boundary, so leftE must be inside 'e'.
-    //(neither e.WindCnt nor e.WindDx should ever be 0)
-    if (e.WindCnt * e.WindDx < 0) then
-    begin
-      //opposite directions so leftE is outside 'e' ...
-      if (Abs(e.WindCnt) > 1) then
-      begin
-        //outside prev poly but still inside another.
-        if (e.WindDx * leftE.WindDx < 0) then
-          //reversing direction so use the same WC
-          leftE.WindCnt := e.WindCnt else
-          //otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
-          leftE.WindCnt := e.WindCnt + leftE.WindDx;
-      end
-      //now outside all polys of same polytype so set own WC ...
-      else leftE.WindCnt := leftE.WindDx;
-    end else
-    begin
-      //leftE must be inside 'e'
-      if (e.WindDx * leftE.WindDx < 0) then
-        //reversing direction so use the same WC
-        leftE.WindCnt := e.WindCnt
-      else
-        //otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
-        leftE.WindCnt := e.WindCnt + leftE.WindDx;
-    end;
-    leftE.WindCnt2 := e.WindCnt2;
-    e := e.NextInAEL;
-  end;
-
-  //update WindCnt2 ...
-  if FFillType = ftEvenOdd then
-    while (e <> leftE) do
-    begin
-      if IsSamePolyType(e, leftE) or IsOpen(e) then //do nothing
-      else if leftE.WindCnt2 = 0 then leftE.WindCnt2 := 1
-      else leftE.WindCnt2 := 0;
-      e := e.NextInAEL;
-    end
-  else
-    while (e <> leftE) do
-    begin
-      if not IsSamePolyType(e, leftE) and not IsOpen(e) then
-        Inc(leftE.WindCnt2, e.WindDx);
-      e := e.NextInAEL;
-    end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1122,23 +1163,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure SetOutrecClockwise(outRec: POutRec; e1, e2: PActive);
-  {$IFDEF INLINING} inline; {$ENDIF}
+procedure TClipper.PushHorz(e: PActive);
 begin
-  outRec.StartE := e1;
-  outRec.EndE := e2;
-  e1.OutRec := outRec;
-  e2.OutRec := outRec;
+  if assigned(FSel) then
+    e.NextInSEL := FSel else
+    e.NextInSEL := nil;
+  FSel := e;
 end;
 //------------------------------------------------------------------------------
 
-procedure SetOutrecCounterClockwise(outRec: POutRec; e1, e2: PActive);
-  {$IFDEF INLINING} inline; {$ENDIF}
+function TClipper.PopHorz(out e: PActive): Boolean;
 begin
-  outRec.StartE := e2;
-  outRec.EndE := e1;
-  e1.OutRec := outRec;
-  e2.OutRec := outRec;
+  Result := assigned(FSel);
+  if not Result then Exit;
+  e := FSel;
+  FSel := FSel.NextInSEL;
 end;
 //------------------------------------------------------------------------------
 
@@ -1211,15 +1250,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure EndOutRec(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  outRec.StartE.OutRec := nil;
-  if assigned(outRec.EndE) then outRec.EndE.OutRec := nil;
-  outRec.StartE := nil;
-  outRec.EndE := nil;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
 begin
   if not IsHotEdge(e2) then
@@ -1230,21 +1260,6 @@ begin
   else if e1.OutRec.Idx < e2.OutRec.Idx then
     JoinOutrecPaths(e1, e2) else
     JoinOutrecPaths(e2, e1);
-end;
-//------------------------------------------------------------------------------
-
-procedure ReversePolyPtLinks(pp: POutPt); {$IFDEF INLINING} inline; {$ENDIF}
-var
-  pp1, pp2: POutPt;
-begin
-  if (pp.Next = pp.Prev) then Exit;
-  pp1 := pp;
-  repeat
-    pp2:= pp1.Next;
-    pp1.Next := pp1.Prev;
-    pp1.Prev := pp2;
-    pp1 := pp2;
-  until pp1 = pp;
 end;
 //------------------------------------------------------------------------------
 
@@ -1387,24 +1402,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.PushHorz(e: PActive);
-begin
-  if assigned(FSel) then
-    e.NextInSEL := FSel else
-    e.NextInSEL := nil;
-  FSel := e;
-end;
-//------------------------------------------------------------------------------
-
-function TClipper.PopHorz(out e: PActive): Boolean;
-begin
-  Result := assigned(FSel);
-  if not Result then Exit;
-  e := FSel;
-  FSel := FSel.NextInSEL;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipper.StartOpenPath(e: PActive; const pt: TPoint64);
 var
   OutRec: POutRec;
@@ -1450,7 +1447,7 @@ begin
   begin
     if (IsOpen(e1) and IsOpen(e2) ) then Exit;
     //the following line just avoids duplicating a whole lot of code ...
-    if IsOpen(e2) then SwapActive(e1, e2);
+    if IsOpen(e2) then SwapActives(e1, e2);
     case FClipType of
       ctIntersection, ctDifference:
         if IsSamePolyType(e1, e2) or (abs(e2.WindCnt) <> 1) then Exit;
@@ -1771,9 +1768,9 @@ end;
 procedure TClipper.BuildIntersectList(const topY: Int64);
 var
   i, lCnt, rCnt, mul: integer;
-  first, second, base, tmp, prevBase: PActive;
+  first, second, base, prevBase, tmp: PActive;
 begin
-  if not Assigned(FActives) then Exit;
+  if not Assigned(FActives) or not Assigned(FActives.NextInAEL) then Exit;
 
   //copy AEL to SEL while also adjusting Curr.X ...
   FSel := FActives;
@@ -1786,35 +1783,38 @@ begin
     tmp := tmp.NextInAEL;
   end;
 
-  //Merge sort the actives to their new positions at top of scanbeam, and
-  //create intersection nodes every time an edge crosses over another ...
+  //Merge sort FActives into their new positions at the top of scanbeam, and
+  //create an intersection node every time an edge crosses over another ...
 
 	mul := 1;
-  //for each new level of mul ...
 	while (true) do
   begin
     first := FSel;
     prevBase := nil;
-		//sort each successive mul count of nodes ...
-		while (first <> nil) do
+
+		//sort successive larger 'mul' count of nodes ...
+		while assigned(first) do
     begin
-      base := first;
 			if (mul = 1) then
       begin
         second := first.NextInSEL;
-        if assigned(second) then
-          first.MergeJump := second.NextInSEL else
-          first.MergeJump := nil;
+        if not assigned(second) then break;
+        first.MergeJump := second.NextInSEL;
       end else
+      begin
 			  second := first.MergeJump;
+        if not assigned(second) then break;
+        first.MergeJump := second.MergeJump;
+      end;
 
-      if not assigned(second) then break;
       //now sort first and second groups ...
+      base := first;
 			lCnt := mul; rCnt := mul;
-			while (true) do
+			while (lCnt > 0) and (rCnt > 0) do
 			begin
 				if (second.Curr.X < first.Curr.X) then
         begin
+          // create one or more Intersect nodes ///////////
           tmp := second.PrevInSEL;
           for i := 1 to lCnt do
           begin
@@ -1822,44 +1822,31 @@ begin
             InsertNewIntersectNode(tmp, second, topY);
             tmp := tmp.PrevInSEL;
           end;
-          tmp := second.NextInSEL;
-          Insert2Before1InSel(first, second);
+          /////////////////////////////////////////////////
           if (first = base) then
           begin
+            if assigned(prevBase) then prevBase.MergeJump := second;
             base := second;
-            if assigned(prevBase) then
-              prevBase.MergeJump := base;
-            if (second.PrevInSEL = nil) then FSel := second;
+            base.MergeJump := first.MergeJump;
+            if (first.PrevInSEL = nil) then FSel := second;
           end;
-          dec(rCnt);
-          if (rCnt = 0) then
-          begin
-            first := tmp;
-            break;
-          end
-          else second := tmp;
+          tmp := second.NextInSEL;
+          //now move the out of place edge to it's new position in SEL ...
+          Insert2Before1InSel(first, second);
+          second := tmp;
           if not assigned(second) then
           begin
-            first := nil;
+            first := nil; //forces a break in the next outer loop too
             break;
           end;
+          dec(rCnt);
         end else
         begin
+          first := first.NextInSEL;
           dec(lCnt);
-          if (lCnt = 0) then
-          begin
-            first := second;
-            while (rCnt > 0) and assigned(first) do
-            begin
-              first := first.NextInSEL;
-              dec(rCnt);
-            end;
-            break;
-          end else
-            first := first.NextInSEL;
         end;
       end;
-      base.MergeJump := first;
+      first := base.MergeJump;
       prevBase := base;
     end;
     if FSel.MergeJump = nil then Break

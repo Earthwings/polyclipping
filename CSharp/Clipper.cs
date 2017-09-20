@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  18 September 2017                                               *
+* Date      :  20 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -143,7 +143,7 @@ namespace ClipperLib
   };
 
   [Flags]
-  internal enum OutrecFlags { Open = 1, Outer = 2, Horz = 4, HorzJoin = 8};
+  internal enum OutrecFlags { Open = 1, Outer = 2 };
 
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
@@ -332,7 +332,7 @@ namespace ClipperLib
 
     public static Rect64 GetBounds(Paths paths)
     {
-      Rect64 result = 
+      Rect64 result =
         new Rect64(Int64.MaxValue, Int64.MaxValue, Int64.MinValue, Int64.MinValue);
       foreach (Path p in paths)
         foreach (Point64 pt in p)
@@ -671,6 +671,7 @@ namespace ClipperLib
       }
 
       List<Vertex> va = new List<Vertex>(pathLen);
+      VertexList.Add(va);
       Vertex v = new Vertex(p[0]);
       if (isOpen)
       {
@@ -709,24 +710,20 @@ namespace ClipperLib
         if (goingUp) v.Flags |= VertexFlags.LocMax;
         else AddLocMin(v, pt, isOpen);
       }
+      else if (goingUp)
+      {
+        //going up so find local maxima ...
+        while (v.Next.Pt.Y <= v.Pt.Y) v = v.Next;
+        v.Flags |= VertexFlags.LocMax;
+        if (P0IsMinima) AddLocMin(va[0], pt, isOpen); //ie just turned to going up
+      }
       else
       {
-        if (goingUp)
-        {
-          //going up so find local maxima ...
-          while (v.Next.Pt.Y <= v.Pt.Y) v = v.Next;
-          v.Flags |= VertexFlags.LocMax;
-          if (P0IsMinima) AddLocMin(va[0], pt, isOpen); //ie just turned to going up
-        }
-        else
-        {
-          //going down so find local minima ...
-          while (v.Next.Pt.Y >= v.Pt.Y) v = v.Next;
-          AddLocMin(v, pt, isOpen);
-          if (P0IsMaxima) va[0].Flags |= VertexFlags.LocMax;
-        }
+        //going down so find local minima ...
+        while (v.Next.Pt.Y >= v.Pt.Y) v = v.Next;
+        AddLocMin(v, pt, isOpen);
+        if (P0IsMaxima) va[0].Flags |= VertexFlags.LocMax;
       }
-      VertexList.Add(va);
     }
     //------------------------------------------------------------------------------
 
@@ -771,7 +768,7 @@ namespace ClipperLib
         case FillType.Positive:
           if (e.WindCnt != 1) return false;
           break;
-        case FillType.Negative :
+        case FillType.Negative:
           if (e.WindCnt != -1) return false;
           break;
       }
@@ -785,9 +782,9 @@ namespace ClipperLib
             case FillType.NonZero:
               return (e.WindCnt2 != 0);
             case FillType.Positive:
-              return (e.WindCnt2 > 0); 
+              return (e.WindCnt2 > 0);
             case FillType.Negative:
-              return (e.WindCnt2 < 0); 
+              return (e.WindCnt2 < 0);
           }
           break;
         case ClipType.Union:
@@ -795,9 +792,9 @@ namespace ClipperLib
           {
             case FillType.EvenOdd:
             case FillType.NonZero:
-              return (e.WindCnt2 == 0); 
+              return (e.WindCnt2 == 0);
             case FillType.Positive:
-              return (e.WindCnt2 <= 0); 
+              return (e.WindCnt2 <= 0);
             case FillType.Negative:
               return (e.WindCnt2 >= 0);
           }
@@ -821,9 +818,9 @@ namespace ClipperLib
               case FillType.NonZero:
                 return (e.WindCnt2 != 0);
               case FillType.Positive:
-                return (e.WindCnt2 > 0); 
+                return (e.WindCnt2 > 0);
               case FillType.Negative:
-                return (e.WindCnt2 < 0); 
+                return (e.WindCnt2 < 0);
             }; break;
         case ClipType.Xor:
           return true; //XOr is always contributing unless open
@@ -853,7 +850,7 @@ namespace ClipperLib
 
     private void SetWindingLeftEdgeOpen(Active e)
     {
-    Active e2 = Actives;
+      Active e2 = Actives;
       if (FillType == FillType.EvenOdd)
       {
         int cnt1 = 0, cnt2 = 0;
@@ -959,7 +956,7 @@ namespace ClipperLib
 
     private void InsertEdgeIntoAEL(Active edge, Active startEdge, bool preferLeft)
     {
-      if (Actives == null) 
+      if (Actives == null)
       {
         edge.PrevInAEL = null;
         edge.NextInAEL = null;
@@ -977,13 +974,13 @@ namespace ClipperLib
       {
         if (startEdge == null) startEdge = Actives;
         while (startEdge.NextInAEL != null &&
-          !E2InsertsBeforeE1(startEdge.NextInAEL, edge, preferLeft)) 
+          !E2InsertsBeforeE1(startEdge.NextInAEL, edge, preferLeft))
         {
           startEdge = startEdge.NextInAEL;
           preferLeft = false; //if there's one intervening then allow all
         }
         edge.NextInAEL = startEdge.NextInAEL;
-        if (startEdge.NextInAEL != null) 
+        if (startEdge.NextInAEL != null)
           startEdge.NextInAEL.PrevInAEL = edge;
         edge.PrevInAEL = startEdge;
         startEdge.NextInAEL = edge;
@@ -1032,17 +1029,17 @@ namespace ClipperLib
 
         //Currently LeftB is just the descending bound and RightB is the ascending.
         //Now if the LeftB isn't on the left of RightB then we need swap them.
-        if (leftB != null && rightB != null) 
+        if (leftB != null && rightB != null)
         {
           if ((IsHorizontal(leftB) && leftB.Top.X > leftB.Bot.X) ||
-            (!IsHorizontal(leftB) && leftB.Dx < rightB.Dx)) 
+            (!IsHorizontal(leftB) && leftB.Dx < rightB.Dx))
           {
             Active tmp = leftB;
             leftB = rightB;
             rightB = tmp;
-           }
+          }
         }
-        else if (leftB == null) 
+        else if (leftB == null)
         {
           leftB = rightB;
           rightB = null;
@@ -1056,23 +1053,23 @@ namespace ClipperLib
           contributing = IsContributingOpen(leftB);
         }
         else
-        { 
+        {
           SetWindingLeftEdgeClosed(leftB);
           contributing = IsContributingClosed(leftB);
         }
 
-        if (rightB != null) 
+        if (rightB != null)
         {
           rightB.WindCnt = leftB.WindCnt;
-            rightB.WindCnt2 = leftB.WindCnt2;
+          rightB.WindCnt2 = leftB.WindCnt2;
           InsertEdgeIntoAEL(rightB, leftB, false); //insert right edge
-          if (contributing) 
+          if (contributing)
             AddLocalMinPoly(leftB, rightB, leftB.Bot);
 
-            if (IsHorizontal(rightB))
-              PushHorz(rightB);
-            else
-              InsertScanline(rightB.Top.Y);
+          if (IsHorizontal(rightB))
+            PushHorz(rightB);
+          else
+            InsertScanline(rightB.Top.Y);
         }
         else if (contributing)
           StartOpenPath(leftB, leftB.Bot);
@@ -1081,7 +1078,7 @@ namespace ClipperLib
           PushHorz(leftB); else
           InsertScanline(leftB.Top.Y);
 
-        if (rightB != null && leftB.NextInAEL != rightB) 
+        if (rightB != null && leftB.NextInAEL != rightB)
         {
           //intersect edges that are between left and right bounds ...
           Active e = leftB.NextInAEL;
@@ -1117,10 +1114,10 @@ namespace ClipperLib
 
     private OutRec GetOwner(Active e)
     {
-      if (IsHorizontal(e)  && e.Top.X < e.Bot.X)
+      if (IsHorizontal(e) && e.Top.X < e.Bot.X)
       {
         e = e.NextInAEL;
-        while (e != null && (!IsHotEdge(e) || IsOpen(e))) 
+        while (e != null && (!IsHotEdge(e) || IsOpen(e)))
           e = e.NextInAEL;
         if (e == null) return null;
         else if (((e.OutRec.Flags & OutrecFlags.Outer) != 0) == (e.OutRec.StartE == e))
@@ -1304,7 +1301,7 @@ namespace ClipperLib
       SEL = SEL.NextInSEL;
       return true;
     }
-      //------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
     private void StartOpenPath(Active e, Point64 pt)
     {
@@ -1357,40 +1354,40 @@ namespace ClipperLib
       e1.OutRec = or2;
       e2.OutRec = or1;
     }
-      //------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
-      private void AddOutPt(Active e, Point64 pt)
+    private void AddOutPt(Active e, Point64 pt)
+    {
+
+      //Outrec.Pts: a circular double-linked-list of POutPt.
+      bool toStart = IsStartSide(e);
+      OutPt opStart = e.OutRec.Pts;
+      OutPt opEnd = opStart.Prev;
+      if (toStart)
       {
-
-        //Outrec.Pts: a circular double-linked-list of POutPt.
-        bool toStart = IsStartSide(e);
-        OutPt opStart = e.OutRec.Pts;
-        OutPt opEnd = opStart.Prev;
-        if (toStart)
-        {
-          if (pt == opStart.Pt) return;
-        }
-        else if (pt == opEnd.Pt) return;
-
-        OutPt opNew = new OutPt();
-        opNew.Pt = pt;
-        opNew.Next = opStart;
-        opNew.Prev = opEnd;
-        opEnd.Next = opNew;
-        opStart.Prev = opNew;
-        if (toStart) e.OutRec.Pts = opNew;
+        if (pt == opStart.Pt) return;
       }
-      //------------------------------------------------------------------------------
+      else if (pt == opEnd.Pt) return;
 
-      private void UpdateEdgeIntoAEL(ref Active e)
-      {
-        e.Bot = e.Top;
-        e.VertTop = NextVertex(e);
-        e.Top = e.VertTop.Pt;
-        e.Curr = e.Bot;
-        SetDx(e);
-        if (!IsHorizontal(e)) InsertScanline(e.Top.Y);
-      }
+      OutPt opNew = new OutPt();
+      opNew.Pt = pt;
+      opNew.Next = opStart;
+      opNew.Prev = opEnd;
+      opEnd.Next = opNew;
+      opStart.Prev = opNew;
+      if (toStart) e.OutRec.Pts = opNew;
+    }
+    //------------------------------------------------------------------------------
+
+    private void UpdateEdgeIntoAEL(ref Active e)
+    {
+      e.Bot = e.Top;
+      e.VertTop = NextVertex(e);
+      e.Top = e.VertTop.Pt;
+      e.Curr = e.Bot;
+      SetDx(e);
+      if (!IsHorizontal(e)) InsertScanline(e.Top.Y);
+    }
     //------------------------------------------------------------------------------
 
     private void IntersectEdges(Active e1, Active e2, Point64 pt)
@@ -1406,7 +1403,7 @@ namespace ClipperLib
         //the following line just avoids duplicating a whole lot of code ...
         if (IsOpen(e2)) SwapActive(ref e1, ref e2);
         switch (ClipType)
-        { 
+        {
           case ClipType.Intersection:
           case ClipType.Difference:
             if (IsSamePolyType(e1, e2) || (Math.Abs(e2.WindCnt) != 1)) return;
@@ -1414,8 +1411,8 @@ namespace ClipperLib
           case ClipType.Union:
             if (IsHotEdge(e1) != ((Math.Abs(e2.WindCnt) != 1) ||
               (IsHotEdge(e1) != (e2.WindCnt2 != 0)))) return; //just works!
-            break; 
-          case ClipType.Xor:            
+            break;
+          case ClipType.Xor:
             if (Math.Abs(e2.WindCnt) != 1) return;
             break;
         }
@@ -1425,7 +1422,7 @@ namespace ClipperLib
           AddOutPt(e1, pt);
           TerminateHotOpen(e1);
         }
-          else StartOpenPath(e1, pt);
+        else StartOpenPath(e1, pt);
         return;
       }
 
@@ -1507,7 +1504,7 @@ namespace ClipperLib
           SwapOutrecs(e1, e2);
         }
       }
-      else if ((oldE1WindCnt == 0 || oldE1WindCnt == 1) && 
+      else if ((oldE1WindCnt == 0 || oldE1WindCnt == 1) &&
         (oldE2WindCnt == 0 || oldE2WindCnt == 1))
       {
         //neither edge is currently contributing ...
@@ -1552,387 +1549,374 @@ namespace ClipperLib
               AddLocalMinPoly(e1, e2, pt);
               break;
           }
-        }
       }
-      //------------------------------------------------------------------------------
+    }
+    //------------------------------------------------------------------------------
 
-      private void DeleteFromAEL(Active e)
+    private void DeleteFromAEL(Active e)
+    {
+      Active AelPrev = e.PrevInAEL;
+      Active AelNext = e.NextInAEL;
+      if (AelPrev == null && AelNext == null && (e != Actives))
+        return; //already deleted
+      if (AelPrev != null) AelPrev.NextInAEL = AelNext;
+      else Actives = AelNext;
+      if (AelNext != null)
+        AelNext.PrevInAEL = AelPrev;
+      e.NextInAEL = null;
+      e.PrevInAEL = null;
+    }
+    //------------------------------------------------------------------------------
+
+    private void CopyAELToSEL()
+    {
+      Active e = Actives;
+      SEL = e;
+      while (e != null)
       {
-        Active AelPrev = e.PrevInAEL;
-        Active AelNext = e.NextInAEL;
-        if (AelPrev == null && AelNext == null && (e != Actives))
-          return; //already deleted
-        if (AelPrev != null) AelPrev.NextInAEL = AelNext;
-        else Actives = AelNext;
-        if (AelNext != null)
-          AelNext.PrevInAEL = AelPrev;
-        e.NextInAEL = null;
-        e.PrevInAEL = null;
+        e.PrevInSEL = e.PrevInAEL;
+        e.NextInSEL = e.NextInAEL;
+        e = e.NextInAEL;
       }
-      //------------------------------------------------------------------------------
+    }
+    //------------------------------------------------------------------------------
 
-      private void CopyAELToSEL()
+    private bool ExecuteInternal(ClipType ct, FillType ft)
+    {
+      if (ExecuteLocked) return false;
+      try
       {
-        Active e = Actives;
-        SEL = e;
-        while (e != null)
+        ExecuteLocked = true;
+        FillType = ft;
+        ClipType = ct;
+        Reset();
+        Int64 Y;
+        Active e;
+        if (!PopScanline(out Y)) return false;
+
+        while (true) /////////////////////////////////////////////
         {
-          e.PrevInSEL = e.PrevInAEL;
-          e.NextInSEL = e.NextInAEL;
-          e = e.NextInAEL;
-        }
+          InsertLocalMinimaIntoAEL(Y);
+          while (PopHorz(out e)) ProcessHorizontal(e);
+          if (!PopScanline(out Y)) break; //Y == top of scanbeam
+          ProcessIntersections(Y);          //process scanbeam intersections
+          DoTopOfScanbeam(Y); //leaves pending horizontals for next loop iteration
+        } ////////////////////////////////////////////////////////
       }
-      //------------------------------------------------------------------------------
+      finally
+      { ExecuteLocked = false; }
+      return true;
+    }
+    //------------------------------------------------------------------------------
 
-      private bool ExecuteInternal(ClipType ct, FillType ft)
+    public bool Execute(ClipType clipType, Paths Closed, FillType ft = FillType.EvenOdd)
+    {
+      try
       {
-        if (ExecuteLocked) return false;
-        try
-        {
-          ExecuteLocked = true;
-          FillType = ft;
-          ClipType = ct;
-          Reset();
-          Int64 Y;
-          Active e;
-          if (!PopScanline(out Y)) return false;
-
-          while (true) /////////////////////////////////////////////
-          {
-            InsertLocalMinimaIntoAEL(Y);
-            while (PopHorz(out e)) ProcessHorizontal(e);
-            if (!PopScanline(out Y)) break; //Y == top of scanbeam
-            ProcessIntersections(Y);          //process scanbeam intersections
-            DoTopOfScanbeam(Y); //leaves pending horizontals for next loop iteration
-          } ////////////////////////////////////////////////////////
-        }
-        finally
-        { ExecuteLocked = false; }
+        if (Closed == null) return false;
+        Closed.Clear();
+        if (!ExecuteInternal(clipType, ft)) return false;
+        BuildResult(Closed, null);
         return true;
       }
-      //------------------------------------------------------------------------------
+      finally { CleanUp(); }
+    }
+    //------------------------------------------------------------------------------
 
-        public bool Execute(ClipType clipType, Paths Closed, FillType ft = FillType.EvenOdd)
-        {
-        try
-        {
-          if (Closed == null) return false;
-          Closed.Clear();
-          if (!ExecuteInternal(clipType, ft)) return false;
-          BuildResult(Closed, null);
-          return true;
-        }
-        finally { CleanUp(); }
+    public bool Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.EvenOdd)
+    {
+      try
+      {
+        if (Closed == null) return false;
+        Closed.Clear();
+        if (Open != null) Open.Clear();
+        if (!ExecuteInternal(clipType, ft)) return false;
+        BuildResult(Closed, Open);
+        return true;
       }
-      //------------------------------------------------------------------------------
+      finally { CleanUp(); }
+    }
+    //------------------------------------------------------------------------------
 
-      public bool Execute(ClipType clipType, Paths Closed, Paths Open, FillType ft = FillType.EvenOdd)
+    public bool Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.EvenOdd)
+    {
+      try
+      {
+        if (polytree == null) return false;
+        polytree.Clear();
+        if (Open != null) Open.Clear();
+        if (!ExecuteInternal(clipType, ft)) return false;
+        BuildResult2(polytree, Open);
+        return true;
+      }
+      finally { CleanUp(); }
+    }
+    //------------------------------------------------------------------------------
+
+    private void ProcessIntersections(Int64 topY)
+    {
+      try
+      {
+        BuildIntersectList(topY);
+        if (IntersectList.Count == 0) return;
+        FixupIntersectionOrder();
+        ProcessIntersectList();
+      }
+      finally
+      {
+        IntersectList.Clear(); //clean up if there's been an error
+        SEL = null;
+      }
+    }
+    //------------------------------------------------------------------------------
+
+    private void InsertNewIntersectNode(Active e1, Active e2, Int64 topY)
+    {
+      Point64 pt = GetIntersectPoint(e1, e2);
+
+      //Rounding errors can occasionally place the calculated intersection
+      //point either below or above the scanbeam, so check and correct ...
+      if (pt.Y > e1.Curr.Y)
+      {
+        pt.Y = e1.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
+        //use the more vertical of the 2 edges to derive pt.X ...
+        if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx))
+          pt.X = TopX(e1, pt.Y);
+        else
+          pt.X = TopX(e2, pt.Y);
+      }
+      else if (pt.Y < topY)
+      {
+        pt.Y = topY;          //TopY = top of scanbeam
+
+        if (e1.Top.Y == topY) pt.X = e1.Top.X;
+        else if (e2.Top.Y == topY) pt.X = e2.Top.X;
+        else if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx)) pt.X = e1.Curr.X;
+        else pt.X = e2.Curr.X;
+      }
+
+      IntersectNode node = new IntersectNode();
+      node.Edge1 = e1;
+      node.Edge2 = e2;
+      node.Pt = pt;
+      IntersectList.Add(node);
+    }
+    //------------------------------------------------------------------------------
+
+    private void BuildIntersectList(Int64 TopY)
+    {
+      if (Actives == null || Actives.NextInAEL == null) return;
+
+      //copy AEL to SEL while also adjusting Curr.X ...
+      SEL = Actives;
+      Active e = Actives;
+      while (e != null)
+      {
+        e.PrevInSEL = e.PrevInAEL;
+        e.NextInSEL = e.NextInAEL;
+        e.Curr.X = TopX(e, TopY);
+        e = e.NextInAEL;
+      }
+
+      //Merge sort FActives into their new positions at the top of scanbeam, and
+      //create an intersection node every time an edge crosses over another ...
+
+      int mul = 1;
+      while (true)
+      {
+        Active first = SEL, second = null, baseE, prevBase = null, tmp;
+
+        //sort successive larger 'mul' count of nodes ...
+        while (first != null)
         {
-          try
+          if (mul == 1)
           {
-            if (Closed == null) return false;
-            Closed.Clear();
-            if (Open != null) Open.Clear();
-            if (!ExecuteInternal(clipType, ft)) return false;
-            BuildResult(Closed, Open);
-            return true;
-          }
-          finally { CleanUp(); }
-      }
-      //------------------------------------------------------------------------------
-
-      public bool Execute(ClipType clipType, PolyTree polytree, Paths Open, FillType ft = FillType.EvenOdd)
-        {
-        try
-        {
-          if (polytree == null) return false;
-          polytree.Clear();
-          if (Open != null) Open.Clear();
-          if (!ExecuteInternal(clipType, ft)) return false;
-          BuildResult2(polytree, Open);
-          return true;
-        }
-        finally { CleanUp(); }
-      }
-      //------------------------------------------------------------------------------
-
-      private void ProcessIntersections(Int64 topY)
-      {
-        try
-        {
-          BuildIntersectList(topY);
-          if (IntersectList.Count == 0) return;
-          FixupIntersectionOrder();
-          ProcessIntersectList();
-        }
-        finally
-        {
-          IntersectList.Clear(); //clean up if there's been an error
-          SEL = null;
-        }
-      }
-      //------------------------------------------------------------------------------
-
-      private void InsertNewIntersectNode(Active e1, Active e2, Int64 topY)
-      {
-        Point64 pt = GetIntersectPoint(e1, e2);
-        //Rounding errors can occasionally place the calculated intersection
-        //point either below or above the scanbeam, so check and correct ...
-        if (pt.Y > e1.Curr.Y)
-        {
-          pt.Y = e1.Curr.Y;      //E.Curr.Y is still the bottom of scanbeam
-          //use the more vertical of the 2 edges to derive pt.X ...
-          if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx))
-            pt.X = TopX(e1, pt.Y); else
-            pt.X = TopX(e2, pt.Y);
-        }
-        else if (pt.Y < topY)
-        {
-          pt.Y = topY;          //TopY = top of scanbeam
-          if (e1.Top.Y == topY)
-            pt.X = e1.Top.X;
-          else if (e2.Top.Y == topY)
-            pt.X = e2.Top.X;
-          else if (Math.Abs(e1.Dx) < Math.Abs(e2.Dx))
-            pt.X = e1.Curr.X;
-          else
-            pt.X = e2.Curr.X;
-        }
-
-        IntersectNode NewNode = new IntersectNode();
-        NewNode.Edge1 = e1;
-        NewNode.Edge2 = e2;
-        NewNode.Pt = pt;
-        IntersectList.Add(NewNode);
-      }
-      //------------------------------------------------------------------------------
-
-      private void BuildIntersectList(Int64 TopY)
-      {
-        if (Actives == null) return;
-
-        //copy AEL to SEL while also adjusting Curr.X ...
-        SEL = Actives;
-        Active e = Actives;
-        while (e != null)
-        {
-          e.PrevInSEL = e.PrevInAEL;
-          e.NextInSEL = e.NextInAEL;
-          e.Curr.X = TopX(e, TopY);
-          e = e.NextInAEL;
-        }
-
-        //Merge sort the actives to their new positions at top of scanbeam, and
-        //create intersection nodes every time an edge crosses over another ...
-        Active baseE, prevBaseE, first, second; 
-        int mul = 1;
-
-      //for each new level of mul ...
-        for (;;)
-        {
-          first = SEL;
-          prevBaseE = null;
-          //sort each successive mul count of nodes ...
-          while (first != null) 
-          {  
-            baseE = first;
-            if (mul == 1)
-            {         
-              second = first.NextInSEL;
-              if (second != null) first.MergeJump = second.NextInSEL;
-              else first.MergeJump = null;
-            } 
-            else second = first.MergeJump;
+            second = first.NextInSEL;
             if (second == null) break;
-            //now sort first and second groups ...
-            int lCnt = mul, rCnt = mul;
-
-            for (; ; )
-            {
-              if (second.Curr.X < first.Curr.X) 
-              {
-                Active tmp = second.PrevInSEL;
-                for (int i = 0; i < lCnt; i++)
-                {
-                  //create a new intersect node...
-                  InsertNewIntersectNode(tmp, second, TopY);
-                  tmp = tmp.PrevInSEL;
-                }
-                tmp = second.NextInSEL;
-                Insert2Before1InSel(first, second);
-                if (first == baseE) 
-                {
-                  baseE = second;
-                  if (prevBaseE != null) prevBaseE.MergeJump = baseE;
-                  if (second.PrevInSEL == null) SEL = second;
-                  };
-                rCnt--;
-                if (rCnt == 0)
-                {
-                  first = tmp;
-                  break;
-                }
-                else second = tmp;
-                if (second == null) 
-                {
-                  first = null;
-                  break;
-                }
-              }
-              else
-              {
-                lCnt--;
-                if (lCnt == 0)
-                {
-                  first = second;
-                  while (rCnt > 0 && first != null) 
-                  {
-                    first = first.NextInSEL;
-                    rCnt--;
-                  }
-                  break;
-                }
-                else first = first.NextInSEL;
-              }
-            }
-            baseE.MergeJump = first;
-            prevBaseE = baseE;
+            first.MergeJump = second.NextInSEL;
           }
-          if (SEL.MergeJump == null) break;
-          else mul <<= 1;
-        }
-      }
-      //------------------------------------------------------------------------------
-
-      private void ProcessIntersectList()
-      {
-        foreach (IntersectNode iNode in IntersectList)
-        {
-          IntersectEdges(iNode.Edge1, iNode.Edge2, iNode.Pt);
-          SwapPositionsInAEL(iNode.Edge1, iNode.Edge2);
-        }
-        IntersectList.Clear();
-      }
-      //------------------------------------------------------------------------------
-
-      private bool EdgesAdjacent(IntersectNode inode)
-      {
-        return (inode.Edge1.NextInSEL == inode.Edge2) ||
-          (inode.Edge1.PrevInSEL == inode.Edge2);
-      }
-      //------------------------------------------------------------------------------
-
-      private static int IntersectNodeSort(IntersectNode node1, IntersectNode node2)
-      {
-        //the following typecast should be safe because the differences in Pt.Y will
-        //be limited to the height of the Scanline ...
-        return (int)(node2.Pt.Y - node1.Pt.Y);
-      }
-      //------------------------------------------------------------------------------
-
-      private void FixupIntersectionOrder()
-      {
-        //pre-condition: intersections are sorted bottom-most first.
-        //Now it's crucial that intersections are made only between adjacent edges,
-        //so to ensure this the order of intersections may need Bubble sorting ...
-        int cnt = IntersectList.Count;
-        if (cnt < 3) return; //edges must be adjacent :)
-        IntersectList.Sort(IntersectNodeComparer);
-        CopyAELToSEL();
-        for (int i = 0; i < cnt; i++)
-        {
-          if (!EdgesAdjacent(IntersectList[i]))
+          else
           {
-            int j = i + 1;
-            while (j < cnt && !EdgesAdjacent(IntersectList[j])) j++;
-            IntersectNode tmp = IntersectList[i];
-            IntersectList[i] = IntersectList[j];
-            IntersectList[j] = tmp;
+            second = first.MergeJump;
+            if (second == null) break;
+            first.MergeJump = second.MergeJump;
           }
-          SwapPositionsInSEL(IntersectList[i].Edge1, IntersectList[i].Edge2);
-        }
-      }
-      //------------------------------------------------------------------------------
 
-      internal void SwapPositionsInAEL(Active e1, Active e2)
-      {
-        Active next, prev;
-        if (e1.NextInAEL == e2)
-        {
-          next = e2.NextInAEL;
-          if (next != null) next.PrevInAEL = e1;
-          prev = e1.PrevInAEL;
-          if (prev != null) prev.NextInAEL = e2;
-          e2.PrevInAEL = prev;
-          e2.NextInAEL = e1;
-          e1.PrevInAEL = e2;
-          e1.NextInAEL = next;
-          if (e2.PrevInAEL == null) Actives = e2;
-        }
-        else if (e2.NextInAEL == e1)
-        {
-          next = e1.NextInAEL;
-          if (next != null) next.PrevInAEL = e2;
-          prev = e2.PrevInAEL;
-          if (prev != null) prev.NextInAEL = e1;
-          e1.PrevInAEL = prev;
-          e1.NextInAEL = e2;
-          e2.PrevInAEL = e1;
-          e2.NextInAEL = next;
-          if (e1.PrevInAEL == null) Actives = e1;
-        }
-        else
-          throw new ClipperException("Clipping error in SwapPositionsInAEL");
-      }
-      //------------------------------------------------------------------------------
+          //now sort first and second groups ...
+          baseE = first;
+          int lCnt = mul, rCnt = mul;
+          while (lCnt > 0 && rCnt > 0)
+          {
+            if (second.Curr.X < first.Curr.X)
+            {
+              // create one or more Intersect nodes ///////////
+              tmp = second.PrevInSEL;
+              for (int i = 0; i < lCnt; ++i)
+              {
+                //create a new intersect node...
+                InsertNewIntersectNode(tmp, second, TopY);
+                tmp = tmp.PrevInSEL;
+              }
+              /////////////////////////////////////////////////
 
-      private void SwapPositionsInSEL(Active e1, Active e2)
-      {
-        Active next, prev;
-        if (e1.NextInSEL == e2)
-        {
-          next = e2.NextInSEL;
-          if (next != null) next.PrevInSEL = e1;
-          prev = e1.PrevInSEL;
-          if (prev != null) prev.NextInSEL = e2;
-          e2.PrevInSEL = prev;
-          e2.NextInSEL = e1;
-          e1.PrevInSEL = e2;
-          e1.NextInSEL = next;
-          if (e2.PrevInSEL == null) SEL = e2;
+              if (first == baseE)
+              {
+                if (prevBase != null) prevBase.MergeJump = second;
+                baseE = second;
+                baseE.MergeJump = first.MergeJump;
+                if (first.PrevInSEL == null) SEL = second;
+              }
+              tmp = second.NextInSEL;
+              //now move the out of place edge to it's new position in SEL ...
+              Insert2Before1InSel(first, second);
+              second = tmp;
+              if (second == null) { first = null; break; }
+              --rCnt;
+            }
+            else
+            {
+              first = first.NextInSEL;
+              --lCnt;
+            }
+          }
+          first = baseE.MergeJump;
+          prevBase = baseE;
         }
-        else if (e2.NextInSEL == e1)
-        {
-          next = e1.NextInSEL;
-          if (next != null) next.PrevInSEL = e2;
-          prev = e2.PrevInSEL;
-          if (prev != null) prev.NextInSEL = e1;
-          e1.PrevInSEL = prev;
-          e1.NextInSEL = e2;
-          e2.PrevInSEL = e1;
-          e2.NextInSEL = next;
-          if (e1.PrevInSEL == null) SEL = e1;
-        }
-        else
-          throw new ClipperException("Clipping error in SwapPositionsInSEL");
+        if (SEL.MergeJump == null) break;
+        else mul <<= 1;
       }
-      //------------------------------------------------------------------------------
-    
-      private void Insert2Before1InSel(Active first, Active second)
+    }
+    //------------------------------------------------------------------------------
+
+    private void ProcessIntersectList()
+    {
+      foreach (IntersectNode iNode in IntersectList)
       {
-        //remove second from list ...
-        Active prev = second.PrevInSEL;
-        Active next = second.NextInSEL;
-        prev.NextInSEL = next; //always a prev since we're moving from right to left
-        if (next != null) next.PrevInSEL = prev;
-        //insert back into list ...
-        prev = first.PrevInSEL;
-        if (prev != null) prev.NextInSEL = second;
-        first.PrevInSEL = second;
-        second.PrevInSEL = prev;
-        second.NextInSEL = first;
+        IntersectEdges(iNode.Edge1, iNode.Edge2, iNode.Pt);
+        SwapPositionsInAEL(iNode.Edge1, iNode.Edge2);
       }
-      //------------------------------------------------------------------------------
+      IntersectList.Clear();
+    }
+    //------------------------------------------------------------------------------
+
+    private bool EdgesAdjacent(IntersectNode inode)
+    {
+      return (inode.Edge1.NextInSEL == inode.Edge2) ||
+        (inode.Edge1.PrevInSEL == inode.Edge2);
+    }
+    //------------------------------------------------------------------------------
+
+    private static int IntersectNodeSort(IntersectNode node1, IntersectNode node2)
+    {
+      //the following typecast should be safe because the differences in Pt.Y will
+      //be limited to the height of the Scanline ...
+      return (int)(node2.Pt.Y - node1.Pt.Y);
+    }
+    //------------------------------------------------------------------------------
+
+    private void FixupIntersectionOrder()
+    {
+      //pre-condition: intersections are sorted bottom-most first.
+      //Now it's crucial that intersections are made only between adjacent edges,
+      //so to ensure this the order of intersections may need Bubble sorting ...
+      int cnt = IntersectList.Count;
+      if (cnt < 3) return; //edges must be adjacent :)
+      IntersectList.Sort(IntersectNodeComparer);
+      CopyAELToSEL();
+      for (int i = 0; i < cnt; i++)
+      {
+        if (!EdgesAdjacent(IntersectList[i]))
+        {
+          int j = i + 1;
+          while (j < cnt && !EdgesAdjacent(IntersectList[j])) j++;
+          IntersectNode tmp = IntersectList[i];
+          IntersectList[i] = IntersectList[j];
+          IntersectList[j] = tmp;
+        }
+        SwapPositionsInSEL(IntersectList[i].Edge1, IntersectList[i].Edge2);
+      }
+    }
+    //------------------------------------------------------------------------------
+
+    internal void SwapPositionsInAEL(Active e1, Active e2)
+    {
+      Active next, prev;
+      if (e1.NextInAEL == e2)
+      {
+        next = e2.NextInAEL;
+        if (next != null) next.PrevInAEL = e1;
+        prev = e1.PrevInAEL;
+        if (prev != null) prev.NextInAEL = e2;
+        e2.PrevInAEL = prev;
+        e2.NextInAEL = e1;
+        e1.PrevInAEL = e2;
+        e1.NextInAEL = next;
+        if (e2.PrevInAEL == null) Actives = e2;
+      }
+      else if (e2.NextInAEL == e1)
+      {
+        next = e1.NextInAEL;
+        if (next != null) next.PrevInAEL = e2;
+        prev = e2.PrevInAEL;
+        if (prev != null) prev.NextInAEL = e1;
+        e1.PrevInAEL = prev;
+        e1.NextInAEL = e2;
+        e2.PrevInAEL = e1;
+        e2.NextInAEL = next;
+        if (e1.PrevInAEL == null) Actives = e1;
+      }
+      else
+        throw new ClipperException("Clipping error in SwapPositionsInAEL");
+    }
+    //------------------------------------------------------------------------------
+
+    private void SwapPositionsInSEL(Active e1, Active e2)
+    {
+      Active next, prev;
+      if (e1.NextInSEL == e2)
+      {
+        next = e2.NextInSEL;
+        if (next != null) next.PrevInSEL = e1;
+        prev = e1.PrevInSEL;
+        if (prev != null) prev.NextInSEL = e2;
+        e2.PrevInSEL = prev;
+        e2.NextInSEL = e1;
+        e1.PrevInSEL = e2;
+        e1.NextInSEL = next;
+        if (e2.PrevInSEL == null) SEL = e2;
+      }
+      else if (e2.NextInSEL == e1)
+      {
+        next = e1.NextInSEL;
+        if (next != null) next.PrevInSEL = e2;
+        prev = e2.PrevInSEL;
+        if (prev != null) prev.NextInSEL = e1;
+        e1.PrevInSEL = prev;
+        e1.NextInSEL = e2;
+        e2.PrevInSEL = e1;
+        e2.NextInSEL = next;
+        if (e1.PrevInSEL == null) SEL = e1;
+      }
+      else
+        throw new ClipperException("Clipping error in SwapPositionsInSEL");
+    }
+    //------------------------------------------------------------------------------
+
+    private void Insert2Before1InSel(Active first, Active second)
+    {
+      //remove second from list ...
+      Active prev = second.PrevInSEL;
+      Active next = second.NextInSEL;
+      prev.NextInSEL = next; //always a prev since we're moving from right to left
+      if (next != null) next.PrevInSEL = prev;
+      //insert back into list ...
+      prev = first.PrevInSEL;
+      if (prev != null) prev.NextInSEL = second;
+      first.PrevInSEL = second;
+      second.PrevInSEL = prev;
+      second.NextInSEL = first;
+    }
+    //------------------------------------------------------------------------------
 
       private bool ResetHorzDirection(Active horz, Active maxPair, 
         out Int64 horzLeft, out Int64 horzRight)

@@ -43,7 +43,7 @@
      showgrid="false"
      units="mm"
      inkscape:zoom="1.1196396"
-     inkscape:cx="435.07568"
+     inkscape:cx="282.34796"
      inkscape:cy="426.87841"
      inkscape:window-x="-11"
      inkscape:window-y="-11"
@@ -316,7 +316,7 @@
        x="539.76306"
        y="316.18082"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
-       id="tspan5361">cos(ß/2) = </tspan><tspan
+       id="tspan5361">cos(ß/2) </tspan><tspan
        sodipodi:role="line"
        x="539.76306"
        y="334.51416"
@@ -346,7 +346,7 @@
        x="539.76306"
        y="426.18082"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
-       id="tspan4567"></tspan><tspan
+       id="tspan4567" /><tspan
        sodipodi:role="line"
        x="539.76306"
        y="444.51416"
