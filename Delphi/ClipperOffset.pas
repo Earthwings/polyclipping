@@ -4,7 +4,7 @@ unit ClipperOffset;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  16 September 2017                                               *
+* Date      :  23 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -493,8 +493,8 @@ begin
   try
     AddPaths(FSolution, ptSubject);
     if negate then
-      Execute(ctUnion, solution, ftNegative) else
-      Execute(ctUnion, solution, ftPositive);
+      Execute(ctUnion, solution, frNegative) else
+      Execute(ctUnion, solution, frPositive);
   finally
     free;
   end;

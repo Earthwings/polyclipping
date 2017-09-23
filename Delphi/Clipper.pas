@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  20 September 2017                                               *
+* Date      :  23 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -44,11 +44,11 @@ type
   TRect64 = record Left, Top, Right, Bottom: Int64; end;
 
   TClipType = (ctIntersection, ctUnion, ctDifference, ctXor);
-  TPolyType = (ptSubject, ptClip);
+  TPathType = (ptSubject, ptClip);
   //By far the most widely used winding rules for polygon filling are EvenOdd
   //and NonZero (see GDI, GDI+, XLib, OpenGL, Cairo, AGG, Quartz, SVG, Gr32).
   //https://www.w3.org/TR/SVG/painting.html
-  TFillType = (ftEvenOdd, ftNonZero, ftPositive, ftNegative);
+  TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
 
   TVertexFlag = (vfOpenStart, vfOpenEnd, vfLocMax, vfLocMin);
   TVertexFlags = set of TVertexFlag;
@@ -74,7 +74,7 @@ type
   PLocalMinima = ^TLocalMinima;
   TLocalMinima = record
     vertex    : PVertex;
-    PolyType  : TPolyType;
+    PolyType  : TPathType;
     IsOpen    : Boolean;
   end;
 
@@ -141,7 +141,7 @@ type
     FCurrentLocMinIdx   : Integer;
     FIntersectList      : TList;
     FClipType           : TClipType;
-    FFillType           : TFillType;
+    FFillRule           : TFillRule;
     FExecuteLocked      : Boolean;
     FOutRecList         : TList;
     FLocMinList         : TList;
@@ -151,7 +151,7 @@ type
 
     procedure Reset; virtual;
     procedure AddPathToVertexList(const p: TPath;
-      polyType: TPolyType; isOpen: Boolean);
+      polyType: TPathType; isOpen: Boolean);
     procedure InsertScanLine(const Y: Int64);
     function PopScanLine(out Y: Int64): Boolean;
     function PopLocalMinima(Y: Int64;
@@ -192,26 +192,26 @@ type
     procedure BuildResult2(polyTree: TPolyTree; out openPaths: TPaths);
     procedure PushHorz(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function PopHorz(out e: PActive): Boolean;
-    function ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
+    function ExecuteInternal(clipType: TClipType; fillRule: TFillRule): Boolean;
   public
     constructor Create; virtual;
     destructor Destroy; override;
     procedure CleanUp;
     procedure Clear; virtual;
     function GetBounds: TRect64;
-    procedure AddPath(const path: TPath; polyType: TPolyType = ptSubject;
+    procedure AddPath(const path: TPath; polyType: TPathType = ptSubject;
       isOpen: Boolean = false); virtual;
-    procedure AddPaths(const paths: TPaths; polyType: TPolyType = ptSubject;
+    procedure AddPaths(const paths: TPaths; polyType: TPathType = ptSubject;
       isOpen: Boolean = false); virtual;
 
     function Execute(clipType: TClipType; out closedPaths: TPaths;
-      fillType: TFillType = ftEvenOdd): Boolean; overload;
+      fillRule: TFillRule = frEvenOdd): Boolean; overload;
 
     function Execute(clipType: TClipType; out closedPaths, openPaths: TPaths;
-      fillType: TFillType = ftEvenOdd): Boolean; overload;
+      fillRule: TFillRule = frEvenOdd): Boolean; overload;
 
     function Execute(clipType: TClipType; var polytree: TPolyTree;
-      out openPaths: TPaths; fillType: TFillType = ftEvenOdd): Boolean; overload;
+      out openPaths: TPaths; fillRule: TFillRule = frEvenOdd): Boolean; overload;
   end;
 
   TPolyPath = class
@@ -366,7 +366,7 @@ begin
 end;
 //----------------------------------------------------------------------
 
-function GetPolyType(const e: PActive): TPolyType; {$IFDEF INLINING} inline; {$ENDIF}
+function GetPolyType(const e: PActive): TPathType; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := e.LocMin.PolyType;
 end;
@@ -715,7 +715,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipper.AddPathToVertexList(const p: TPath;
-  polyType: TPolyType; isOpen: Boolean);
+  polyType: TPathType; isOpen: Boolean);
 var
   i, j, pathLen: Integer;
   isFlat, goingUp, p0IsMinima, p0IsMaxima: Boolean;
@@ -830,7 +830,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddPath(const path: TPath; PolyType: TPolyType;
+procedure TClipper.AddPath(const path: TPath; PolyType: TPathType;
   isOpen: Boolean);
 begin
   if isOpen then
@@ -844,7 +844,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddPaths(const paths: TPaths; polyType: TPolyType;
+procedure TClipper.AddPaths(const paths: TPaths; polyType: TPathType;
   isOpen: Boolean);
 var
   i: Integer;
@@ -856,37 +856,37 @@ end;
 function TClipper.IsContributingClosed(e: PActive): Boolean;
 begin
   Result := false;
-  case FFillType of
-    ftNonZero: if abs(e.WindCnt) <> 1 then Exit;
-    ftPositive: if (e.WindCnt <> 1) then Exit;
-    ftNegative: if (e.WindCnt <> -1) then Exit;
+  case FFillRule of
+    frNonZero: if abs(e.WindCnt) <> 1 then Exit;
+    frPositive: if (e.WindCnt <> 1) then Exit;
+    frNegative: if (e.WindCnt <> -1) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
-      case FFillType of
-        ftEvenOdd, ftNonZero: Result := (e.WindCnt2 <> 0);
-        ftPositive: Result := (e.WindCnt2 > 0);
-        ftNegative: Result := (e.WindCnt2 < 0);
+      case FFillRule of
+        frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
+        frPositive: Result := (e.WindCnt2 > 0);
+        frNegative: Result := (e.WindCnt2 < 0);
       end;
     ctUnion:
-      case FFillType of
-        ftEvenOdd, ftNonZero: Result := (e.WindCnt2 = 0);
-        ftPositive: Result := (e.WindCnt2 <= 0);
-        ftNegative: Result := (e.WindCnt2 >= 0);
+      case FFillRule of
+        frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
+        frPositive: Result := (e.WindCnt2 <= 0);
+        frNegative: Result := (e.WindCnt2 >= 0);
       end;
     ctDifference:
       if GetPolyType(e) = ptSubject then
-        case FFillType of
-          ftEvenOdd, ftNonZero: Result := (e.WindCnt2 = 0);
-          ftPositive: Result := (e.WindCnt2 <= 0);
-          ftNegative: Result := (e.WindCnt2 >= 0);
+        case FFillRule of
+          frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
+          frPositive: Result := (e.WindCnt2 <= 0);
+          frNegative: Result := (e.WindCnt2 >= 0);
         end
       else
-        case FFillType of
-          ftEvenOdd, ftNonZero: Result := (e.WindCnt2 <> 0);
-          ftPositive: Result := (e.WindCnt2 > 0);
-          ftNegative: Result := (e.WindCnt2 < 0);
+        case FFillRule of
+          frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
+          frPositive: Result := (e.WindCnt2 > 0);
+          frNegative: Result := (e.WindCnt2 < 0);
         end;
     ctXor:
         Result := true;
@@ -929,7 +929,7 @@ begin
     e.WindCnt := e.WindDx;
     e2 := FActives;
   end
-  else if (FFillType = ftEvenOdd) then
+  else if (FFillRule = frEvenOdd) then
   begin
     e.WindCnt := e.WindDx;
     e.WindCnt2 := e2.WindCnt2;
@@ -969,7 +969,7 @@ begin
   end;
 
   //update WindCnt2 ...
-  if FFillType = ftEvenOdd then
+  if FFillRule = frEvenOdd then
     while (e2 <> e) do
     begin
       if IsSamePolyType(e2, e) or IsOpen(e2) then //do nothing
@@ -993,7 +993,7 @@ var
   cnt1, cnt2: Integer;
 begin
   e2 := FActives;
-  if FFillType = ftEvenOdd then
+  if FFillRule = frEvenOdd then
   begin
     cnt1 := 0;
     cnt2 := 0;
@@ -1471,7 +1471,7 @@ begin
   //assumes that e1 will be to the right of e2 ABOVE the intersection
   if IsSamePolyType(e1, e2) then
   begin
-    if FFillType = ftEvenOdd then
+    if FFillRule = frEvenOdd then
     begin
       e1WindCnt := e1.WindCnt;
       e1.WindCnt := e2.WindCnt;
@@ -1487,22 +1487,22 @@ begin
     end;
   end else
   begin
-    if FFillType <> ftEvenOdd then Inc(e1.WindCnt2, e2.WindDx)
+    if FFillRule <> frEvenOdd then Inc(e1.WindCnt2, e2.WindDx)
     else if e1.WindCnt2 = 0 then e1.WindCnt2 := 1
     else e1.WindCnt2 := 0;
 
-    if FFillType <> ftEvenOdd then Dec(e2.WindCnt2, e1.WindDx)
+    if FFillRule <> frEvenOdd then Dec(e2.WindCnt2, e1.WindDx)
     else if e2.WindCnt2 = 0 then e2.WindCnt2 := 1
     else e2.WindCnt2 := 0;
   end;
 
-  case FFillType of
-    ftPositive:
+  case FFillRule of
+    frPositive:
       begin
         e1WindCnt := e1.WindCnt;
         e2WindCnt := e2.WindCnt;
       end;
-    ftNegative:
+    frNegative:
       begin
         e1WindCnt := -e1.WindCnt;
         e2WindCnt := -e2.WindCnt;
@@ -1551,13 +1551,13 @@ begin
     ((e2WindCnt = 0) or (e2WindCnt = 1)) then
   begin
     //neither Edge is currently contributing ...
-    case FFillType of
-      ftPositive:
+    case FFillRule of
+      frPositive:
       begin
         e1WindCnt2 := e1.WindCnt2;
         e2WindCnt2 := e2.WindCnt2;
       end;
-      ftNegative:
+      frNegative:
       begin
         e1WindCnt2 := -e1.WindCnt2;
         e2WindCnt2 := -e2.WindCnt2;
@@ -1604,8 +1604,6 @@ begin
   if Assigned(aelPrev) then aelPrev.NextInAEL := aelNext
   else FActives := aelNext;
   if Assigned(aelNext) then aelNext.PrevInAEL := aelPrev;
-  e.NextInAEL := nil;
-  e.PrevInAEL := nil;
   Dispose(e);
 end;
 //------------------------------------------------------------------------------
@@ -1625,7 +1623,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.ExecuteInternal(clipType: TClipType; fillType: TFillType): Boolean;
+function TClipper.ExecuteInternal(clipType: TClipType; fillRule: TFillRule): Boolean;
 var
   Y: Int64;
   e: PActive;
@@ -1634,7 +1632,7 @@ begin
   if FExecuteLocked then Exit;
   try try
     FExecuteLocked := True;
-    FFillType := fillType;
+    FFillRule := fillRule;
     FClipType := clipType;
     Reset;
     if not PopScanLine(Y) then Exit;
@@ -1644,9 +1642,10 @@ begin
     begin
       InsertLocalMinimaIntoAEL(Y);
       while PopHorz(e) do ProcessHorizontal(e);
-      if not PopScanLine(Y) then Break; //Y == top of scanbeam
-      ProcessIntersections(Y);          //process scanbeam intersections
-      DoTopOfScanbeam(Y); //leaves pending horizontals for next loop iteration
+      if not PopScanLine(Y) then Break; //Y now top of scanbeam
+      ProcessIntersections(Y);
+      FSel := nil;                      //FSel reused to flag horizontals
+      DoTopOfScanbeam(Y);
     end;
     ////////////////////////////////////////////////////////
     Result := True;
@@ -1660,13 +1659,13 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType; out closedPaths: TPaths;
-  fillType: TFillType): Boolean;
+  fillRule: TFillRule): Boolean;
 var
   dummy: TPaths;
 begin
   closedPaths := nil;
   try
-    Result := ExecuteInternal(clipType, fillType);
+    Result := ExecuteInternal(clipType, fillRule);
     if Result then BuildResult(closedPaths, dummy);
   finally
     CleanUp;
@@ -1675,12 +1674,12 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType; out closedPaths, openPaths: TPaths;
-  fillType: TFillType = ftEvenOdd): Boolean;
+  fillRule: TFillRule = frEvenOdd): Boolean;
 begin
   closedPaths := nil;
   openPaths := nil;
   try
-    Result := ExecuteInternal(clipType, fillType);
+    Result := ExecuteInternal(clipType, fillRule);
     if Result then BuildResult(closedPaths, openPaths);
   finally
     CleanUp;
@@ -1689,14 +1688,14 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType; var polytree: TPolyTree;
-  out openPaths: TPaths; fillType: TFillType): Boolean;
+  out openPaths: TPaths; fillRule: TFillRule): Boolean;
 begin
   if not assigned(polytree) then
     raise EClipperLibException.Create(rsPolyTreeErr);
   polytree.Clear;
   openPaths := nil;
   try
-    Result := ExecuteInternal(clipType, fillType);
+    Result := ExecuteInternal(clipType, fillRule);
     if Result then BuildResult2(polytree, openPaths);
   finally
     CleanUp;
@@ -1706,14 +1705,13 @@ end;
 
 procedure TClipper.ProcessIntersections(const topY: Int64);
 begin
+  BuildIntersectList(topY);
+  if (FIntersectList.Count = 0) then Exit;
   try
-    BuildIntersectList(topY);
-    if (FIntersectList.Count = 0) then Exit;
     FixupIntersectionOrder;
     ProcessIntersectList;
   finally
-    DisposeIntersectNodes; //clean up if there's been an error
-    FSel := nil;
+    DisposeIntersectNodes; //clean up only needed if there's been an error
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1872,7 +1870,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function EdgesAdjacent(node: PIntersectNode): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function EdgesAdjacentInSel(node: PIntersectNode): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (node.Edge1.NextInSEL = node.Edge2) or
     (node.Edge1.PrevInSEL = node.Edge2);
@@ -1905,10 +1904,10 @@ begin
   FIntersectList.Sort(IntersectListSort);
   for i := 0 to cnt - 1 do
   begin
-    if not EdgesAdjacent(FIntersectList[i]) then
+    if not EdgesAdjacentInSel(FIntersectList[i]) then
     begin
       j := i + 1;
-      while (j < cnt) and not EdgesAdjacent(FIntersectList[j]) do inc(j);
+      while not EdgesAdjacentInSel(FIntersectList[j]) do inc(j);
       //Swap IntersectNodes ...
       node := FIntersectList[i];
       FIntersectList[i] := FIntersectList[j];

@@ -42,7 +42,7 @@ Test 1b was compiled (for 32bit) using C# code and compiled using Microsoft's
 Visual Studio Community 2017 on the same PC.
 
 TEST1a: Time (secs) to intersect COMPLEX polygons - a single random subject 
-and a single clip polygon with the following number of edges ...
+and a single clip polygon with varying number of edges (32bit compile).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
@@ -60,7 +60,7 @@ and a single clip polygon with the following number of edges ...
 +===================+=========+=========+=======+
 Vertex coordinate ranges X:0-800, Y:0-600 (rounded to nearest 10).
 
-TEST1b: Same test as above but using C# code.
+TEST1b: Same test as above but using C# code (64bit compile).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
@@ -68,9 +68,9 @@ TEST1b: Same test as above but using C# code.
 | 100               |   0.002 |   0.003 |   50% |   
 | 500               |   0.074 |   0.148 |  100% |
 |1000               |   0.422 |   0.729 |   73% |
-|2000               |   3.87  |	  7.34  |   90% |
-|2500               |   8.34  |	 16.6   |   99% |
-|3000               |  16.8	  |	 36.8   |  119% |
+|2000               |   3.87  |    7.34 |   90% |
+|2500               |   8.34  |   16.6  |   99% |
+|3000               |  16.8   |   36.8  |  119% |
 |3500               |  33.3   |  68.6   |  106% |
 |4000               |  57.2   | 121     |  111% |
 |4500               | 105     | 214     |  104% |

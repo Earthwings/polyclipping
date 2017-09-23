@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  16 September 2017                                               *
+* Date      :  23 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -490,11 +490,11 @@ namespace ClipperLib
 
       //now clean up 'corners' ...
       Clipper clpr = new Clipper();
-      clpr.AddPaths(solution, PolyType.Subject);
+      clpr.AddPaths(solution, PathType.Subject);
       if (negate)
-        clpr.Execute(ClipType.Union, sol, FillType.Negative);
+        clpr.Execute(ClipType.Union, sol, FillRule.Negative);
       else
-        clpr.Execute(ClipType.Union, sol, FillType.Positive);
+        clpr.Execute(ClipType.Union, sol, FillRule.Positive);
     }
     //------------------------------------------------------------------------------
 
