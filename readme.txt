@@ -38,18 +38,18 @@ while acknowledging that I still have limited experience coding in C# and C++.
 
 Below I've benchmarked a few comparisons between the old (ver 6.4.2) and this 
 Clipper. (The old version has had the polygon 'merging' code removed so as to 
-compare 'apples with apples'. All tests were performed on a Windows 10 64Bit PC 
+compare 'apples with apples'.) All tests were performed on a Windows 10 64Bit PC 
 with Intel i7 2.0GHz CPU & 8GB RAM.
 
-Tests 1a and 2 were using Delphi code compiled (to 32bit) using Delphi 10.1.
-Test 1b was compiled using C# code (to 64bit) with MSVS Community 2017. 
-Test 1c was compiled using C++ code (to 32bit) with MSVS Community 2017.
+Tests 1a and 2 reflect Delphi code (compiled to 32bit using Delphi 10.1).Test 
+1b reflects C# code (compiled to 64bit .NET Framework with MSVS Community 2017). 
+Test 1c reflects C++ code (compiled to 32bit with MSVS Community 2017). 
 
-TEST1a: Time (secs) to intersect COMPLEX polygons - a single random subject 
-and a single clip polygon with varying number of edges (32bit compile).
+TEST1a: Time (secs) to intersect 2 COMPLEX polygons - a subject and a clip 
+polygon - having random coordinates and varying numbers of edges (Delphi 32bit).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
-|(each)             | Clipper | Clipper | Incr. |  
+|(for each polygon) | Clipper | Clipper | Incr. |  
 +===================+=========+=========+=======+
 | 100               |   0.002 |   0.002 |   5%  |
 | 500               |   0.068 |   0.98  |  36%  |
@@ -64,7 +64,7 @@ and a single clip polygon with varying number of edges (32bit compile).
 +===================+=========+=========+=======+
 Vertex coordinate ranges X:0-800, Y:0-600 (rounded to nearest 10).
 
-TEST1b: Same test as above but using C# code (to 64bit).
+TEST1b: Same test as above but using C# code (to 64bit .NET framework).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
@@ -111,4 +111,4 @@ TEST2: Time (secs) to intersect multiple polygon ELLIPSES.
 Paths approximating ellipses are such that the edges deviate from their true 
 elliptical paths by <= 1/2px. Random ellipses are bounded by the range 
 X:0-800, Y:0-600 where the max. elliptical radii are 1/3 of axis bounds 
-and the min. radii is 10.
+and the min. radii is 10. (Delphi 32bit)
