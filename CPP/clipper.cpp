@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  23 September 2017                                               *
+* Date      :  25 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -22,6 +22,7 @@
 #include <ostream>
 #include <functional>
 #include "clipper.h"
+
 
 namespace clipperlib {
 
@@ -359,7 +360,7 @@ namespace clipperlib {
 
   bool IntersectListSort(IntersectNode *node1, IntersectNode *node2)
   {
-    return node2->pt.y < node1->pt.y;
+    return (node1 == node2 ?  0 : node2->pt.y < node1->pt.y);
   }
   //------------------------------------------------------------------------------
 
@@ -1116,27 +1117,32 @@ namespace clipperlib {
     //if either edge is an OPEN path ...
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2))) {
       if (IsOpen(e1) && IsOpen(e2)) return; //ignore lines that intersect
-      //the following line just avoids duplicating a whole lot of code ...
-      if (IsOpen(e2)) { Active &e = e1; e1 = e2; e2 = e; }
+      Active *edge_o, *edge_c;
+      if (IsOpen(e1)) {
+        edge_o = &e1; edge_c = &e2;
+      }
+      else {
+        edge_o = &e2; edge_c = &e1;
+      }
       switch (cliptype_) {
         case kIntersection:
         case kDifference:
-          if (IsSamePolyType(e1, e2) || (Abs(e2.wind_cnt) != 1)) return;
+          if (IsSamePolyType(*edge_o, *edge_c) || (Abs(edge_c->wind_cnt) != 1)) return;
           break;
         case kUnion:
-          if (IsHotEdge(e1) != ((Abs(e2.wind_cnt) != 1) ||
-            (IsHotEdge(e1) != (e2.wind_cnt != 0)))) return; //just works!
+          if (IsHotEdge(*edge_o) != ((Abs(edge_c->wind_cnt) != 1) ||
+            (IsHotEdge(*edge_o) != (edge_c->wind_cnt != 0)))) return; //just works!
           break;
         case kXor:
-          if (Abs(e2.wind_cnt) != 1) return;
+          if (Abs(edge_c->wind_cnt) != 1) return;
           break;
       }
       //toggle contribution ...
-      if (IsHotEdge(e1)) {
-        AddOutPt(e1, pt);
-        TerminateHotOpen(e1);
+      if (IsHotEdge(*edge_o)) {
+        AddOutPt(*edge_o, pt);
+        TerminateHotOpen(*edge_o);
       }
-      else StartOpenPath(e1, pt);
+      else StartOpenPath(*edge_o, pt);
       return;
     }
 
@@ -1655,7 +1661,6 @@ namespace clipperlib {
       if (is_left_to_right)
         e = horz.next_in_ael; else
         e = horz.prev_in_ael;
-
       while (e) {
         //break if we've gone past the } of the horizontal ...
         if ((is_left_to_right && (e->curr.x > horz_right)) ||
@@ -1875,27 +1880,26 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  std::ostream& operator <<(std::ostream &s, const Point64 &p)
+  std::ostream& operator <<(std::ostream &s, const Point64 &pt)
   {
-    s << "(" << p.x << "," << p.y << ")";
+    s << pt.x << "," << pt.y << " ";
     return s;
   }
   //------------------------------------------------------------------------------
 
-  std::ostream& operator <<(std::ostream &s, const Path &p)
+  std::ostream& operator <<(std::ostream &s, const Path &path)
   {
-    if (p.empty()) return s;
-    Path::size_type last = p.size() -1;
-    for (Path::size_type i = 0; i < last; i++)
-      s << "(" << p[i].x << "," << p[i].y << "), ";
-    s << "(" << p[last].x << "," << p[last].y << ")\n";
+    if (path.empty()) return s;
+    Path::size_type last = path.size() -1;
+    for (Path::size_type i = 0; i < last; i++) s  << path[i] << " ";
+    s << path[last] << "\n";
     return s;
   }
   //------------------------------------------------------------------------------
 
-  std::ostream& operator <<(std::ostream &s, const Paths &p)
+  std::ostream& operator <<(std::ostream &s, const Paths &paths)
   {
-    for (Paths::size_type i = 0; i < p.size(); i++) s << p[i];
+    for (Paths::size_type i = 0; i < paths.size(); i++) s << paths[i];
     s << "\n";
     return s;
   }

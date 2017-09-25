@@ -26,6 +26,7 @@ Here are the more notable ones ...
 6. The optional Closed parameter in the AddPath and AddPaths methods has changed 
    to IsOpen (and now defaults to false).
 
+   
 When I originally translated the Library from Delphi (Pascal) to C# and C++,
 I deliberately kept a strong Delphi naming style as I thought this would help
 with maintainance. In hindsight this was a mistake. It didn't really achieve
@@ -34,12 +35,15 @@ I've attempted to adopt a more typical style for each of these three languages,
 while acknowledging that I still have limited experience coding in C# and C++.
 
 
+
 Below I've benchmarked a few comparisons between the old (ver 6.4.2) and this 
-Clipper. (The old version has also had the polygon 'merging' code removed so 
-we're comparing 'apples with apples'. Tests 1a and 2 were compiled (for 32bit) 
-using Delphi 10.1 on a Windows 10 64Bit PC with Intel i7 2.0GHz CPU & 8GB RAM.
-Test 1b was compiled (for 32bit) using C# code and compiled using Microsoft's 
-Visual Studio Community 2017 on the same PC.
+Clipper. (The old version has had the polygon 'merging' code removed so as to 
+compare 'apples with apples'. All tests were performed on a Windows 10 64Bit PC 
+with Intel i7 2.0GHz CPU & 8GB RAM.
+
+Tests 1a and 2 were using Delphi code compiled (to 32bit) using Delphi 10.1.
+Test 1b was compiled using C# code (to 64bit) with MSVS Community 2017. 
+Test 1c & 1d was compiled using C++ code (to 64bit) with MSVS Community 2017.
 
 TEST1a: Time (secs) to intersect COMPLEX polygons - a single random subject 
 and a single clip polygon with varying number of edges (32bit compile).
@@ -60,7 +64,7 @@ and a single clip polygon with varying number of edges (32bit compile).
 +===================+=========+=========+=======+
 Vertex coordinate ranges X:0-800, Y:0-600 (rounded to nearest 10).
 
-TEST1b: Same test as above but using C# code (64bit compile).
+TEST1b: Same test as above but using C# code (to 64bit).
 +===================+=========+=========+=======+
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
@@ -68,13 +72,47 @@ TEST1b: Same test as above but using C# code (64bit compile).
 | 100               |   0.002 |   0.003 |   50% |   
 | 500               |   0.074 |   0.148 |  100% |
 |1000               |   0.422 |   0.729 |   73% |
-|2000               |   3.87  |    7.34 |   90% |
-|2500               |   8.34  |   16.6  |   99% |
-|3000               |  16.8   |   36.8  |  119% |
+|2000               |   3.87  |   7.34  |   90% |
+|2500               |   8.34  |  16.6   |   99% |
+|3000               |  16.8   |  36.8   |  119% |
 |3500               |  33.3   |  68.6   |  106% |
 |4000               |  57.2   | 121     |  111% |
 |4500               | 105     | 214     |  104% |
 |5000               | 171     | 363     |  112% |
++===================+=========+=========+=======+
+
+TEST1c: Same test as above but using MSVS C++ code (to 32bit).
++===================+=========+=========+=======+
+|No. Edges          | New     | Old     | Perf. |
+|(each)             | Clipper | Clipper | Incr. |  
++===================+=========+=========+=======+
+| 100               |   0.003 |   0.004 |   33% |   
+| 500               |   0.059 |   0.093 |   58% |
+|1000               |   0.254 |   0.493 |   94% |
+|2000               |   1.00  |   3.41  |  241% |
+|2500               |   1.37  |   6.73  |  391% |
+|3000               |   2.20  |  13.4   |  510% |
+|3500               |   3.42  |  21.8   |  537% |
+|4000               |   5.21  |  34.7   |  566% |
+|4500               |   8.06  |  57.4   |  612% |
+|5000               |  11.4   |  81.1   |  611% |
++===================+=========+=========+=======+
+
+TEST1d: Same test as above but using C++ code (to 64bit).
++===================+=========+=========+=======+
+|No. Edges          | New     | Old     | Perf. |
+|(each)             | Clipper | Clipper | Incr. |  
++===================+=========+=========+=======+
+| 100               |   0.003 |  0.003  |   0%  |   
+| 500               |   0.053 |  0.08   |  51%  |
+|1000               |   0.195 |  0.43   | 120%  |
+|2000               |   0.78  |  3.35   | 329%  |
+|2500               |   1.29  |  6.32   | 390%  |
+|3000               |   2.03  | 12.8    | 531%  |
+|3500               |   3.30  | 22.4    | 579%  |
+|4000               |   5.22  | 33.9    | 550%  |
+|4500               |   8.06  | 62.6    | 680%  |
+|5000               |  12.1   | 89.5    | 640%  |
 +===================+=========+=========+=======+
 
 TEST2: Time (secs) to intersect multiple polygon ELLIPSES.
