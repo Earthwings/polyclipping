@@ -43,7 +43,7 @@ with Intel i7 2.0GHz CPU & 8GB RAM.
 
 Tests 1a and 2 were using Delphi code compiled (to 32bit) using Delphi 10.1.
 Test 1b was compiled using C# code (to 64bit) with MSVS Community 2017. 
-Test 1c & 1d was compiled using C++ code (to 64bit) with MSVS Community 2017.
+Test 1c was compiled using C++ code (to 32bit) with MSVS Community 2017.
 
 TEST1a: Time (secs) to intersect COMPLEX polygons - a single random subject 
 and a single clip polygon with varying number of edges (32bit compile).
@@ -86,33 +86,16 @@ TEST1c: Same test as above but using MSVS C++ code (to 32bit).
 |No. Edges          | New     | Old     | Perf. |
 |(each)             | Clipper | Clipper | Incr. |  
 +===================+=========+=========+=======+
-| 100               |   0.003 |   0.004 |   33% |   
-| 500               |   0.059 |   0.093 |   58% |
-|1000               |   0.254 |   0.493 |   94% |
-|2000               |   1.00  |   3.41  |  241% |
-|2500               |   1.37  |   6.73  |  391% |
-|3000               |   2.20  |  13.4   |  510% |
-|3500               |   3.42  |  21.8   |  537% |
-|4000               |   5.21  |  34.7   |  566% |
-|4500               |   8.06  |  57.4   |  612% |
-|5000               |  11.4   |  81.1   |  611% |
-+===================+=========+=========+=======+
-
-TEST1d: Same test as above but using C++ code (to 64bit).
-+===================+=========+=========+=======+
-|No. Edges          | New     | Old     | Perf. |
-|(each)             | Clipper | Clipper | Incr. |  
-+===================+=========+=========+=======+
-| 100               |   0.003 |  0.003  |   0%  |   
-| 500               |   0.053 |  0.08   |  51%  |
-|1000               |   0.195 |  0.43   | 120%  |
-|2000               |   0.78  |  3.35   | 329%  |
-|2500               |   1.29  |  6.32   | 390%  |
-|3000               |   2.03  | 12.8    | 531%  |
-|3500               |   3.30  | 22.4    | 579%  |
-|4000               |   5.22  | 33.9    | 550%  |
-|4500               |   8.06  | 62.6    | 680%  |
-|5000               |  12.1   | 89.5    | 640%  |
+| 100               |   0.003 |   0.003 |    0% |   
+| 500               |   0.054 |   0.084 |   56% |
+|1000               |   0.270 |   0.500 |   85% |
+|2000               |   1.99  |   4.80  |  141% |
+|2500               |   4.64  |  12.1   |  161% |
+|3000               |  10.8   |  25.6   |  137% |
+|3500               |  21.6   |  55.7   |  158% |
+|4000               |  40.9   |  91.3   |  123% |
+|4500               |  70.7   | 191     |  170% |
+|5000               | 110     | 258     |  135% |
 +===================+=========+=========+=======+
 
 TEST2: Time (secs) to intersect multiple polygon ELLIPSES.
