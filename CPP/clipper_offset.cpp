@@ -59,7 +59,7 @@ namespace clipperlib {
   }
   //---------------------------------------------------------------------------
 
-  ClipperOffset::PathNode::PathNode(Path &p, JoinType jt, EndType et)
+  ClipperOffset::PathNode::PathNode(const Path &p, JoinType jt, EndType et)
   {
     join_type = jt;
     end_type = et;
@@ -256,15 +256,15 @@ namespace clipperlib {
     }
 
     //MiterLimit: see offset_triginometry3.svg in the documentation folder ...
-    if (miter_limit > 2)
-      miter_lim_ = 2 / (miter_limit * miter_limit);
+    if (miter_limit_ > 2)
+      miter_lim_ = 2 / (miter_limit_ * miter_limit_);
     else
       miter_lim_ = 0.5;
 
     double arc_tol;
-    if (arc_tolerance < DEFAULT_ARC_FRAC)
+    if (arc_tolerance_ < DEFAULT_ARC_FRAC)
       arc_tol = abs_delta * DEFAULT_ARC_FRAC; else
-      arc_tol = arc_tolerance;
+      arc_tol = arc_tolerance_;
 
     //see offset_triginometry2.svg in the documentation folder ...
     double steps = PI / acos(1 - arc_tol / abs_delta);  //steps per 360 degrees
@@ -420,7 +420,7 @@ namespace clipperlib {
   }
   //---------------------------------------------------------------------------
 
-  void ClipperOffset::AddPath(Path &path, JoinType jt, EndType et)
+  void ClipperOffset::AddPath(const Path &path, JoinType jt, EndType et)
   {
     PathNode *pn = new PathNode(path, jt, et);
     if (pn->path.empty()) delete pn;
@@ -428,9 +428,9 @@ namespace clipperlib {
   }
   //---------------------------------------------------------------------------
 
-  void ClipperOffset::AddPaths(Paths &paths, JoinType jt, EndType et)
+  void ClipperOffset::AddPaths(const Paths &paths, JoinType jt, EndType et)
   {
-    for (Paths::iterator p_iter = paths.begin(); p_iter != paths.end(); ++p_iter)
+    for (Paths::const_iterator p_iter = paths.begin(); p_iter != paths.end(); ++p_iter)
       AddPath(*p_iter, jt, et);
   }
   //---------------------------------------------------------------------------

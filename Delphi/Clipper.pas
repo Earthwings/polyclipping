@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  23 September 2017                                               *
+* Date      :  27 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -1783,6 +1783,7 @@ begin
 
   //Merge sort FActives into their new positions at the top of scanbeam, and
   //create an intersection node every time an edge crosses over another ...
+  //see https://stackoverflow.com/a/46319131/359538
 
 	mul := 1;
 	while (true) do
@@ -1832,11 +1833,7 @@ begin
           //now move the out of place edge to it's new position in SEL ...
           Insert2Before1InSel(first, second);
           second := tmp;
-          if not assigned(second) then
-          begin
-            first := nil; //forces a break in the next outer loop too
-            break;
-          end;
+          if not assigned(second) then break;
           dec(rCnt);
         end else
         begin
@@ -1882,10 +1879,15 @@ function IntersectListSort(node1, node2: Pointer): Integer;
 var
   i: Int64;
 begin
-  i := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
-  if i < 0 then Result := -1
-  else if i > 0 then Result := 1
-  else Result := 0;
+  if node1 = node2 then
+    Result := 0
+  else
+  begin
+    i := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
+    if i < 0 then Result := -1
+    else if i > 0 then Result := 1
+    else Result := 0;
+  end;
 end;
 //------------------------------------------------------------------------------
 

@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  23 September 2017                                               *
+* Date      :  26 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -52,7 +52,6 @@ namespace ClipperLib
 
     public PathNode(Path p, JoinType jt, EndType et)
     {
-      path = p;
       joinType = jt;
       endType = et;
 
@@ -129,10 +128,14 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    public ClipperOffset() { MiterLimit = 2.0; }
+    public ClipperOffset(double MiterLimit = 2.0, double ArcTolerance = 0)
+    {
+      this.MiterLimit = MiterLimit;
+      this.ArcTolerance = ArcTolerance;
+    }
     //------------------------------------------------------------------------------
 
-    public void Clear()  { nodes.Clear(); }
+    public void Clear()  { nodes.Clear(); norms.Clear(); solution.Clear(); }
     //------------------------------------------------------------------------------
 
     public void AddPath(Path p, JoinType jt, EndType et)

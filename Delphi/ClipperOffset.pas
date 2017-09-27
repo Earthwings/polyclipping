@@ -4,7 +4,7 @@ unit ClipperOffset;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  23 September 2017                                               *
+* Date      :  27 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -69,7 +69,7 @@ type
     procedure GetLowestPolygonIdx;
     procedure DoOffset(delta: Double);
   public
-    constructor Create;
+    constructor Create(MiterLimit: double = 2.0; ArcTolerance: double = 0.0);
     destructor Destroy; override;
     procedure AddPath(const p: TPath; jt: TJoinType; et: TEndType);
     procedure AddPaths(const p: TPaths; jt: TJoinType; et: TEndType);
@@ -199,12 +199,12 @@ end;
 // TClipperOffset methods
 //------------------------------------------------------------------------------
 
-constructor TClipperOffset.Create;
+constructor TClipperOffset.Create(MiterLimit: double; ArcTolerance: double);
 begin
   inherited Create;
   FNodeList := TList.Create;
-  FMiterLimit := 2;
-  FArcTolerance := 0;
+  FMiterLimit := MiterLimit;
+  FArcTolerance := ArcTolerance;
 end;
 //------------------------------------------------------------------------------
 
@@ -223,6 +223,8 @@ begin
   for i := 0 to FNodeList.Count -1 do
     TPathNode(FNodeList[i]).Free;
   FNodeList.Clear;
+  FNorms := nil;
+  FSolution := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -280,7 +282,6 @@ var
   node: TPathNode;
   norm: TPointD;
 begin
-  FSolution := nil;
   FDelta := delta;
   absDelta := Abs(delta);
 
@@ -470,9 +471,6 @@ end;
 
 procedure TClipperOffset.Execute(out solution: TPaths; delta: Double);
 var
-  i, Len: Integer;
-  outerPath: TPath;
-  bounds: TRect64;
   negate: Boolean;
 begin
   solution := nil;

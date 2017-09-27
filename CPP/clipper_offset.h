@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  25 September 2017                                               *
+* Date      :  26 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -35,7 +35,7 @@ namespace clipperlib {
       double x;
       double y;
       PointD(double x_ = 0, double y_ = 0) : x(x_), y(y_) {};
-      PointD(Point64 &pt) : x((double)pt.x), y((double)pt.y) {};
+      PointD(const Point64 &pt) : x((double)pt.x), y((double)pt.y) {};
     };
 
     struct PathNode
@@ -44,17 +44,19 @@ namespace clipperlib {
       JoinType join_type;
       EndType end_type;
       int lowest_idx;
-      PathNode(Path &p, JoinType jt, EndType et);
+      PathNode(const Path &p, JoinType jt, EndType et);
     };
 
     typedef std::vector< PointD > NormalsList;
     typedef std::vector< PathNode* > NodeList;
 
-
     Paths solution_;
     Path path_in_, path_out_;
     NormalsList norms_;
     NodeList nodes_;
+    double arc_tolerance_;
+    double miter_limit_;
+
     //nb: miter_lim_ below is a temp field that differs from miter_limit
     double delta_, sin_a_, sin_, cos_, miter_lim_, steps_per_radian_;
     int lowest_idx_;
@@ -65,13 +67,13 @@ namespace clipperlib {
     void DoRound(int j, int k);
     void DoOffset(double d);
     static PointD GetUnitNormal(const Point64 &pt1, const Point64 &pt2);
+
   public:
-    double arc_tolerance;
-    double miter_limit;
-    ClipperOffset() { miter_limit = 2.0; }
+    ClipperOffset(double miter_limit = 2.0, double arc_tolerance = 0) :
+      miter_limit_(miter_limit), arc_tolerance_(arc_tolerance) {};
     void Clear();
-    void AddPath(Path &path, JoinType jt, EndType et);
-    void AddPaths(Paths &paths, JoinType jt, EndType et);
+    void AddPath(const Path &path, JoinType jt, EndType et);
+    void AddPaths(const Paths &paths, JoinType jt, EndType et);
     void Execute(Paths &sol, double delta);
   };
 

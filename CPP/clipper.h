@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  25 September 2017                                               *
+* Date      :  27 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -18,14 +18,9 @@
 #define CLIPPER_VERSION "10.0.0"
 
 #include <vector>
-#include <list>
-#include <set>
-#include <stdexcept>
-#include <cstring>
-#include <cstdlib>
-#include <ostream>
-#include <functional>
 #include <queue>
+#include <stdexcept>
+#include <cstdlib>
 
 namespace clipperlib {
 
@@ -42,7 +37,7 @@ struct Point64 {
   {
     return a.x == b.x && a.y == b.y;
   }
-  friend inline bool operator!= (const Point64 &a, const Point64 &b) //todo: remove
+  friend inline bool operator!= (const Point64 &a, const Point64 &b)
   {
     return a.x != b.x || a.y != b.y;
   }

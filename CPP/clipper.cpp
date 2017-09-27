@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  25 September 2017                                               *
+* Date      :  27 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -1401,6 +1401,7 @@ namespace clipperlib {
 
     //Merge sort FActives into their new positions at the top of scanbeam, and
     //create an intersection node every time an edge crosses over another ...
+    //see also https://stackoverflow.com/a/46319131/359538 
 
     int mul = 1;
     while (true) {
@@ -1443,7 +1444,7 @@ namespace clipperlib {
             //now move the out of place edge to it's new position in SEL ...
             Insert2Before1InSel(*first, *second);
             second = tmp;
-            if (!second) { first = NULL; break; }
+            if (!second) break;
             --rCnt;
           }
           else {
