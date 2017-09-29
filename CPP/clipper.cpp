@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  27 September 2017                                               *
+* Date      :  29 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -360,7 +360,7 @@ namespace clipperlib {
 
   bool IntersectListSort(IntersectNode *node1, IntersectNode *node2)
   {
-    return (node1 == node2 ?  0 : node2->pt.y < node1->pt.y);
+    return (node2->pt.y < node1->pt.y);
   }
   //------------------------------------------------------------------------------
 
@@ -1282,6 +1282,19 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
+  inline void Clipper::CopyActivesToSELAdjustCurrX(const int64_t top_y)
+  {
+    Active* e = actives_;
+    sel_ = e;
+    while (e) {
+      e->prev_in_sel = e->prev_in_ael;
+      e->next_in_sel = e->next_in_ael;
+      e->curr.x = TopX(*e, top_y);
+      e = e->next_in_ael;
+    }
+  }
+  //------------------------------------------------------------------------------
+
   bool Clipper::ExecuteInternal(ClipType ct, FillRule ft)
   {
     if (locked_) return false;
@@ -1388,21 +1401,11 @@ namespace clipperlib {
   void Clipper::BuildIntersectList(const int64_t top_y)
   {
     if (!actives_ || !actives_->next_in_ael) return;
+    CopyActivesToSELAdjustCurrX(top_y);
 
-    //copy AEL to SEL while also adjusting Curr.X ...
-    sel_ = actives_;
-    Active *e = actives_;
-    while (e) {
-      e->prev_in_sel = e->prev_in_ael;
-      e->next_in_sel = e->next_in_ael;
-      e->curr.x = TopX(*e, top_y);
-      e = e->next_in_ael;
-    }
-
-    //Merge sort FActives into their new positions at the top of scanbeam, and
+    //Merge sort actives_ into their new positions at the top of scanbeam, and
     //create an intersection node every time an edge crosses over another ...
     //see also https://stackoverflow.com/a/46319131/359538 
-
     int mul = 1;
     while (true) {
 
@@ -1476,13 +1479,18 @@ namespace clipperlib {
 
   void Clipper::FixupIntersectionOrder()
   {
-    //Intersections have been sorted so the bottom-most are processed first but
-    //it's also crucial that intersections are made between adjacent edges, so
-    //the order of these intersections may need some adjusting ...
     unsigned cnt = (unsigned)intersect_list_.size();
-    if (cnt < 3) return;
-    CopyAELToSEL();
+    if (cnt < 2) return;
+    //It's important that edge intersections are processed from the bottom up,
+    //but it's also crucial that intersections only occur between adjacent edges.
+    //The first sort here (a quicksort), arranges intersections relative to their
+    //vertical positions within the scanbeam ...
     std::sort(intersect_list_.begin(), intersect_list_.end(), IntersectListSort);
+
+    //Now we simulate processing these intersections, and as we do, we make sure
+    //that the intersecting edges remain adjacent. If they aren't, this simulated
+    //intersection is delayed until such time as these edges do become adjacent.
+    CopyAELToSEL();
     for (size_t i = 0; i < cnt; ++i) {
       if (!EdgesAdjacentInSel(*intersect_list_[i])) {
         size_t  j = i + 1;

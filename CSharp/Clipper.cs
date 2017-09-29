@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  27 September 2017                                               *
+* Date      :  29 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -1581,6 +1581,20 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
+    private void CopyActivesToSELAdjustCurrX(Int64 topY)
+    {
+      Active e = Actives;
+      SEL = e;
+      while (e != null)
+      {
+        e.PrevInSEL = e.PrevInAEL;
+        e.NextInSEL = e.NextInAEL;
+        e.Curr.X = TopX(e, topY);
+        e = e.NextInAEL;
+      }
+    }
+    //------------------------------------------------------------------------------
+
     private bool ExecuteInternal(ClipType ct, FillRule ft)
     {
       if (ExecuteLocked) return false;
@@ -1707,16 +1721,7 @@ namespace ClipperLib
     {
       if (Actives == null || Actives.NextInAEL == null) return;
 
-      //copy AEL to SEL while also adjusting Curr.X ...
-      SEL = Actives;
-      Active e = Actives;
-      while (e != null)
-      {
-        e.PrevInSEL = e.PrevInAEL;
-        e.NextInSEL = e.NextInAEL;
-        e.Curr.X = TopX(e, TopY);
-        e = e.NextInAEL;
-      }
+      CopyActivesToSELAdjustCurrX(TopY);
 
       //Merge sort FActives into their new positions at the top of scanbeam, and
       //create an intersection node every time an edge crosses over another ...
@@ -1816,12 +1821,17 @@ namespace ClipperLib
 
     private void FixupIntersectionOrder()
     {
-      //pre-condition: intersections are sorted bottom-most first.
-      //Now it's crucial that intersections are made only between adjacent edges,
-      //so to ensure this the order of intersections may need Bubble sorting ...
       int cnt = IntersectList.Count;
-      if (cnt < 3) return; //edges must be adjacent :)
+      if (cnt < 2) return;
+      //It's important that edge intersections are processed from the bottom up,
+      //but it's also crucial that intersections only occur between adjacent edges.
+      //The first sort here (a quicksort), arranges intersections relative to their
+      //vertical positions within the scanbeam ...
       IntersectList.Sort(IntersectNodeComparer);
+
+      //Now we simulate processing these intersections, and as we do, we make sure
+      //that the intersecting edges remain adjacent. If they aren't, this simulated
+      //intersection is delayed until such time as these edges do become adjacent.
       CopyAELToSEL();
       for (int i = 0; i < cnt; i++)
       {

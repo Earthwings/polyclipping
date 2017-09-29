@@ -27,12 +27,12 @@ There are quite a few changes to Clipper's interface. Notable ones include ...
    to IsOpen (and defaults to false).
 
    
-When I originally translated the Library from Delphi (Pascal) to C# and C++,
+When I originally translated this Library from Delphi (Pascal) to C# and C++,
 I deliberately kept a strong Delphi naming style as I thought this would help
 with maintenance. In hindsight this was a mistake. It didn't really achieve
 that goal, and it made the C# and C++ code look odd. With this new version, 
-I've attempted to adopt a more conventional naming style for each languages, 
-while admitting that I still have limited coding experience in C# and C++.
+I've attempted to adopt a more conventional naming style for each language, 
+while admitting that I still have limited coding experience in both C# and C++.
 
 
 Below I've benchmarked some comparisons between the old and the new versions of

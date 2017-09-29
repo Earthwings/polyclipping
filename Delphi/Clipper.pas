@@ -4,7 +4,7 @@ unit Clipper;
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  27 September 2017                                               *
+* Date      :  29 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -33,7 +33,7 @@ unit Clipper;
 interface
 
 uses
-  SysUtils, Types, Classes, Math;
+  SysUtils, Classes, Math;
 
 type
   TPoint64 = record X, Y: Int64; end;
@@ -171,7 +171,9 @@ type
     function GetOwner(e: PActive): POutRec;
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64);
     procedure AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
-    procedure CopyActivesToSEL;
+    procedure CopyActivesToSEL; {$IFDEF INLINING} inline; {$ENDIF}
+    procedure CopyActivesToSELAdjustCurrX(topY: Int64);
+      {$IFDEF INLINING} inline; {$ENDIF}
     procedure UpdateEdgeIntoAEL(var e: PActive);
     procedure SwapOutRecs(e1, e2: PActive);
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
@@ -1623,6 +1625,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TClipper.CopyActivesToSELAdjustCurrX(topY: Int64);
+var
+  e: PActive;
+begin
+  FSel := FActives;
+  e := FActives;
+  while Assigned(e) do
+  begin
+    e.PrevInSEL := e.PrevInAEL;
+    e.NextInSEL := e.NextInAEL;
+    e.Curr.X := TopX(e, topY);
+      e := e.NextInAEL;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 function TClipper.ExecuteInternal(clipType: TClipType; fillRule: TFillRule): Boolean;
 var
   Y: Int64;
@@ -1770,16 +1788,7 @@ var
 begin
   if not Assigned(FActives) or not Assigned(FActives.NextInAEL) then Exit;
 
-  //copy AEL to SEL while also adjusting Curr.X ...
-  FSel := FActives;
-  tmp := FActives;
-  while Assigned(tmp) do
-  begin
-    tmp.PrevInSEL := tmp.PrevInAEL;
-    tmp.NextInSEL := tmp.NextInAEL;
-    tmp.Curr.X := TopX(tmp, topY);
-    tmp := tmp.NextInAEL;
-  end;
+  CopyActivesToSELAdjustCurrX(topY);
 
   //Merge sort FActives into their new positions at the top of scanbeam, and
   //create an intersection node every time an edge crosses over another ...
@@ -1870,24 +1879,14 @@ end;
 function EdgesAdjacentInSel(node: PIntersectNode): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := (node.Edge1.NextInSEL = node.Edge2) or
-    (node.Edge1.PrevInSEL = node.Edge2);
+  with node^ do
+    Result := (Edge1.NextInSEL = Edge2) or (Edge1.PrevInSEL = Edge2);
 end;
 //------------------------------------------------------------------------------
 
 function IntersectListSort(node1, node2: Pointer): Integer;
-var
-  i: Int64;
 begin
-  if node1 = node2 then
-    Result := 0
-  else
-  begin
-    i := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
-    if i < 0 then Result := -1
-    else if i > 0 then Result := 1
-    else Result := 0;
-  end;
+  result := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
 end;
 //------------------------------------------------------------------------------
 
@@ -1896,14 +1895,18 @@ var
   i, j, cnt: Integer;
   node: PIntersectNode;
 begin
-  //Intersections have been sorted so the bottom-most are processed first but
-  //it's also crucial that intersections are made between adjacent edges, so
-  //the order of these intersections may need some adjusting ...
   cnt := FIntersectList.Count;
-  if cnt < 3 then Exit; //edges must be adjacent :)
-
-  CopyActivesToSEL;
+  if cnt < 2 then Exit;
+  //It's important that edge intersections are processed from the bottom up,
+  //but it's also crucial that intersections only occur between adjacent edges.
+  //The first sort here (a quicksort), arranges intersections relative to their
+  //vertical positions within the scanbeam ...
   FIntersectList.Sort(IntersectListSort);
+
+  //Now we simulate processing these intersections, and as we do, we make sure
+  //that the intersecting edges remain adjacent. If they aren't, this simulated
+  //intersection is delayed until such time as these edges do become adjacent.
+  CopyActivesToSEL;
   for i := 0 to cnt - 1 do
   begin
     if not EdgesAdjacentInSel(FIntersectList[i]) then

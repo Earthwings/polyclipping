@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  27 September 2017                                               *
+* Date      :  29 September 2017                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -139,6 +139,7 @@ class Clipper {
     void IntersectEdges(Active &e1, Active &e2, const Point64 pt);
     inline void DeleteFromAEL(Active &e);
     inline void CopyAELToSEL();
+    inline void CopyActivesToSELAdjustCurrX(const int64_t top_y);
     bool ExecuteInternal(ClipType ct, FillRule ft);
     void ProcessIntersections(const int64_t top_y);
     inline void DisposeIntersectNodes();
