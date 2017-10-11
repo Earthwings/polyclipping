@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  29 September 2017                                               *
+* Date      :  3 October 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -808,6 +808,11 @@ namespace clipperlib {
   }
   //----------------------------------------------------------------------
 
+  inline void SwapActives(Active *&e1, Active *&e2) {
+    Active *e = e1; e1 = e2; e2 = e;
+  }
+  //----------------------------------------------------------------------
+
   void Clipper::InsertLocalMinimaIntoAEL(int64_t bot_y)
   {
     LocalMinima *local_minima;
@@ -845,13 +850,13 @@ namespace clipperlib {
       //Currently LeftB is just the descending bound and RightB is the ascending.
       //Now if the LeftB isn't on the left of RightB then we need swap them.
       if (left_bound && right_bound) {
-        if ((IsHorizontal(*left_bound) && (left_bound->top.x > left_bound->bot.x)) ||
-          (!IsHorizontal(*left_bound) && (left_bound->dx < right_bound->dx)))
-        {
-          Active *tmp = left_bound;
-          left_bound = right_bound;
-          right_bound = tmp;
+        if (IsHorizontal(*left_bound)) {
+          if (left_bound->top.x > left_bound->bot.x) SwapActives(left_bound, right_bound);
         }
+        else if (IsHorizontal(*right_bound)) {
+          if (right_bound->top.x < right_bound->bot.x) SwapActives(left_bound, right_bound);
+        }
+        else if (left_bound->dx < right_bound->dx) SwapActives(left_bound, right_bound);
       }
       else if (!left_bound) {
         left_bound = right_bound;
@@ -940,10 +945,14 @@ namespace clipperlib {
     outrec->idx = (unsigned)outrec_list_.size();
     outrec_list_.push_back(outrec);
     outrec->owner = GetOwner(&e1);
-    if (outrec->owner && (outrec->owner->flags & ofOuter) != 0)
-      outrec->flags = ofNone; else
-      outrec->flags = outrec->flags | ofOuter;
-    if (IsOpen(e1)) outrec->flags |= ofOpen;
+
+    if (IsOpen(e1))
+      outrec->flags = ofOpen;
+    else if (!outrec->owner || (outrec->owner->flags & ofOuter) == 0)
+      outrec->flags = ofOuter; 
+    else
+      outrec->flags = ofNone;
+
     outrec->polypath = NULL;
 
     //now set orientation ...
@@ -1118,12 +1127,9 @@ namespace clipperlib {
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2))) {
       if (IsOpen(e1) && IsOpen(e2)) return; //ignore lines that intersect
       Active *edge_o, *edge_c;
-      if (IsOpen(e1)) {
-        edge_o = &e1; edge_c = &e2;
-      }
-      else {
-        edge_o = &e2; edge_c = &e1;
-      }
+      if (IsOpen(e1)) { edge_o = &e1; edge_c = &e2; }
+      else { edge_o = &e2; edge_c = &e1; }
+
       switch (cliptype_) {
         case kIntersection:
         case kDifference:

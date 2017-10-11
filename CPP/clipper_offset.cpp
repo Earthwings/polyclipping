@@ -2,7 +2,7 @@
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (alpha)                                                    *
-* Date      :  26 September 2017                                               *
+* Date      :  3 October 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
 *                                                                              *
@@ -223,7 +223,7 @@ namespace clipperlib {
   void ClipperOffset::DoRound(int j, int k)
   {
     double a = atan2(sin_a_, norms_[k].x * norms_[j].x + norms_[k].y * norms_[j].y);
-    int steps = std::max((int)Round(steps_per_radian_ * abs(a)), 1);
+    int steps = (std::max)((int)Round(steps_per_radian_ * abs(a)), 1);
 
     double x = norms_[k].x, y = norms_[k].y, x2;
     for (int i = 0; i < steps; ++i)
