@@ -78,7 +78,7 @@ type
     IsOpen    : Boolean;
   end;
 
-  POutRec = ^TOutRecTri;
+  POutRec = ^TOutRec;
 
   PActive = ^TActive;
   TActive = record
@@ -113,7 +113,7 @@ type
     Pt       : TPoint64;
     Next     : POutPt;
     Prev     : POutPt;
-    IsMax    : Boolean; //ClipperTri only
+    IsMax    : Boolean;                //only used by ClipperTri.
   end;
 
   TPolyTree = class;
@@ -124,14 +124,13 @@ type
 
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //carry a pointer to an OutRec when they are part of the clipping solution.
-  TOutRecTri = record
+  TOutRec = record
     Idx      : Integer;
     Owner    : POutRec;
-    Pts      : POutPt;
-    StartE   : PActive;
-    EndE     : PActive;
-    Flags    : TOutRecFlags;
+    Edges    : array [0..1] of PActive;
+    OutPts   : array [0..1] of POutPt; //OutPts[1] only used by ClipperTri.
     PolyPath : TPolyPath;
+    Flags    : TOutRecFlags;
   end;
 
   TClipper = class
@@ -177,7 +176,7 @@ type
     procedure BuildResult2(polyTree: TPolyTree; out openPaths: TPaths);
   protected
     FActives: PActive; //see AEL above
-    procedure SwapOutRecs(e1, e2: PActive); virtual;
+    procedure SwapOutRecs(e1, e2: PActive);
     function IsContributingClosed(e: PActive): Boolean;
     function IsContributingOpen(e: PActive): Boolean;
     procedure PushHorz(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
@@ -293,7 +292,7 @@ end;
 
 function IsStartSide(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := (e = e.OutRec.StartE);
+  Result := (e = e.OutRec.Edges[0]);
 end;
 //------------------------------------------------------------------------------
 
@@ -546,10 +545,10 @@ end;
 
 procedure EndOutRec(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  outRec.StartE.OutRec := nil;
-  if assigned(outRec.EndE) then outRec.EndE.OutRec := nil;
-  outRec.StartE := nil;
-  outRec.EndE := nil;
+  outRec.Edges[0].OutRec := nil;
+  if assigned(outRec.Edges[1]) then outRec.Edges[1].OutRec := nil;
+  outRec.Edges[0] := nil;
+  outRec.Edges[1] := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -567,8 +566,8 @@ end;
 procedure SetOutrecClockwise(outRec: POutRec; e1, e2: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  outRec.StartE := e1;
-  outRec.EndE := e2;
+  outRec.Edges[0] := e1;
+  outRec.Edges[1] := e2;
   e1.OutRec := outRec;
   e2.OutRec := outRec;
 end;
@@ -577,8 +576,8 @@ end;
 procedure SetOutrecCounterClockwise(outRec: POutRec; e1, e2: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  outRec.StartE := e2;
-  outRec.EndE := e1;
+  outRec.Edges[0] := e2;
+  outRec.Edges[1] := e1;
   e1.OutRec := outRec;
   e2.OutRec := outRec;
 end;
@@ -721,7 +720,7 @@ var
   outRec: POutRec;
 begin
   outRec := FOutRecList[index];
-  if Assigned(outRec.Pts) then DisposePolyPts(outRec.Pts);
+  if Assigned(outRec.OutPts[0]) then DisposePolyPts(outRec.OutPts[0]);
   Dispose(outRec);
 end;
 //------------------------------------------------------------------------------
@@ -1230,7 +1229,7 @@ begin
     while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
       e := e.NextInAEL;
     if not assigned(e) then Result := nil
-    else if (orOuter in e.OutRec.Flags) = (e.OutRec.StartE = e) then
+    else if (orOuter in e.OutRec.Flags) = (e.OutRec.Edges[0] = e) then
       Result := e.OutRec.Owner
     else Result := e.OutRec;
   end else
@@ -1239,7 +1238,7 @@ begin
     while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
       e := e.PrevInAEL;
     if not assigned(e) then Result := nil
-    else if (orOuter in e.OutRec.Flags) = (e.OutRec.EndE = e) then
+    else if (orOuter in e.OutRec.Flags) = (e.OutRec.Edges[1] = e) then
       Result := e.OutRec.Owner
     else Result := e.OutRec;
   end;
@@ -1291,7 +1290,7 @@ begin
   op.Pt := pt;
   op.Next := op;
   op.Prev := op;
-  outRec.Pts := op;
+  outRec.OutPts[0] := op;
 end;
 //------------------------------------------------------------------------------
 
@@ -1314,8 +1313,8 @@ var
 begin
   //join e2 outrec path onto e1 outrec path and then delete e2 outrec path
   //pointers. (nb: Only very rarely do the joining ends share the same coords.)
-  p1_start :=  e1.OutRec.Pts;
-  p2_start :=  e2.OutRec.Pts;
+  p1_start :=  e1.OutRec.OutPts[0];
+  p2_start :=  e2.OutRec.OutPts[0];
   p1_end := p1_start.Prev;
   p2_end := p2_start.Prev;
   if IsStartSide(e1) then
@@ -1328,8 +1327,8 @@ begin
       p1_start.Prev := p2_start;
       p1_end.Next := p2_end; //P2 now reversed
       p2_end.Prev := p1_end;
-      e1.OutRec.Pts := p2_end;
-      e1.OutRec.StartE := e2.OutRec.EndE;
+      e1.OutRec.OutPts[0] := p2_end;
+      e1.OutRec.Edges[0] := e2.OutRec.Edges[1];
     end else
     begin
       //end-start join
@@ -1337,11 +1336,11 @@ begin
       p1_start.Prev := p2_end;
       p2_start.Prev := p1_end;
       p1_end.Next := p2_start;
-      e1.OutRec.Pts := p2_start;
-      e1.OutRec.StartE := e2.OutRec.StartE;
+      e1.OutRec.OutPts[0] := p2_start;
+      e1.OutRec.Edges[0] := e2.OutRec.Edges[0];
     end;
-    if assigned(e1.OutRec.StartE) then //ie closed path
-      e1.OutRec.StartE.OutRec := e1.OutRec;
+    if assigned(e1.OutRec.Edges[0]) then //ie closed path
+      e1.OutRec.Edges[0].OutRec := e1.OutRec;
   end else
   begin
     if IsStartSide(e2) then
@@ -1351,7 +1350,7 @@ begin
       p2_start.Prev := p1_end;
       p1_start.Prev := p2_end;
       p2_end.Next := p1_start;
-      e1.OutRec.EndE := e2.OutRec.EndE;
+      e1.OutRec.Edges[1] := e2.OutRec.Edges[1];
     end else
     begin
       //end-end join (see JoinOutrec4.png)
@@ -1360,19 +1359,19 @@ begin
       p2_end.Prev := p1_end;
       p2_start.Next := p1_start;
       p1_start.Prev := p2_start;
-      e1.OutRec.EndE := e2.OutRec.StartE;
+      e1.OutRec.Edges[1] := e2.OutRec.Edges[0];
     end;
-    if assigned(e1.OutRec.EndE) then //ie closed path
-      e1.OutRec.EndE.OutRec := e1.OutRec;
+    if assigned(e1.OutRec.Edges[1]) then //ie closed path
+      e1.OutRec.Edges[1].OutRec := e1.OutRec;
   end;
 
   if e1.OutRec.Owner = e2.OutRec then
     raise EClipperLibException.Create(rsClippingErr);
 
   //after joining, the e2.OutRec contains not vertices ...
-  e2.OutRec.StartE := nil;
-  e2.OutRec.EndE := nil;
-  e2.OutRec.Pts := nil;
+  e2.OutRec.Edges[0] := nil;
+  e2.OutRec.Edges[1] := nil;
+  e2.OutRec.OutPts[0] := nil;
   e2.OutRec.Owner := e1.OutRec; //this may be redundant
 
   //and e1 and e2 are maxima and are about to be dropped from the Actives list.
@@ -1383,9 +1382,9 @@ end;
 
 procedure TerminateHotOpen(e: PActive);
 begin
-  if e.OutRec.StartE = e then
-    e.OutRec.StartE := nil else
-    e.OutRec.EndE := nil;
+  if e.OutRec.Edges[0] = e then
+    e.OutRec.Edges[0] := nil else
+    e.OutRec.Edges[1] := nil;
   e.OutRec := nil;
 end;
 //------------------------------------------------------------------------------
@@ -1399,22 +1398,22 @@ begin
   or2 := e2.OutRec;
   if (or1 = or2) then
   begin
-    e := or1.StartE;
-    or1.StartE := or1.EndE;
-    or1.EndE := e;
+    e := or1.Edges[0];
+    or1.Edges[0] := or1.Edges[1];
+    or1.Edges[1] := e;
     Exit;
   end;
   if assigned(or1) then
   begin
-    if e1 = or1.StartE then
-      or1.StartE := e2 else
-      or1.EndE := e2;
+    if e1 = or1.Edges[0] then
+      or1.Edges[0] := e2 else
+      or1.Edges[1] := e2;
   end;
   if assigned(or2) then
   begin
-    if e2 = or2.StartE then
-      or2.StartE := e1 else
-      or2.EndE := e1;
+    if e2 = or2.Edges[0] then
+      or2.Edges[0] := e1 else
+      or2.Edges[1] := e1;
   end;
   e1.OutRec := or2;
   e2.OutRec := or1;
@@ -1426,9 +1425,9 @@ var
   opStart, opEnd, opNew: POutPt;
   toStart: Boolean;
 begin
-  //Outrec.Pts: a circular double-linked-list of POutPt.
+  //Outrec.OutPts[0]: a circular double-linked-list of POutPt.
   toStart := IsStartSide(e);
-  opStart := e.OutRec.Pts;
+  opStart := e.OutRec.OutPts[0];
   opEnd := opStart.Prev;
   if toStart then
   begin
@@ -1443,7 +1442,7 @@ begin
   opEnd.Next := opNew;
   opStart.Prev := opNew;
   if toStart then
-    e.OutRec.Pts := opNew;
+    e.OutRec.OutPts[0] := opNew;
 end;
 //------------------------------------------------------------------------------
 
@@ -1458,14 +1457,14 @@ begin
   OutRec.Owner := nil;
   OutRec.Flags := [orOpen];
   OutRec.PolyPath := nil;
-  OutRec.StartE := nil;
-  OutRec.EndE := nil;
+  OutRec.Edges[0] := nil;
+  OutRec.Edges[1] := nil;
   e.OutRec := OutRec;
   new(op);
   op.Pt := pt;
   op.Next := op;
   op.Prev := op;
-  OutRec.Pts := op;
+  OutRec.OutPts[0] := op;
 end;
 //------------------------------------------------------------------------------
 
@@ -2322,12 +2321,12 @@ begin
     if Assigned(FOutRecList[i]) then
     begin
       outRec := FOutRecList[i];
-      if not assigned(outRec.Pts) then Continue;
+      if not assigned(outRec.OutPts[0]) then Continue;
 
-      op := outRec.Pts.Prev;
+      op := outRec.OutPts[0].Prev;
       cnt := PointCount(op);
       //fixup for duplicate start and end points ...
-      if PointsEqual(op.Pt, outRec.Pts.Pt) then dec(cnt);
+      if PointsEqual(op.Pt, outRec.OutPts[0].Pt) then dec(cnt);
 
       if (orOpen in outRec.Flags) then
       begin
@@ -2370,12 +2369,12 @@ begin
     if Assigned(FOutRecList[i]) then
     begin
       outRec := FOutRecList[i];
-      if not assigned(outRec.Pts) then Continue;
+      if not assigned(outRec.OutPts[0]) then Continue;
 
-      op := outRec.Pts.Prev;
+      op := outRec.OutPts[0].Prev;
       cnt := PointCount(op);
       //avoid duplicate start and end points ...
-      if PointsEqual(op.Pt, outRec.Pts.Pt) then dec(cnt);
+      if PointsEqual(op.Pt, outRec.OutPts[0].Pt) then dec(cnt);
 
       if (cnt < 3) then
       begin

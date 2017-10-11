@@ -51,7 +51,6 @@ type
     procedure BuildResult(out closedPaths: TPaths);
   protected
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64); override;
-    procedure SwapOutRecs(e1, e2: PActive); override;
     procedure AddOutPt(e: PActive; const pt: TPoint64); override;
     procedure AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64); override;
     procedure AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64); override;
@@ -62,20 +61,6 @@ type
   end;
 
 implementation
-
-type
-  POutRecTri = ^TOutRecTri;
-  TOutRecFill = (ofInternal, ofExternal);
-
-  //OutRecTri: contains a path in the clipping solution. Edges in the AEL will
-  //carry a pointer to an OutRec when they are part of the clipping solution.
-  //While both the Clipper OutRec and TriOutRec trace two bounds via two active
-  //edges, the TriOutRec used separate POutPts for each edge ...
-  TOutRecTri = record
-    Idx      : Integer;
-    Edges    : array [0..1] of PActive;
-    OutPts   : array [0..1] of POutPt;
-  end;
 
 const
   HORIZONTAL = NegInfinity;
@@ -115,7 +100,7 @@ end;
 
 function IsStartSide(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := (e = POutRecTri(e.OutRec).Edges[0]);
+  Result := (e = e.OutRec.Edges[0]);
 end;
 //------------------------------------------------------------------------------
 
@@ -169,8 +154,8 @@ end;
 function GetTopOutPt(e: PActive): POutPt; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if IsStartSide(e) then
-    Result := POutRecTri(e.OutRec).OutPts[0] else
-    Result := POutRecTri(e.OutRec).OutPts[1];
+    Result := e.OutRec.OutPts[0] else
+    Result := e.OutRec.OutPts[1];
 end;
 //------------------------------------------------------------------------------
 
@@ -289,23 +274,23 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure SetOutrecClockwise(outRec: POutRecTri; e1, e2: PActive);
+procedure SetOutrecClockwise(outRec: POutRec; e1, e2: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outRec.Edges[0] := e1;
   outRec.Edges[1] := e2;
-  e1.OutRec := POutRec(outRec);
-  e2.OutRec := POutRec(outRec);
+  e1.OutRec := outRec;
+  e2.OutRec := outRec;
 end;
 //------------------------------------------------------------------------------
 
-procedure SetOutrecCounterClockwise(outRec: POutRecTri; e1, e2: PActive);
+procedure SetOutrecCounterClockwise(outRec: POutRec; e1, e2: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outRec.Edges[0] := e2;
   outRec.Edges[1] := e1;
-  e1.OutRec := POutRec(outRec);
-  e2.OutRec := POutRec(outRec);
+  e1.OutRec := outRec;
+  e2.OutRec := outRec;
 end;
 
 //------------------------------------------------------------------------------
@@ -620,7 +605,7 @@ end;
 
 procedure TClipperTri.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64);
 var
-  outRec: POutRecTri;
+  outRec: POutRec;
   op, op1, op2: POutPt;
   eLeft, eRight: PActive;
   isOuter: Boolean;
@@ -812,7 +797,7 @@ var
   i: integer;
   eLeft, eRight: PActive;
   op, op2, tmp, tmp2: POutPt;
-  e1OutRec: POutRecTri;
+  e1OutRec: POutRec;
 begin
   AddOutPt(e1, pt);
   AddOutPt(e2, pt);
@@ -822,16 +807,16 @@ begin
   if IsStartSide(e1) then
   begin
     //remove e1.OutRec and fixup e2.OutRec ...
-    DisposeOutPts(POutRecTri(e1.OutRec).OutPts[0]);
-    DisposeOutPts(POutRecTri(e2.OutRec).OutPts[i]);
-    POutRecTri(e2.OutRec).Edges[i] := POutRecTri(e1.OutRec).Edges[1];
-    POutRecTri(e2.OutRec).OutPts[i] := POutRecTri(e1.OutRec).OutPts[1];
-    POutRecTri(e1.OutRec).Edges[1].OutRec := e2.OutRec;
+    DisposeOutPts(e1.OutRec.OutPts[0]);
+    DisposeOutPts(e2.OutRec.OutPts[i]);
+    e2.OutRec.Edges[i] := e1.OutRec.Edges[1];
+    e2.OutRec.OutPts[i] := e1.OutRec.OutPts[1];
+    e1.OutRec.Edges[1].OutRec := e2.OutRec;
 
-    POutRecTri(e1.OutRec).Edges[0] := nil;
-    POutRecTri(e1.OutRec).Edges[1] := nil;
-    POutRecTri(e1.OutRec).OutPts[0] := nil;
-    POutRecTri(e1.OutRec).OutPts[1] := nil;
+    e1.OutRec.Edges[0] := nil;
+    e1.OutRec.Edges[1] := nil;
+    e1.OutRec.OutPts[0] := nil;
+    e1.OutRec.OutPts[1] := nil;
     e1.OutRec := nil;
     e2.OutRec := nil;
     Exit;
@@ -839,21 +824,21 @@ begin
 
   //nb: it's an inner max to be here so e1 must be the end side
   //and e2 is USUALLY the start.
-  e1OutRec := POutRecTri(e1.OutRec);
+  e1OutRec := e1.OutRec;
   eLeft := GetLeftAdjacentHotEdge(e1);
   eRight := GetRightAdjacentHotEdge(e2); //#4
 
   if not assigned(eLeft) or not assigned(eRight) then
   begin
-    DisposeOutPts(POutRecTri(e1.OutRec).OutPts[1]);
-    DisposeOutPts(POutRecTri(e2.OutRec).OutPts[i]);
-    POutRecTri(e2.OutRec).Edges[i] := POutRecTri(e1.OutRec).Edges[0];
-    POutRecTri(e2.OutRec).OutPts[i] := POutRecTri(e1.OutRec).OutPts[0];
-    POutRecTri(e1.OutRec).Edges[0].OutRec := e2.OutRec;
-    POutRecTri(e1.OutRec).Edges[0] := nil;
-    POutRecTri(e1.OutRec).Edges[1] := nil;
-    POutRecTri(e1.OutRec).OutPts[0] := nil;
-    POutRecTri(e1.OutRec).OutPts[1] := nil;
+    DisposeOutPts(e1.OutRec.OutPts[1]);
+    DisposeOutPts(e2.OutRec.OutPts[i]);
+    e2.OutRec.Edges[i] := e1.OutRec.Edges[0];
+    e2.OutRec.OutPts[i] := e1.OutRec.OutPts[0];
+    e1.OutRec.Edges[0].OutRec := e2.OutRec;
+    e1.OutRec.Edges[0] := nil;
+    e1.OutRec.Edges[1] := nil;
+    e1.OutRec.OutPts[0] := nil;
+    e1.OutRec.OutPts[1] := nil;
     e1.OutRec := nil;
     e2.OutRec := nil;
     Exit;
@@ -890,7 +875,7 @@ begin
   while assigned(op2.Prev) do op2 := op2.Prev;
 
   //attach inner pending OutPt in reverse order to right outer edge ...
-  tmp := POutRecTri(e2.OutRec).OutPts[0];
+  tmp := e2.OutRec.OutPts[0];
   tmp.isMax := true;
   while assigned(tmp.Prev) do tmp := tmp.Prev;
   while assigned(tmp) do
@@ -910,9 +895,9 @@ begin
   end;
 
   //remove e1.OutRec and fixup e2.OutRec ...
-  POutRecTri(e2.OutRec).Edges[0] := e1OutRec.Edges[0];
-  POutRecTri(e2.OutRec).OutPts[0] := e1OutRec.OutPts[0];
-  POutRecTri(e1OutRec).Edges[0].OutRec := e2.OutRec;
+  e2.OutRec.Edges[0] := e1OutRec.Edges[0];
+  e2.OutRec.OutPts[0] := e1OutRec.OutPts[0];
+  e1OutRec.Edges[0].OutRec := e2.OutRec;
   e1OutRec.Edges[0] := nil;
   e1OutRec.OutPts[0] := nil;
   e1OutRec.Edges[1] := nil;
@@ -922,44 +907,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperTri.SwapOutRecs(e1, e2: PActive);
-var
-  or1, or2: POutRecTri;
-  e: PActive;
-begin
-  or1 := POutRecTri(e1.OutRec);
-  or2 := POutRecTri(e2.OutRec);
-  if (or1 = or2) then
-  begin
-    e := or1.Edges[0];
-    or1.Edges[0] := or1.Edges[1];
-    or1.Edges[1] := e;
-    Exit;
-  end;
-  if assigned(or1) then
-  begin
-    if e1 = or1.Edges[0] then
-      or1.Edges[0] := e2 else
-      or1.Edges[1] := e2;
-  end;
-  if assigned(or2) then
-  begin
-    if e2 = or2.Edges[0] then
-      or2.Edges[0] := e1 else
-      or2.Edges[1] := e1;
-  end;
-  e1.OutRec := POutRec(or2);
-  e2.OutRec := POutRec(or1);
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipperTri.AddOutPt(e: PActive; const pt: TPoint64);
 var
   op, opNew: POutPt;
 begin
   if IsStartSide(e) then
   begin
-    op := POutRecTri(e.OutRec).OutPts[0];
+    op := e.OutRec.OutPts[0];
     if PointsEqual(pt, op.Pt) then Exit;
     new(opNew);
     opNew.isMax := false;
@@ -967,11 +921,11 @@ begin
     opNew.Next := nil;
     opNew.Prev := op;
     op.Next := opNew;
-    POutRecTri(e.OutRec).OutPts[0] := opNew;
+    e.OutRec.OutPts[0] := opNew;
     TriangulateRight(e);
   end else
   begin
-    op := POutRecTri(e.OutRec).OutPts[1];
+    op := e.OutRec.OutPts[1];
     if PointsEqual(pt, op.Pt) then Exit;
     new(opNew);
     opNew.isMax := false;
@@ -979,7 +933,7 @@ begin
     opNew.Next := nil;
     opNew.Prev := op;
     op.Next := opNew;
-    POutRecTri(e.OutRec).OutPts[1] := opNew;
+    e.OutRec.OutPts[1] := opNew;
     TriangulateLeft(e);
   end;
 end;
