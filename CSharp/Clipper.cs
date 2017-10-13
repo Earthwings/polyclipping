@@ -401,18 +401,20 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void SwapActives(ref Active e1, ref Active e2)
+    private void SwapActive(ref Active e1, ref Active e2)
     {
       Active e = e1;
       e1 = e2; e2 = e;
     }
     //------------------------------------------------------------------------------
 
-    private bool E2InsertsBeforeE1(Active e1, Active e2)
+    private bool E2InsertsBeforeE1(Active e1, Active e2, bool PreferLeft)
     {
-      return (e2.Curr.X == e1.Curr.X) ?
-        GetTopDeltaX(e1, e2) < 0 :
-        e2.Curr.X < e1.Curr.X;
+      if (e2.Curr.X == e1.Curr.X)
+      {
+        return (PreferLeft ? GetTopDeltaX(e1, e2) <= 0 : GetTopDeltaX(e1, e2) < 0);
+      }
+      else return e2.Curr.X < e1.Curr.X;
     }
     //------------------------------------------------------------------------------
 
@@ -952,7 +954,7 @@ namespace ClipperLib
     }
     //------------------------------------------------------------------------------
 
-    private void InsertEdgeIntoAEL(Active edge, Active startEdge)
+    private void InsertEdgeIntoAEL(Active edge, Active startEdge, bool preferLeft)
     {
       if (Actives == null)
       {
@@ -960,7 +962,8 @@ namespace ClipperLib
         edge.NextInAEL = null;
         Actives = edge;
       }
-      else if (startEdge == null && E2InsertsBeforeE1(Actives, edge))
+      else if (startEdge == null &&
+        E2InsertsBeforeE1(Actives, edge, preferLeft))
       {
         edge.PrevInAEL = null;
         edge.NextInAEL = Actives;
@@ -971,9 +974,11 @@ namespace ClipperLib
       {
         if (startEdge == null) startEdge = Actives;
         while (startEdge.NextInAEL != null &&
-          !E2InsertsBeforeE1(startEdge.NextInAEL, edge))
-            startEdge = startEdge.NextInAEL;
-
+          !E2InsertsBeforeE1(startEdge.NextInAEL, edge, preferLeft))
+        {
+          startEdge = startEdge.NextInAEL;
+          preferLeft = false; //if there's one intervening then allow all
+        }
         edge.NextInAEL = startEdge.NextInAEL;
         if (startEdge.NextInAEL != null)
           startEdge.NextInAEL.PrevInAEL = edge;
@@ -1026,13 +1031,13 @@ namespace ClipperLib
         //Now if the LeftB isn't on the left of RightB then we need swap them.
         if (leftB != null && rightB != null)
         {
-          if (IsHorizontal(leftB)) { 
-            if (leftB.Top.X > leftB.Bot.X) SwapActives(ref leftB, ref rightB);
+          if ((IsHorizontal(leftB) && leftB.Top.X > leftB.Bot.X) ||
+            (!IsHorizontal(leftB) && leftB.Dx < rightB.Dx))
+          {
+            Active tmp = leftB;
+            leftB = rightB;
+            rightB = tmp;
           }
-          else if (IsHorizontal(rightB)) { 
-            if (rightB.Top.X < rightB.Bot.X) SwapActives(ref leftB, ref rightB);
-          }
-          else if (leftB.Dx < rightB.Dx) SwapActives(ref leftB, ref rightB);
         }
         else if (leftB == null)
         {
@@ -1041,7 +1046,7 @@ namespace ClipperLib
         }
 
         bool contributing;
-        InsertEdgeIntoAEL(leftB, null);      //insert left edge
+        InsertEdgeIntoAEL(leftB, null, false);      //insert left edge
         if (IsOpen(leftB))
         {
           SetWindingLeftEdgeOpen(leftB);
@@ -1057,7 +1062,7 @@ namespace ClipperLib
         {
           rightB.WindCnt = leftB.WindCnt;
           rightB.WindCnt2 = leftB.WindCnt2;
-          InsertEdgeIntoAEL(rightB, leftB); //insert right edge
+          InsertEdgeIntoAEL(rightB, leftB, false); //insert right edge
           if (contributing)
             AddLocalMinPoly(leftB, rightB, leftB.Bot);
 
@@ -1136,14 +1141,10 @@ namespace ClipperLib
       outRec.IDx = OutRecList.Count;
       OutRecList.Add(outRec);
       outRec.Owner = GetOwner(e1);
-
-      if (IsOpen(e1))
-        outRec.Flags = OutrecFlags.Outer;
-      else if (outRec.Owner == null || (outRec.Owner.Flags & OutrecFlags.Outer) == 0)
-        outRec.Flags = OutrecFlags.Outer;
-      else
-        outRec.Flags = 0;
-
+      if (outRec.Owner != null && (outRec.Owner.Flags & OutrecFlags.Outer) != 0)
+        outRec.Flags = 0; else
+        outRec.Flags |= OutrecFlags.Outer;
+      if (IsOpen(e1)) outRec.Flags |= OutrecFlags.Open;
       outRec.PolyPath = null;
 
       //now set orientation ...
@@ -1400,7 +1401,7 @@ namespace ClipperLib
       {
         if (IsOpen(e1) && IsOpen(e2)) return; //ignore lines that intersect
         //the following line just avoids duplicating a whole lot of code ...
-        if (IsOpen(e2)) SwapActives(ref e1, ref e2);
+        if (IsOpen(e2)) SwapActive(ref e1, ref e2);
         switch (ClipType)
         {
           case ClipType.Intersection:
