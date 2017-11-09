@@ -3,10 +3,12 @@ unit ClipperOffset;
 (*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (alpha)                                                    *
-* Date      :  27 September 2017                                               *
+* Version   :  10.0 (beta)                                                     *
+* Date      :  8 Noveber 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
+*                                                                              *
+* Purpose   :  Offset clipping solutions                                       *
 *                                                                              *
 * License:                                                                     *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
@@ -33,7 +35,7 @@ unit ClipperOffset;
 interface
 
 uses
-  SysUtils, Types, Classes, Math, Clipper, ClipperMisc;
+  SysUtils, Classes, Math, Clipper, ClipperMisc;
 
 type
 
@@ -84,11 +86,11 @@ type
 
 implementation
 
-//OVERFLOWCHECKS OFF is a necessary workaround for a Delphi compiler bug that very
-//occasionally reports overflow errors while still returning correct values
+//OVERFLOWCHECKS is OFF as a necessary workaround for a Delphi compiler bug that
+//very occasionally reports overflow errors while still returning correct values
 //eg var A, B: Int64; begin A := -$13456780; B := -$73456789; A := A * B; end;
 //see https://forums.embarcadero.com/message.jspa?messageID=871444
-//nb: this issue was resolved in Delphi 10.2
+//nb: this issue has now been resolved in Delphi 10.2
 {$OVERFLOWCHECKS OFF}
 
 type

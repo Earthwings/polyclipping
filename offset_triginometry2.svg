@@ -8,11 +8,11 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    version="1.1"
-   viewBox="0 0 1122.5197 793.70079"
+   viewBox="0 0 800.00003 599.99999"
    id="svg96"
    sodipodi:docname="offset_triginometry2.svg"
-   width="297mm"
-   height="210mm"
+   width="800"
+   height="600"
    inkscape:version="0.92.1 r15371">
   <metadata
      id="metadata102">
@@ -22,7 +22,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -41,7 +41,7 @@
      inkscape:window-height="1346"
      id="namedview98"
      showgrid="false"
-     units="mm"
+     units="px"
      inkscape:zoom="1.1196396"
      inkscape:cx="282.34796"
      inkscape:cy="426.87841"
@@ -52,7 +52,8 @@
   <flowRoot
      xml:space="preserve"
      id="flowRoot4556"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"><flowRegion
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     transform="translate(0,-193.70082)"><flowRegion
        id="flowRegion4558"><rect
          id="rect4560"
          width="371.23105"
@@ -64,7 +65,7 @@
      xml:space="preserve"
      id="flowRoot4794"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
-     transform="translate(14,72)"><flowRegion
+     transform="translate(14,-121.70082)"><flowRegion
        id="flowRegion4796"><rect
          id="rect4798"
          width="362.24243"
@@ -75,7 +76,8 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start" /></flowRoot>  <flowRoot
      xml:space="preserve"
      id="flowRoot5001"
-     style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:14.66666667px;line-height:1.25;letter-spacing:0px;word-spacing:0px;-inkscape-font-specification:sans-serif;font-stretch:normal;font-variant:normal"><flowRegion
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     transform="translate(0,-193.70082)"><flowRegion
        id="flowRegion5003"><rect
          id="rect5005"
          width="290.33325"
@@ -85,7 +87,8 @@
        id="flowPara5007" /></flowRoot>  <flowRoot
      xml:space="preserve"
      id="flowRoot5105"
-     style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:14.66666667px;line-height:1.25;letter-spacing:0px;word-spacing:0px;-inkscape-font-specification:sans-serif;font-stretch:normal;font-variant:normal"><flowRegion
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+     transform="translate(0,-193.70082)"><flowRegion
        id="flowRegion5107"><rect
          id="rect5109"
          width="564.46735"
@@ -93,7 +96,7 @@
          x="600.19312"
          y="14.878738" /></flowRegion><flowPara
        id="flowPara5111" /></flowRoot>  <g
-     transform="translate(-3.29161,-7.30034)"
+     transform="translate(-25.29161,-49.00116)"
      id="g5170">
     <g
        id="g5140">
@@ -244,179 +247,179 @@
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
-     x="539.76306"
-     y="77.847473"
+     x="455.76306"
+     y="36.146652"
      id="text4844"><tspan
        sodipodi:role="line"
        id="tspan4842"
-       x="539.76306"
-       y="77.847473"
+       x="455.76306"
+       y="36.146652"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start">Calculate the number of steps needed to </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="96.180809"
+       x="455.76306"
+       y="54.479984"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5341">construct a flattened path approximating </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="114.51414"
+       x="455.76306"
+       y="72.813316"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5343">a circle with radius (R) where the maximum </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="132.84747"
+       x="455.76306"
+       y="91.146652"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5345">imprecision of the path is a predefined </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="151.1808"
+       x="455.76306"
+       y="109.47999"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5347">constant L.</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="169.51414"
+       x="455.76306"
+       y="127.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5349" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="187.84747"
+       x="455.76306"
+       y="146.14665"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5351">ß = 2π / steps</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="206.18082"
+       x="455.76306"
+       y="164.48"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4559" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="224.51414"
+       x="455.76306"
+       y="182.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5353">q = midpoint(ab)</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="242.84747"
+       x="455.76306"
+       y="201.14665"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5355">length(cd) = R </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="261.18082"
+       x="455.76306"
+       y="219.48"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5357">length(qd) = L </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="279.51413"
+       x="455.76306"
+       y="237.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4557">length(cq) = R – L</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="297.84747"
+       x="455.76306"
+       y="256.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5359" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="316.18082"
+       x="455.76306"
+       y="274.47998"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5361">cos(ß/2) </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="334.51416"
+       x="455.76306"
+       y="292.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4561">  = length(cq) / R </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="352.84747"
+       x="455.76306"
+       y="311.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5363">  = (R – L) / R </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="371.18082"
+       x="455.76306"
+       y="329.47998"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4579">  = 1 - L / R</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="389.51416"
+       x="455.76306"
+       y="347.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4577">hence ß/2 = Arccos(1 – L / R)</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="407.84747"
+       x="455.76306"
+       y="366.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4565">and ß = 2 × Arccos(1 – L / R) </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="426.18082"
+       x="455.76306"
+       y="384.47998"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4567" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="444.51416"
+       x="455.76306"
+       y="402.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4575">Since ß also equals 2π / steps ...</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="462.84747"
+       x="455.76306"
+       y="421.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5385" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="481.18082"
+       x="455.76306"
+       y="439.47998"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5365">steps = π / Arccos(1 – L / R)</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="499.51416"
+       x="455.76306"
+       y="457.81332"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5367" /><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="517.84747"
+       x="455.76306"
+       y="476.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5369">Example: </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="536.18079"
+       x="455.76306"
+       y="494.47998"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan4555">Given a circle with radius = 100px </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="554.51416"
+       x="455.76306"
+       y="512.81335"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5371">and allowing a max. imprecision of 1/4px</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="572.84747"
+       x="455.76306"
+       y="531.14667"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5373">the number of steps (vertices) required to </tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="591.18085"
+       x="455.76306"
+       y="549.47998"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5375">draw a path approximating the circle is ...</tspan><tspan
        sodipodi:role="line"
-       x="539.76306"
-       y="609.51416"
+       x="455.76306"
+       y="567.81335"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start"
        id="tspan5379">steps = π / Arccos(1 – 0.25/100) =  44</tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
      x="47.336662"
-     y="55.963387"
+     y="-137.73744"
      id="text5383"><tspan
        sodipodi:role="line"
        id="tspan5381"
        x="47.336662"
-       y="68.939949"
+       y="-124.76087"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start" /></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
-     x="52.848732"
-     y="87.185143"
+     x="15.528164"
+     y="57.484322"
      id="text5405"><tspan
        sodipodi:role="line"
        id="tspan5403"
-       x="52.848732"
-       y="87.185143"
-       style="font-weight:bold;font-size:26.66666603px">Flattening an elliptical path ...</tspan></text>
+       x="15.528164"
+       y="57.484322"
+       style="font-weight:bold;font-size:26.66666603px">Flattening an elliptical path</tspan></text>
 </svg>
