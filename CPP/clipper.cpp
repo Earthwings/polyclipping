@@ -1,15 +1,11 @@
 /*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (alpha)                                                    *
-* Date      :  29 September 2017                                               *
+* Version   :  10.0 (beta)                                                     *
+* Date      :  8 Noveber 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
-* License:                                                                     *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
+* Purpose   :  Base clipping module                                            *
+* License   : http://www.boost.org/LICENSE_1_0.txt                             *
 *******************************************************************************/
 
 #include <stdlib.h>
@@ -23,10 +19,7 @@
 #include <functional>
 #include "clipper.h"
 
-
 namespace clipperlib {
-
-#define HORIZONTAL (-DBL_MAX)
 
   enum VertexFlags { vfNone = 0, vfOpenStart = 1, vfOpenEnd = 2, vfLocalMax = 4, vfLocMin = 8 };
   inline VertexFlags operator|(VertexFlags a, VertexFlags b) {
@@ -41,47 +34,10 @@ namespace clipperlib {
     VertexFlags  flags;
   };
 
-  struct OutPt {
-    Point64      pt;
-    OutPt       *next;
-    OutPt       *prev;
-  };
-
-  enum OutRecFlags { ofNone = 0, ofOpen = 1, ofOuter = 2 };
-  inline OutRecFlags operator|(OutRecFlags a, OutRecFlags b) {
-    return static_cast<OutRecFlags>(static_cast<int>(a) | static_cast<int>(b));
-  }
-  inline OutRecFlags& operator |=(OutRecFlags& a, OutRecFlags b) { return a = a | b; }
-
-  //OutRec: contains a path in the clipping solution. Edges in the AEL will
-  //carry a pointer to an OutRec when they are part of the clipping solution.
-  struct OutRec {
-    unsigned     idx;
-    OutRec      *owner;
-    OutPt       *pts;
-    Active      *start_edge;
-    Active      *end_edge;
-    OutRecFlags  flags;
+  struct LocalMinima {
+    Vertex      *vertex;
+    PathType     polytype;
     bool         is_open;
-    PolyPath    *polypath;
-  };
-
-  struct Active {
-    Point64      bot;
-    Point64      curr;         //current (updated at every new scanline)
-    Point64      top;
-    double       dx;
-    int          wind_dx;      //1 or -1 depending on winding direction
-    int          wind_cnt;
-    int          wind_cnt2;    //winding count of the opposite polytype
-    OutRec      *outrec;
-    Active      *next_in_ael;
-    Active      *prev_in_ael;
-    Active      *next_in_sel;
-    Active      *prev_in_sel;
-    Active      *merge_jump;
-    Vertex      *vertex_top;
-    LocalMinima *local_min;    //bottom of bound
   };
 
   struct Scanline {
@@ -93,12 +49,6 @@ namespace clipperlib {
     Point64      pt;
     Active      *edge1;
     Active      *edge2;
-  };
-
-  struct LocalMinima {
-    Vertex      *vertex;
-    PathType     polytype;
-    bool         is_open;
   };
 
   struct LocMinSorter {
@@ -188,7 +138,40 @@ namespace clipperlib {
   inline bool IsHotEdge(const Active &e) { return (e.outrec); }
   //------------------------------------------------------------------------------
 
-  inline bool IsStartSide(const Active &e) { return (&e == e.outrec->start_edge); }
+  inline bool IsOpen(const Active &e) { return (e.local_min->is_open); }
+  //------------------------------------------------------------------------------
+
+  inline bool IsStartSide(const Active &e) { return (&e == e.outrec->start_e); }
+  //------------------------------------------------------------------------------
+
+  inline void SwapSides(OutRec &outrec)
+  {
+    Active *e2 = outrec.start_e;
+    outrec.start_e = outrec.end_e;
+    outrec.end_e = e2;
+    outrec.pts = outrec.pts->next;
+  }
+  //------------------------------------------------------------------------------
+
+  bool FixOrientation(Active &e)
+  {
+    bool result = true;
+    Active* e2 = &e;
+    while (e2->prev_in_ael) {
+      e2 = e2->prev_in_ael;
+      if (e2->outrec && !IsOpen(*e2)) result = !result;
+    }
+    if (result != IsStartSide(e)) {
+      if (result) e.outrec->flag = orOuter;
+      else e.outrec->flag = orInner;
+      SwapSides(*e.outrec);
+      return true; //all fixed
+    }
+    else return false; //no fix needed
+  }
+  //------------------------------------------------------------------------------
+
+  inline bool IsHorizontal(const Active &e) { return (e.dx == CLIPPER_HORIZONTAL); }
   //------------------------------------------------------------------------------
 
   inline int64_t TopX(const Active &edge, const int64_t currentY)
@@ -199,28 +182,44 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  inline bool IsHorizontal(const Active &e) { return (e.dx == HORIZONTAL); }
-  //------------------------------------------------------------------------------
-
-  inline bool IsOpen(const Active &e) { return (e.local_min->is_open); }
-  //------------------------------------------------------------------------------
-
   inline int64_t GetTopDeltaX(const Active &e1, const Active &e2)
   {
     return (e1.top.y > e2.top.y) ?
       TopX(e2, e1.top.y) - e1.top.x :
       e2.top.x - TopX(e1, e2.top.y);
   }
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  inline void SwapActives(Active *&e1, Active *&e2) {
+    Active *e = e1; e1 = e2; e2 = e;
+  }
+  //----------------------------------------------------------------------
+
+  inline void MoveEdgeToFollowLeftInAEL(Active &e, Active &eLeft)
+  {
+    Active *aelPrev, *aelNext;
+    //extract first ...
+    aelPrev = e.prev_in_ael;
+    aelNext = e.next_in_ael;
+    aelPrev->next_in_ael = aelNext;
+    if (aelNext) aelNext->prev_in_ael = aelPrev;
+    //now reinsert ...
+    e.next_in_ael = eLeft.next_in_ael;
+    eLeft.next_in_ael->prev_in_ael = &e;
+    e.prev_in_ael = &eLeft;
+    eLeft.next_in_ael = &e;
+  }
+  //----------------------------------------------------------------------------
 
   inline bool E2InsertsBeforeE1(const Active &e1, const Active &e2, bool prefer_left)
   {
-    if (e2.curr.x == e1.curr.x) {
-      return prefer_left ?
-        GetTopDeltaX(e1, e2) <= 0 :
-        GetTopDeltaX(e1, e2) < 0;
+    if (prefer_left) {
+      return e2.curr.x == e1.curr.x ?
+        GetTopDeltaX(e1, e2) < 0 : e2.curr.x < e1.curr.x;
     }
-    else return e2.curr.x < e1.curr.x;
+    else
+      return e2.curr.x == e1.curr.x ?
+      GetTopDeltaX(e1, e2) <= 0 : e2.curr.x <= e1.curr.x;
   }
   //------------------------------------------------------------------------------
 
@@ -262,7 +261,7 @@ namespace clipperlib {
   inline void SetDx(Active &e)
   {
     int64_t dy = (e.top.y - e.bot.y);
-    e.dx = (dy == 0) ? HORIZONTAL : (double)(e.top.x - e.bot.x) / dy;
+    e.dx = (dy == 0) ? CLIPPER_HORIZONTAL : (double)(e.top.x - e.bot.x) / dy;
   }
   //---------------------------------------------------------------------------
 
@@ -275,6 +274,15 @@ namespace clipperlib {
   inline bool IsMaxima(const Active &e)
   {
     return (e.vertex_top->flags & vfLocalMax);
+  }
+  //------------------------------------------------------------------------------
+
+  void TerminateHotOpen(Active &e) {
+    if (e.outrec->start_e == &e)
+      e.outrec->start_e = NULL;
+    else
+      e.outrec->end_e = NULL;
+    e.outrec = NULL;
   }
   //------------------------------------------------------------------------------
 
@@ -306,65 +314,7 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  void ReversePolyPtLinks(OutPt &pp)
-  {
-    OutPt *pp1, *pp2;
-    pp1 = &pp;
-    do {
-      pp2 = pp1->next;
-      pp1->next = pp1->prev;
-      pp1->prev = pp2;
-      pp1 = pp2;
-    } while (pp1 != &pp);
-  }
-  //------------------------------------------------------------------------------
-
-  void DisposeOutPts(OutPt *&op)
-  {
-    if (!op) return;
-    op->prev->next = NULL;
-    while (op) {
-      OutPt *tmpPp = op;
-      op = op->next;
-      delete tmpPp;
-    }
-  }
-  //------------------------------------------------------------------------------
-
-  inline void EndOutrec(OutRec &outrec)
-  {
-    outrec.start_edge->outrec = NULL;
-    if (outrec.end_edge) outrec.end_edge->outrec = NULL;
-    outrec.start_edge = NULL;
-    outrec.end_edge = NULL;
-  }
-  //------------------------------------------------------------------------------
-
-  void SetOutrecClockwise(OutRec &outrec, Active &e1, Active &e2)
-  {
-    outrec.start_edge = &e1;
-    outrec.end_edge = &e2;
-    e1.outrec = &outrec;
-    e2.outrec = &outrec;
-  }
-  //------------------------------------------------------------------------------
-
-  void SetOutrecCounterClockwise(OutRec &outrec, Active &e1, Active &e2)
-  {
-    outrec.start_edge = &e2;
-    outrec.end_edge = &e1;
-    e1.outrec = &outrec;
-    e2.outrec = &outrec;
-  }
-  //------------------------------------------------------------------------------
-
-  bool IntersectListSort(IntersectNode *node1, IntersectNode *node2)
-  {
-    return (node2->pt.y < node1->pt.y);
-  }
-  //------------------------------------------------------------------------------
-
-  int PointCount(OutPt *op)
+  inline int PointCount(OutPt *op)
   {
     if (!op) return 0;
     OutPt *p = op;
@@ -377,23 +327,50 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
+  inline void DisposeOutPts(OutPt *&op)
+  {
+    if (!op) return;
+    op->prev->next = NULL;
+    while (op) {
+      OutPt *tmpPp = op;
+      op = op->next;
+      delete tmpPp;
+    }
+  }
+  //------------------------------------------------------------------------------
+
+  bool IntersectListSort(IntersectNode *node1, IntersectNode *node2)
+  {
+    return (node2->pt.y < node1->pt.y);
+  }
+  //------------------------------------------------------------------------------
+
+  inline void SetOrientation(OutRec &outrec, Active &e1, Active &e2)
+  {
+    outrec.start_e = &e1;
+    outrec.end_e = &e2;
+    e1.outrec = &outrec;
+    e2.outrec = &outrec;
+  }
+  //------------------------------------------------------------------------------
+
   void SwapOutrecs(Active &e1, Active &e2)
   {
     OutRec *or1 = e1.outrec;
     OutRec *or2 = e2.outrec;
     if (or1 == or2) {
-      Active *e = or1->start_edge;
-      or1->start_edge = or1->end_edge;
-      or1->end_edge = e;
+      Active *e = or1->start_e;
+      or1->start_e = or1->end_e;
+      or1->end_e = e;
       return;
     }
     if (or1) {
-      if (&e1 == or1->start_edge) or1->start_edge = &e2;
-      else or1->end_edge = &e2;
+      if (&e1 == or1->start_e) or1->start_e = &e2;
+      else or1->end_e = &e2;
     }
     if (or2) {
-      if (&e2 == or2->start_edge) or2->start_edge = &e1;
-      else or2->end_edge = &e1;
+      if (&e2 == or2->start_e) or2->start_e = &e1;
+      else or2->end_e = &e1;
     }
     e1.outrec = or2;
     e2.outrec = or1;
@@ -411,7 +388,6 @@ namespace clipperlib {
 
   Clipper::Clipper()
   {
-    curr_loc_min_ = minima_list_.begin();
     Clear();
   }
   //--------------------------- ---------------------------------------------------
@@ -605,7 +581,7 @@ namespace clipperlib {
   void Clipper::AddPath(const Path &path, PathType polytype, bool is_open) 
   {
     if (is_open) {
-      if (polytype == kClip)
+      if (polytype == ptClip)
         throw ClipperException("AddPath: Only subject paths may be open.");
       has_open_paths_ = true;
     }
@@ -623,52 +599,52 @@ namespace clipperlib {
 
   bool Clipper::IsContributingClosed(const Active& e) const
   {
-    switch (filltype_) {
-      case kNonZero:
+    switch (fillrule_) {
+      case frNonZero:
         if (Abs(e.wind_cnt) != 1) return false;
         break;
-      case kPositive:
+      case frPositive:
         if (e.wind_cnt != 1) return false;
         break;
-      case kNegative:
+      case frNegative:
         if (e.wind_cnt != -1) return false;
         break;
     }
 
     switch (cliptype_) {
-    case kIntersection:
-      switch (filltype_) {
-        case kEvenOdd:
-        case kNonZero: return (e.wind_cnt2 != 0);
-        case kPositive: return (e.wind_cnt2 > 0);
-        case kNegative: return (e.wind_cnt2 < 0);
+    case ctIntersection:
+      switch (fillrule_) {
+        case frEvenOdd:
+        case frNonZero: return (e.wind_cnt2 != 0);
+        case frPositive: return (e.wind_cnt2 > 0);
+        case frNegative: return (e.wind_cnt2 < 0);
       }
       break;
-    case kUnion:
-      switch (filltype_) {
-        case kEvenOdd:
-        case kNonZero: return (e.wind_cnt2 == 0);
-        case kPositive: return (e.wind_cnt2 <= 0);
-        case kNegative: return (e.wind_cnt2 >= 0);
+    case ctUnion:
+      switch (fillrule_) {
+        case frEvenOdd:
+        case frNonZero: return (e.wind_cnt2 == 0);
+        case frPositive: return (e.wind_cnt2 <= 0);
+        case frNegative: return (e.wind_cnt2 >= 0);
       }
       break;
-    case kDifference:
-      if (GetPolyType(e) == kSubject)
-        switch (filltype_) {
-          case kEvenOdd:
-          case kNonZero: return (e.wind_cnt2 == 0);
-          case kPositive: return (e.wind_cnt2 <= 0);
-          case kNegative: return (e.wind_cnt2 >= 0);
+    case ctDifference:
+      if (GetPolyType(e) == ptSubject)
+        switch (fillrule_) {
+          case frEvenOdd:
+          case frNonZero: return (e.wind_cnt2 == 0);
+          case frPositive: return (e.wind_cnt2 <= 0);
+          case frNegative: return (e.wind_cnt2 >= 0);
         }
       else
-        switch (filltype_) {
-          case kEvenOdd:
-          case kNonZero: return (e.wind_cnt2 != 0);
-          case kPositive: return (e.wind_cnt2 > 0);
-          case kNegative: return (e.wind_cnt2 < 0);
+        switch (fillrule_) {
+          case frEvenOdd:
+          case frNonZero: return (e.wind_cnt2 != 0);
+          case frPositive: return (e.wind_cnt2 > 0);
+          case frNegative: return (e.wind_cnt2 < 0);
         }; 
       break;
-    case kXor: return true; //XOr is always contributing unless open
+    case ctXor: return true; //XOr is always contributing unless open
     }
     return false; //we should never get here 
   }
@@ -677,10 +653,10 @@ namespace clipperlib {
   inline bool Clipper::IsContributingOpen(const Active& e) const
   {
     switch (cliptype_) {
-      case kIntersection: return (e.wind_cnt2 != 0);
-      case kUnion: return (e.wind_cnt == 0 && e.wind_cnt2 == 0);
-      case kDifference: return (e.wind_cnt2 == 0);
-      case kXor: return (e.wind_cnt != 0) != (e.wind_cnt2 != 0);
+      case ctIntersection: return (e.wind_cnt2 != 0);
+      case ctUnion: return (e.wind_cnt == 0 && e.wind_cnt2 == 0);
+      case ctDifference: return (e.wind_cnt2 == 0);
+      case ctXor: return (e.wind_cnt != 0) != (e.wind_cnt2 != 0);
     }
     return false; //stops compiler error
   }
@@ -702,7 +678,7 @@ namespace clipperlib {
       e.wind_cnt = e.wind_dx;
       e2 = actives_;
     }
-    else if (filltype_ == kEvenOdd) {
+    else if (fillrule_ == frEvenOdd) {
       e.wind_cnt = e.wind_dx;
       e.wind_cnt2 = e2->wind_cnt2;
       e2 = e2->next_in_ael;
@@ -741,7 +717,7 @@ namespace clipperlib {
     }
 
     //update wind_cnt2 ...
-    if (filltype_ == kEvenOdd)
+    if (fillrule_ == frEvenOdd)
       while (e2 != &e) {
         if (GetPolyType(*e2) != pt && !IsOpen(*e2))
           e.wind_cnt2 = (e.wind_cnt2 == 0 ? 1 : 0);
@@ -759,10 +735,10 @@ namespace clipperlib {
   void Clipper::SetWindingLeftEdgeOpen(Active &e)
   {
     Active *e2 = actives_;
-    if (filltype_ == kEvenOdd) {
+    if (fillrule_ == frEvenOdd) {
       int cnt1 = 0, cnt2 = 0;
       while (e2 != &e) {
-        if (GetPolyType(*e2) == kClip) cnt2++;
+        if (GetPolyType(*e2) == ptClip) cnt2++;
         else if (!IsOpen(*e2)) cnt1++;
         e2 = e2->next_in_ael;
       }
@@ -771,7 +747,7 @@ namespace clipperlib {
     }
     else {
       while (e2 != &e) {
-        if (GetPolyType(*e2) == kClip) e.wind_cnt2 += e2->wind_dx;
+        if (GetPolyType(*e2) == ptClip) e.wind_cnt2 += e2->wind_dx;
         else if (!IsOpen(*e2)) e.wind_cnt += e2->wind_dx;
         e2 = e2->next_in_ael;
       }
@@ -779,32 +755,36 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  void Clipper::InsertEdgeIntoAEL(Active &edge, Active *edge_start, bool prefer_left)
+  void Clipper::InsertEdgeIntoAEL(Active &e1, Active *e2)
   {
     if (!actives_) {
-      edge.prev_in_ael = NULL;
-      edge.next_in_ael = NULL;
-      actives_ = &edge;
+      e1.prev_in_ael = NULL;
+      e1.next_in_ael = NULL;
+      actives_ = &e1;
+      return;
     }
-    else if (!edge_start && E2InsertsBeforeE1(*actives_, edge, prefer_left)) {
-      edge.prev_in_ael = NULL;
-      edge.next_in_ael = actives_;
-      actives_->prev_in_ael = &edge;
-      actives_ = &edge;
+    if (!e2) {
+      if (E2InsertsBeforeE1(*actives_, e1, false)) {
+        e1.prev_in_ael = NULL;
+        e1.next_in_ael = actives_;
+        actives_->prev_in_ael = &e1;
+        actives_ = &e1;
+        return;
+      }
+      e2 = actives_;
+      while (e2->next_in_ael &&
+        E2InsertsBeforeE1(e1, *e2->next_in_ael, false))
+        e2 = e2->next_in_ael;
     }
     else {
-      if (!edge_start) edge_start = actives_;
-      while (edge_start->next_in_ael &&
-        !E2InsertsBeforeE1(*edge_start->next_in_ael, edge, prefer_left)) {
-        edge_start = edge_start->next_in_ael;
-        prefer_left = false; //if there's one intervening then allow all
-      }
-      edge.next_in_ael = edge_start->next_in_ael;
-      if (edge_start->next_in_ael)
-        edge_start->next_in_ael->prev_in_ael = &edge;
-      edge.prev_in_ael = edge_start;
-      edge_start->next_in_ael = &edge;
+      while (e2->next_in_ael &&
+        E2InsertsBeforeE1(e1, *e2->next_in_ael, true))
+        e2 = e2->next_in_ael;
     }
+    e1.next_in_ael = e2->next_in_ael;
+    if (e2->next_in_ael) e2->next_in_ael->prev_in_ael = &e1;
+    e1.prev_in_ael = e2;
+    e2->next_in_ael = &e1;
   }
   //----------------------------------------------------------------------
 
@@ -845,13 +825,13 @@ namespace clipperlib {
       //Currently LeftB is just the descending bound and RightB is the ascending.
       //Now if the LeftB isn't on the left of RightB then we need swap them.
       if (left_bound && right_bound) {
-        if ((IsHorizontal(*left_bound) && (left_bound->top.x > left_bound->bot.x)) ||
-          (!IsHorizontal(*left_bound) && (left_bound->dx < right_bound->dx)))
-        {
-          Active *tmp = left_bound;
-          left_bound = right_bound;
-          right_bound = tmp;
+        if (IsHorizontal(*left_bound)) {
+          if (left_bound->top.x > left_bound->bot.x) SwapActives(left_bound, right_bound);
         }
+        else if (IsHorizontal(*right_bound)) {
+          if (right_bound->top.x < right_bound->bot.x) SwapActives(left_bound, right_bound);
+        }
+        else if (left_bound->dx < right_bound->dx) SwapActives(left_bound, right_bound);
       }
       else if (!left_bound) {
         left_bound = right_bound;
@@ -859,7 +839,7 @@ namespace clipperlib {
       }
 
       bool contributing;
-      InsertEdgeIntoAEL(*left_bound, NULL, false);      //insert left edge
+      InsertEdgeIntoAEL(*left_bound, NULL);              //insert left edge
       if (IsOpen(*left_bound)) {
         SetWindingLeftEdgeOpen(*left_bound);
         contributing = IsContributingOpen(*left_bound);
@@ -872,7 +852,7 @@ namespace clipperlib {
       if (right_bound != NULL) {
         right_bound->wind_cnt = left_bound->wind_cnt;
         right_bound->wind_cnt2 = left_bound->wind_cnt2;
-        InsertEdgeIntoAEL(*right_bound, left_bound, false); //insert right edge
+        InsertEdgeIntoAEL(*right_bound, left_bound);     //insert right edge
         if (contributing)
           AddLocalMinPoly(*left_bound, *right_bound, left_bound->bot);
         if (IsHorizontal(*right_bound)) PushHorz(*right_bound);
@@ -886,15 +866,17 @@ namespace clipperlib {
 
       if (right_bound && left_bound->next_in_ael != right_bound) {
         //intersect edges that are between left and right bounds ...
-        Active *e = left_bound->next_in_ael;
-        while (e != right_bound) {
+        Active *e = right_bound->next_in_ael;
+        MoveEdgeToFollowLeftInAEL(*right_bound, *left_bound);
+        while (right_bound->next_in_ael != e) {
           //nb: For calculating winding counts etc, IntersectEdges() assumes
           //that rightB will be to the right of e ABOVE the intersection ...
-          IntersectEdges(*right_bound, *e, right_bound->bot);
-          e = e->next_in_ael;
-        }
-      }
-    }
+          IntersectEdges(*right_bound, *right_bound->next_in_ael, right_bound->bot);
+          SwapPositionsInAEL(*right_bound, *right_bound->next_in_ael);
+        } //while
+      } //if
+
+    } //while (PopLocalMinima())
   }
   //------------------------------------------------------------------------------
 
@@ -921,49 +903,50 @@ namespace clipperlib {
       while (e && (!IsHotEdge(*e) || IsOpen(*e)))
         e = e->next_in_ael;
       if (!e) return NULL;
-      else if (((e->outrec->flags & ofOuter) != 0) == (e->outrec->start_edge == e))
-        return e->outrec->owner; else return e->outrec;
+      return ((e->outrec->flag == orOuter) == (e->outrec->start_e == e)) ?
+        e->outrec->owner : e->outrec;
     }
     else {
       e = e->prev_in_ael;
-      while (e && (!IsHotEdge(*e) || IsOpen(*e))) e = e->prev_in_ael;
+      while (e && (!IsHotEdge(*e) || IsOpen(*e))) 
+        e = e->prev_in_ael;
       if (!e) return NULL;
-      else if (((e->outrec->flags & ofOuter) != 0) == (e->outrec->end_edge == e))
-        return e->outrec->owner; else return e->outrec;
+      return ((e->outrec->flag == orOuter) == (e->outrec->end_e == e)) ?
+        e->outrec->owner : e->outrec;
     }
   }
   //------------------------------------------------------------------------------
 
   void Clipper::AddLocalMinPoly(Active &e1, Active &e2, const Point64 pt)
   {
-    OutRec *outrec = new OutRec();
+    OutRec *outrec = CreateOutRec();
     outrec->idx = (unsigned)outrec_list_.size();
     outrec_list_.push_back(outrec);
     outrec->owner = GetOwner(&e1);
-    if (outrec->owner && (outrec->owner->flags & ofOuter) != 0)
-      outrec->flags = ofNone; else
-      outrec->flags = outrec->flags | ofOuter;
-    if (IsOpen(e1)) outrec->flags |= ofOpen;
     outrec->polypath = NULL;
 
+    if (IsOpen(e1))
+      outrec->flag = orOpen;
+    else if (!outrec->owner || outrec->owner->flag == orInner)
+      outrec->flag = orOuter; 
+    else
+      outrec->flag = orInner;
+
     //now set orientation ...
+    bool swap_sides_needed = false;
     if (IsHorizontal(e1)) {
-      if (IsHorizontal(e2)) {
-        if (((outrec->flags & ofOuter) != 0) == (e1.bot.x > e2.bot.x))
-          SetOutrecClockwise(*outrec, e1, e2); else SetOutrecCounterClockwise(*outrec, e1, e2);
-      }
-      else if (((outrec->flags & ofOuter) != 0) == (e1.top.x < e1.bot.x))
-        SetOutrecClockwise(*outrec, e1, e2); else SetOutrecCounterClockwise(*outrec, e1, e2);
+      if (e1.top.x > e1.bot.x) swap_sides_needed = true;
     }
     else if (IsHorizontal(e2)) {
-      if (((outrec->flags & ofOuter) != 0) == (e2.top.x > e2.bot.x))
-        SetOutrecClockwise(*outrec, e1, e2); else SetOutrecCounterClockwise(*outrec, e1, e2);
+      if (e2.top.x < e2.bot.x) swap_sides_needed = true;
     }
-    else if (((outrec->flags & ofOuter) != 0) == (e1.dx >= e2.dx))
-      SetOutrecClockwise(*outrec, e1, e2); else
-      SetOutrecCounterClockwise(*outrec, e1, e2);
+    else if (e1.dx < e2.dx) swap_sides_needed = true;
+    if ((outrec->flag == orOuter) != swap_sides_needed)
+      SetOrientation(*outrec, e1, e2); 
+    else 
+      SetOrientation(*outrec, e2, e1);
 
-    OutPt *op = new OutPt();
+    OutPt *op = CreateOutPt();
     op->pt = pt;
     op->next = op;
     op->prev = op;
@@ -976,7 +959,12 @@ namespace clipperlib {
     if (!IsHotEdge(e2))
       throw new ClipperException("Error in AddLocalMaxPoly().");
     AddOutPt(e1, pt);
-    if (e1.outrec == e2.outrec) EndOutrec(*e1.outrec);
+    if (e1.outrec == e2.outrec) {
+      e1.outrec->start_e = NULL;
+      e1.outrec->end_e = NULL;
+      e1.outrec = NULL;
+      e2.outrec = NULL;
+    }
     //and to preserve the winding orientation of outrec ...
     else if (e1.outrec->idx < e2.outrec->idx)
       JoinOutrecPaths(e1, e2); else
@@ -986,64 +974,44 @@ namespace clipperlib {
 
   void Clipper::JoinOutrecPaths(Active &e1, Active &e2)
   {
-    OutPt *p1_st, *p1_end, *p2_st, *p2_end;
+
+    if (IsStartSide(e1) == IsStartSide(e2)) {
+      //one or other edge orientation is wrong...
+      if (IsOpen(e1)) SwapSides(*e2.outrec);
+      else if (!FixOrientation(e1) && !FixOrientation(e2)) 
+        throw new ClipperException("Error in JoinOutrecPaths()");
+      if (e1.outrec->owner == e2.outrec) e1.outrec->owner = e2.outrec->owner;
+    }
 
     //join E2 outrec path onto E1 outrec path and then delete E2 outrec path
     //pointers. (nb: Only very rarely do the joining ends share the same coords.)
-    p1_st = e1.outrec->pts;
-    p2_st = e2.outrec->pts;
-    p1_end = p1_st->prev;
-    p2_end = p2_st->prev;
+    OutPt *p1_st = e1.outrec->pts;
+    OutPt *p2_st = e2.outrec->pts;
+    OutPt *p1_end = p1_st->next;
+    OutPt *p2_end = p2_st->next;
     if (IsStartSide(e1)) {
-      if (IsStartSide(e2)) {
-        ReversePolyPtLinks(*p2_st);
-        p2_st->next = p1_st;
-        p1_st->prev = p2_st;
-        p1_end->next = p2_end; //p2 now reversed
-        p2_end->prev = p1_end;
-        e1.outrec->pts = p2_end;
-        e1.outrec->start_edge = e2.outrec->end_edge;
-      }
-      else {
-        p2_end->next = p1_st;
-        p1_st->prev = p2_end;
-        p2_st->prev = p1_end;
-        p1_end->next = p2_st;
-        e1.outrec->pts = p2_st;
-        e1.outrec->start_edge = e2.outrec->start_edge;
-      }
-      if (e1.outrec->start_edge) //ie closed path
-        e1.outrec->start_edge->outrec = e1.outrec;
+      p2_end->prev = p1_st;
+      p1_st->next = p2_end;
+      p2_st->next = p1_end;
+      p1_end->prev = p2_st;
+      e1.outrec->pts = p2_st;
+      e1.outrec->start_e = e2.outrec->start_e;
+      if (e1.outrec->start_e) //ie closed path
+        e1.outrec->start_e->outrec = e1.outrec;
     }
     else {
-      if (IsStartSide(e2)) {
-        //(see JoinOutrec3.png)
-        p1_end->next = p2_st;
-        p2_st->prev = p1_end;
-        p1_st->prev = p2_end;
-        p2_end->next = p1_st;
-        e1.outrec->end_edge = e2.outrec->end_edge;
-      }
-      else {
-        //(see JoinOutrec4.png)
-        ReversePolyPtLinks(*p2_st);
-        p1_end->next = p2_end; //p2 now reversed
-        p2_end->prev = p1_end;
-        p2_st->next = p1_st;
-        p1_st->prev = p2_st;
-        e1.outrec->end_edge = e2.outrec->start_edge;
-      }
-
-      if (e1.outrec->end_edge) //ie closed path
-        e1.outrec->end_edge->outrec = e1.outrec;
+      p1_end->prev = p2_st;
+      p2_st->next = p1_end;
+      p1_st->next = p2_end;
+      p2_end->prev = p1_st;
+      e1.outrec->end_e = e2.outrec->end_e;
+      if (e1.outrec->end_e) //ie closed path
+        e1.outrec->end_e->outrec = e1.outrec;
     }
 
-    if (e1.outrec->owner == e2.outrec)
-      throw new ClipperException("Clipping error in JoinOuterPaths.");
-
     //after joining, the E2.OutRec contains not vertices ...
-    e2.outrec->start_edge = NULL;
-    e2.outrec->end_edge = NULL;
+    e2.outrec->start_e = NULL;
+    e2.outrec->end_e = NULL;
     e2.outrec->pts = NULL;
     e2.outrec->owner = e1.outrec; //this may be redundant
 
@@ -1055,42 +1023,63 @@ namespace clipperlib {
 
   inline void Clipper::TerminateHotOpen(Active &e)
   {
-    if (e.outrec->start_edge == &e) e.outrec->start_edge = NULL; 
-    else e.outrec->end_edge = NULL;
+    if (e.outrec->start_e == &e) e.outrec->start_e = NULL;
+    else e.outrec->end_e = NULL;
     e.outrec = NULL;
   }
   //------------------------------------------------------------------------------
 
-  void Clipper::AddOutPt(Active &e, const Point64 pt)
+  OutPt* Clipper::CreateOutPt()
   {
-    //Outrec.Pts: a circular double-linked-list of POutPt.
+    //this is a virtual method as descendant classes may need
+    //to produce descendant classes of OutPt ...
+    return new OutPt();
+  }
+  //------------------------------------------------------------------------------
+
+  OutRec* Clipper::CreateOutRec()
+  {
+    //this is a virtual method as descendant classes may need
+    //to produce descendant classes of OutRec ...
+    return new OutRec();
+  }
+  //------------------------------------------------------------------------------
+
+  OutPt* Clipper::AddOutPt(Active &e, const Point64 pt)
+  {
+    //Outrec.pts[0]: a circular double-linked-list of POutPt.
     bool to_start = IsStartSide(e);
     OutPt *start_op = e.outrec->pts;
-    OutPt *end_op = start_op->prev;
+    OutPt *end_op = start_op->next;
     if (to_start) {
-      if (pt == start_op->pt) return;
+      if (pt == start_op->pt) return start_op;
     }
-    else if (pt == end_op->pt) return;
+    else if (pt == end_op->pt) return end_op;
 
-    OutPt *new_op = new OutPt();
+    OutPt *new_op = CreateOutPt();
     new_op->pt = pt;
-    new_op->next = start_op;
-    new_op->prev = end_op;
-    end_op->next = new_op;
-    start_op->prev = new_op;
+    end_op->prev = new_op;
+    new_op->prev = start_op;
+    new_op->next = end_op;
+    start_op->next = new_op;
     if (to_start) e.outrec->pts = new_op;
+    return new_op;
   }
   //------------------------------------------------------------------------------
 
   void Clipper::StartOpenPath(Active &e, const Point64 pt)
   {
-    OutRec *outrec = new OutRec();
+    OutRec *outrec = CreateOutRec();
     outrec->idx = (unsigned)outrec_list_.size();
     outrec_list_.push_back(outrec);
-    outrec->flags |= ofOpen;
+    outrec->flag = orOpen;
+    outrec->owner = NULL;
+    outrec->polypath = NULL;
+    outrec->end_e = NULL;
+    outrec->start_e = NULL;
     e.outrec = outrec;
 
-    OutPt *op = new OutPt();
+    OutPt *op = CreateOutPt();
     op->pt = pt;
     op->next = op;
     op->prev = op;
@@ -1118,22 +1107,19 @@ namespace clipperlib {
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2))) {
       if (IsOpen(e1) && IsOpen(e2)) return; //ignore lines that intersect
       Active *edge_o, *edge_c;
-      if (IsOpen(e1)) {
-        edge_o = &e1; edge_c = &e2;
-      }
-      else {
-        edge_o = &e2; edge_c = &e1;
-      }
+      if (IsOpen(e1)) { edge_o = &e1; edge_c = &e2; }
+      else { edge_o = &e2; edge_c = &e1; }
+
       switch (cliptype_) {
-        case kIntersection:
-        case kDifference:
+        case ctIntersection:
+        case ctDifference:
           if (IsSamePolyType(*edge_o, *edge_c) || (Abs(edge_c->wind_cnt) != 1)) return;
           break;
-        case kUnion:
+        case ctUnion:
           if (IsHotEdge(*edge_o) != ((Abs(edge_c->wind_cnt) != 1) ||
             (IsHotEdge(*edge_o) != (edge_c->wind_cnt != 0)))) return; //just works!
           break;
-        case kXor:
+        case ctXor:
           if (Abs(edge_c->wind_cnt) != 1) return;
           break;
       }
@@ -1150,7 +1136,7 @@ namespace clipperlib {
     //assumes that e1 will be to the right of e2 ABOVE the intersection
     int old_e1_windcnt, old_e2_windcnt;
     if (e1.local_min->polytype == e2.local_min->polytype) {
-      if (filltype_ == kEvenOdd) {
+      if (fillrule_ == frEvenOdd) {
         old_e1_windcnt = e1.wind_cnt;
         e1.wind_cnt = e2.wind_cnt;
         e2.wind_cnt = old_e1_windcnt;
@@ -1163,18 +1149,18 @@ namespace clipperlib {
       }
     }
     else {
-      if (filltype_ != kEvenOdd) e1.wind_cnt2 += e2.wind_dx;
+      if (fillrule_ != frEvenOdd) e1.wind_cnt2 += e2.wind_dx;
       else e1.wind_cnt2 = (e1.wind_cnt2 == 0 ? 1 : 0);
-      if (filltype_ != kEvenOdd) e2.wind_cnt2 -= e1.wind_dx;
+      if (fillrule_ != frEvenOdd) e2.wind_cnt2 -= e1.wind_dx;
       else e2.wind_cnt2 = (e2.wind_cnt2 == 0 ? 1 : 0);
     }
 
-    switch (filltype_) {
-      case kPositive:
+    switch (fillrule_) {
+      case frPositive:
         old_e1_windcnt = e1.wind_cnt;
         old_e2_windcnt = e2.wind_cnt;
         break;
-      case kNegative:
+      case frNegative:
         old_e1_windcnt = -e1.wind_cnt;
         old_e2_windcnt = -e2.wind_cnt;
         break;
@@ -1186,11 +1172,11 @@ namespace clipperlib {
 
     if (IsHotEdge(e1) && IsHotEdge(e2)) {
       if ((old_e1_windcnt != 0 && old_e1_windcnt != 1) || (old_e2_windcnt != 0 && old_e2_windcnt != 1) ||
-        (e1.local_min->polytype != e2.local_min->polytype && cliptype_ != kXor))
+        (e1.local_min->polytype != e2.local_min->polytype && cliptype_ != ctXor))
       {
         AddLocalMaxPoly(e1, e2, pt);
       }
-      else if (e1.outrec == e2.outrec) { //optional
+      else if (IsStartSide(e1)) {
         AddLocalMaxPoly(e1, e2, pt);
         AddLocalMinPoly(e1, e2, pt);
       }
@@ -1217,12 +1203,12 @@ namespace clipperlib {
     {
       //neither edge is currently contributing ...
       int64_t e1Wc2, e2Wc2;
-      switch (filltype_) {
-        case kPositive:
+      switch (fillrule_) {
+        case frPositive:
           e1Wc2 = e1.wind_cnt2;
           e2Wc2 = e2.wind_cnt2;
           break;
-        case kNegative:
+        case frNegative:
           e1Wc2 = -e1.wind_cnt2;
           e2Wc2 = -e2.wind_cnt2;
           break;
@@ -1232,25 +1218,25 @@ namespace clipperlib {
           break;
       }
 
-      if (e1.local_min->polytype != e2.local_min->polytype) {
+      if (!IsSamePolyType(e1, e2)) {
         AddLocalMinPoly(e1, e2, pt);
       }
       else if (old_e1_windcnt == 1 && old_e2_windcnt == 1)
         switch (cliptype_) {
-          case kIntersection:
+          case ctIntersection:
             if (e1Wc2 > 0 && e2Wc2 > 0)
               AddLocalMinPoly(e1, e2, pt);
             break;
-          case kUnion:
+          case ctUnion:
             if (e1Wc2 <= 0 && e2Wc2 <= 0)
               AddLocalMinPoly(e1, e2, pt);
             break;
-          case kDifference:
-            if (((GetPolyType(e1) == kClip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
-              ((GetPolyType(e1) == kSubject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
+          case ctDifference:
+            if (((GetPolyType(e1) == ptClip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
+              ((GetPolyType(e1) == ptSubject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
               AddLocalMinPoly(e1, e2, pt);
             break;
-          case kXor:
+          case ctXor:
             AddLocalMinPoly(e1, e2, pt);
             break;
         }
@@ -1297,25 +1283,21 @@ namespace clipperlib {
 
   bool Clipper::ExecuteInternal(ClipType ct, FillRule ft)
   {
-    if (locked_) return false;
-    locked_ = true;
-    filltype_ = ft;
+    if (ct == ctNone) return true;
+    fillrule_ = ft;
     cliptype_ = ct;
     Reset();
-    int64_t y;
-    Active *e;
-    if (!PopScanline(y)) { locked_ = false; return false; }
 
+    int64_t y;
+    if (!PopScanline(y)) { return false; }
     for (;;) {
       InsertLocalMinimaIntoAEL(y);
+      Active *e;
       while (PopHorz(e)) ProcessHorizontal(*e);
       if (!PopScanline(y)) break;   //Y is now at the top of the scanbeam
       ProcessIntersections(y);
-      sel_ = NULL;                       //SEL reused to flag horizontals
       DoTopOfScanbeam(y);
     } 
-      
-    locked_ = false;
     return true;
   }
   //------------------------------------------------------------------------------
@@ -1414,12 +1396,18 @@ namespace clipperlib {
       while (first) {
         if (mul == 1) {
           second = first->next_in_sel;
-          if (!second) break;
+          if (!second) {
+            first->merge_jump = NULL;
+            break;
+          }
           first->merge_jump = second->next_in_sel;
         }
         else {
           second = first->merge_jump;
-          if (!second) break;
+          if (!second) {
+            first->merge_jump = NULL;
+            break;
+          }
           first->merge_jump = second->merge_jump;
         }
 
@@ -1479,7 +1467,7 @@ namespace clipperlib {
 
   void Clipper::FixupIntersectionOrder()
   {
-    unsigned cnt = (unsigned)intersect_list_.size();
+    size_t cnt = intersect_list_.size();
     if (cnt < 2) return;
     //It's important that edge intersections are processed from the bottom up,
     //but it's also crucial that intersections only occur between adjacent edges.
@@ -1682,8 +1670,12 @@ namespace clipperlib {
         };
 
         if (e == max_pair) {
-          if (IsHotEdge(horz))
-            AddLocalMaxPoly(horz, *e, horz.top);
+          if (IsHotEdge(horz)) {
+            if (is_left_to_right)
+              AddLocalMaxPoly(horz, *e, horz.top);
+            else
+              AddLocalMaxPoly(*e, horz, horz.top);
+          }
           DeleteFromAEL(*e);
           DeleteFromAEL(horz);
           return;
@@ -1727,17 +1719,20 @@ namespace clipperlib {
       DeleteFromAEL(horz);
     else if (IsHotEdge(horz))
       AddLocalMaxPoly(horz, *max_pair, horz.top);
-    else { DeleteFromAEL(*max_pair); DeleteFromAEL(horz); }
+    else { 
+      DeleteFromAEL(*max_pair); DeleteFromAEL(horz); 
+    }
   }
   //------------------------------------------------------------------------------
 
   void Clipper::DoTopOfScanbeam(const int64_t y)
   {
+    sel_ = NULL;            //reused to flag horizontals
     Active *e = actives_;
     while (e) {
       //nb: E will never be horizontal at this point
       if (e->top.y == y) {
-        e->curr = e->top; //needed for horizontal processing
+        e->curr = e->top;   //needed for horizontal processing
         if (IsMaxima(*e)) {
           e = DoMaxima(*e); //TOP OF BOUND (MAXIMA)
           continue;
@@ -1819,16 +1814,16 @@ namespace clipperlib {
     {
       OutRec *outrec = *ol_iter;
       if (!outrec->pts) continue;
-      OutPt *op = outrec->pts->prev;
+      OutPt *op = outrec->pts->next;
       int cnt = PointCount(op);
       //fixup for duplicate start and } points ...
       if (op->pt == outrec->pts->pt) cnt--;
 
-      bool is_open = (outrec->flags & ofOpen) > 0;
+      bool is_open = (outrec->flag == orOpen);
       if (cnt < 2 || (!is_open && cnt == 2) || (is_open && !solution_open)) continue;
       Path p;
       p.reserve(cnt);
-      for (int i = 0; i < cnt; i++) { p.push_back(op->pt); op = op->prev; }
+      for (int i = 0; i < cnt; i++) { p.push_back(op->pt); op = op->next; }
       if (is_open) solution_open->push_back(p);
       else solution_closed.push_back(p);
     }
@@ -1848,17 +1843,17 @@ namespace clipperlib {
     {
       OutRec *outrec = *ol_iter;
       if (!outrec->pts) continue;
-      OutPt *op = outrec->pts->prev;
+      OutPt *op = outrec->pts->next;
       int cnt = PointCount(op);
       //fixup for duplicate start and } points ...
       if (op->pt == outrec->pts->pt) cnt--;
 
-      bool is_open = (outrec->flags & ofOpen) > 0;
+      bool is_open = (outrec->flag == orOpen);
       if (cnt < 2 || (!is_open && cnt == 2) || (is_open && !solution_open)) continue;
 
       Path p;
       p.reserve(cnt);
-      for (int i = 0; i < cnt; i++) { p.push_back(op->pt); op = op->prev; }
+      for (int i = 0; i < cnt; i++) { p.push_back(op->pt); op = op->next; }
       if (is_open) 
         solution_open->push_back(p);
       else if (outrec->owner && outrec->owner->polypath)

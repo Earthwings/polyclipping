@@ -1,15 +1,11 @@
 /*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (alpha)                                                    *
-* Date      :  26 September 2017                                               *
+* Version   :  10.0 (beta)                                                     *
+* Date      :  8 Noveber 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
-* License:                                                                     *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
+* Purpose   :  Offset clipping solutions                                       *
+* License   : http://www.boost.org/LICENSE_1_0.txt                             *
 *******************************************************************************/
 
 #include <vector>
@@ -64,7 +60,7 @@ namespace clipperlib {
     join_type = jt;
     end_type = et;
 
-    int len_path = p.size();
+    size_t len_path = p.size();
     if (et == kPolygon || et == kOpenJoined)
       while (len_path > 1 && p[len_path - 1] == p[0]) len_path--;
     else if (len_path == 2 && p[1] == p[0])
@@ -82,15 +78,17 @@ namespace clipperlib {
 
     Point64 last_pt = p[0];
     lowest_idx = 0;
-    for (int i = 1; i < len_path; ++i)
+    for (size_t i = 1, last = 0; i < len_path; ++i)
     {
       if (last_pt == p[i]) continue;
+      last++; 
       path.push_back(p[i]);
       last_pt = p[i];
+      //j == path.size() -1;
       if (et != kPolygon) continue;
-      if (p[i].y >= path[lowest_idx].y &&
-        (p[i].y > path[lowest_idx].y || p[i].x < path[lowest_idx].x))
-        lowest_idx = i;
+      if (path[last].y >= path[lowest_idx].y &&
+        (path[last].y > path[lowest_idx].y || path[last].x < path[lowest_idx].x))
+        lowest_idx = last;
     }
     if (end_type == kPolygon && path.size() < 3) path.clear();
   }
@@ -223,7 +221,7 @@ namespace clipperlib {
   void ClipperOffset::DoRound(int j, int k)
   {
     double a = atan2(sin_a_, norms_[k].x * norms_[j].x + norms_[k].y * norms_[j].y);
-    int steps = std::max((int)Round(steps_per_radian_ * abs(a)), 1);
+    int steps = (std::max)((int)Round(steps_per_radian_ * abs(a)), 1);
 
     double x = norms_[k].x, y = norms_[k].y, x2;
     for (int i = 0; i < steps; ++i)
@@ -449,9 +447,9 @@ namespace clipperlib {
 
     //now clean up 'corners' ...
     Clipper clpr;
-    clpr.AddPaths(solution_, kSubject);
-    if (negate) clpr.Execute(kUnion, sol, kNegative);
-    else clpr.Execute(kUnion, sol, kPositive);
+    clpr.AddPaths(solution_, ptSubject);
+    if (negate) clpr.Execute(ctUnion, sol, frNegative);
+    else clpr.Execute(ctUnion, sol, frPositive);
   }
   //---------------------------------------------------------------------------
 

@@ -1,15 +1,11 @@
 /*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (alpha)                                                    *
-* Date      :  26 September 2017                                               *
+* Version   :  10.0 (beta)                                                     *
+* Date      :  8 Noveber 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
-* License:                                                                     *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
+* Purpose   :  Offset clipping solutions                                       *
+* License   : http://www.boost.org/LICENSE_1_0.txt                             *
 *******************************************************************************/
 
 #ifndef clipper_offset_h

@@ -1,19 +1,14 @@
 unit Clipper;
 
 (*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta)                                                     *
-* Date      :  8 Noveber 2017                                                  *
+* Date      :  11 Noveber 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
 * Purpose   :  Base clipping module                                            *
-*                                                                              *
-* License:                                                                     *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
 *******************************************************************************)
 
 {$IFDEF FPC}
@@ -169,9 +164,7 @@ type
     procedure InsertLocalMinimaIntoAEL(const botY: Int64);
     procedure PushHorz(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-    function GetOwner(e: PActive): TOutRec;
     procedure JoinOutrecPaths(e1, e2: PActive);
-    procedure SwapOutRecs(e1, e2: PActive);
     procedure StartOpenPath(e: PActive; const pt: TPoint64);
     procedure UpdateEdgeIntoAEL(var e: PActive);
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
@@ -203,14 +196,14 @@ type
     function ExecuteInternal(clipType: TClipType; fillRule: TFillRule): Boolean;
     property OutRecList: TList read FOutRecList;
   public
-    constructor Create;
+    constructor Create; virtual;
     destructor Destroy; override;
     procedure Clear;
     function GetBounds: TRect64;
     procedure AddPath(const path: TPath; polyType: TPathType = ptSubject;
-      isOpen: Boolean = false);
+      isOpen: Boolean = false); virtual;
     procedure AddPaths(const paths: TPaths; polyType: TPathType = ptSubject;
-      isOpen: Boolean = false);
+      isOpen: Boolean = false); virtual;
     function Execute(clipType: TClipType; out closedPaths: TPaths;
       fillRule: TFillRule = frEvenOdd): Boolean; overload; virtual;
     function Execute(clipType: TClipType; out closedPaths, openPaths: TPaths;
@@ -599,6 +592,75 @@ begin
   outRec.endE := e2;
   e1.OutRec := outRec;
   e2.OutRec := outRec;
+end;
+//------------------------------------------------------------------------------
+
+procedure SwapOutRecs(e1, e2: PActive);
+var
+  or1, or2: TOutRec;
+  e: PActive;
+begin
+  or1 := e1.OutRec;
+  or2 := e2.OutRec;
+  if (or1 = or2) then
+  begin
+    e := or1.startE;
+    or1.startE := or1.endE;
+    or1.endE := e;
+    Exit;
+  end;
+  if assigned(or1) then
+  begin
+    if e1 = or1.startE then
+      or1.startE := e2 else
+      or1.endE := e2;
+  end;
+  if assigned(or2) then
+  begin
+    if e2 = or2.startE then
+      or2.startE := e1 else
+      or2.endE := e1;
+  end;
+  e1.OutRec := or2;
+  e2.OutRec := or1;
+end;
+//------------------------------------------------------------------------------
+
+function GetOwner(e: PActive): TOutRec;
+begin
+  if IsHorizontal(e) and (e.Top.X < e.Bot.X) then
+  begin
+    e := e.NextInAEL;
+    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
+      e := e.NextInAEL;
+    if not assigned(e) then Result := nil
+    else if (e.OutRec.Flag = orOuter) = (e.OutRec.startE = e) then
+      Result := e.OutRec.Owner
+    else Result := e.OutRec;
+  end else
+  begin
+    e := e.PrevInAEL;
+    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
+      e := e.PrevInAEL;
+    if not assigned(e) then Result := nil
+    else if (e.OutRec.Flag = orOuter) = (e.OutRec.endE = e) then
+      Result := e.OutRec.Owner
+    else Result := e.OutRec;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function EdgesAdjacentInSel(node: PIntersectNode): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  with node^ do
+    Result := (Edge1.NextInSEL = Edge2) or (Edge1.PrevInSEL = Edge2);
+end;
+//------------------------------------------------------------------------------
+
+function IntersectListSort(node1, node2: Pointer): Integer;
+begin
+  result := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
 end;
 
 //------------------------------------------------------------------------------
@@ -1239,30 +1301,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.GetOwner(e: PActive): TOutRec;
-begin
-  if IsHorizontal(e) and (e.Top.X < e.Bot.X) then
-  begin
-    e := e.NextInAEL;
-    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
-      e := e.NextInAEL;
-    if not assigned(e) then Result := nil
-    else if (e.OutRec.Flag = orOuter) = (e.OutRec.startE = e) then
-      Result := e.OutRec.Owner
-    else Result := e.OutRec;
-  end else
-  begin
-    e := e.PrevInAEL;
-    while assigned(e) and (not IsHotEdge(e) or IsOpen(e)) do
-      e := e.PrevInAEL;
-    if not assigned(e) then Result := nil
-    else if (e.OutRec.Flag = orOuter) = (e.OutRec.endE = e) then
-      Result := e.OutRec.Owner
-    else Result := e.OutRec;
-  end;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipper.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64);
 var
   outRec: TOutRec;
@@ -1275,13 +1313,18 @@ begin
   outRec.Pts := nil;
   outRec.PolyPath := nil;
 
-  if IsOpen(e1) then outRec.Flag := orOpen
+  if IsOpen(e1) then
+  begin
+    outRec.Owner := nil;
+    outRec.Flag := orOpen;
+  end
   else if not assigned(outRec.Owner) or (outRec.Owner.Flag = orInner) then
     outRec.Flag := orOuter
-  else outRec.Flag := orInner;
+  else
+    outRec.Flag := orInner;
 
   //now set orientation ...
-  swapSideNeeded := false;
+  swapSideNeeded := false;    //todo: recheck this with open paths
   if IsHorizontal(e1) then
   begin
     if  (e1.Top.X > e1.Bot.X) then swapSideNeeded := true;
@@ -1289,7 +1332,7 @@ begin
   begin
     if (e2.Top.X < e2.Bot.X) then swapSideNeeded := true
   end else if (e1.Dx < e2.Dx) then swapSideNeeded := true;
-  if (outRec.Flag = orOuter) <> swapSideNeeded then
+  if (outRec.Flag = orInner) = swapSideNeeded then
     SetOrientation(outRec, e1, e2) else
     SetOrientation(outRec, e2, e1);
 
@@ -1331,7 +1374,7 @@ begin
     else if not FixOrientation(e1) and not FixOrientation(e2) then
       raise EClipperLibException.Create(rsClippingErr);
     if e1.OutRec.Owner = e2.OutRec then
-      e1.OutRec.Owner := GetOwner(e1);
+      e1.OutRec.Owner := e2.OutRec.Owner;
   end;
 
   //join e2 outrec path onto e1 outrec path and then delete e2 outrec path
@@ -1374,49 +1417,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.SwapOutRecs(e1, e2: PActive);
-var
-  or1, or2: TOutRec;
-  e: PActive;
-begin
-  or1 := e1.OutRec;
-  or2 := e2.OutRec;
-  if (or1 = or2) then
-  begin
-    e := or1.startE;
-    or1.startE := or1.endE;
-    or1.endE := e;
-    Exit;
-  end;
-  if assigned(or1) then
-  begin
-    if e1 = or1.startE then
-      or1.startE := e2 else
-      or1.endE := e2;
-  end;
-  if assigned(or2) then
-  begin
-    if e2 = or2.startE then
-      or2.startE := e1 else
-      or2.endE := e1;
-  end;
-  e1.OutRec := or2;
-  e2.OutRec := or1;
-end;
-//------------------------------------------------------------------------------
-
 function TClipper.CreateOutPt: TOutPt;
 begin
-  //this is a virtual method as descendant classes may need
-  //to produce descendant classes of TOutPt ...
   Result := TOutPt.Create;
 end;
 //------------------------------------------------------------------------------
 
 function TClipper.CreateOutRec: TOutRec;
 begin
-  //this is a virtual method as descendant classes may need
-  //to produce descendant classes of TOutRec ...
   Result := TOutRec.Create;
 end;
 //------------------------------------------------------------------------------
@@ -1445,9 +1453,9 @@ begin
   end;
   Result := CreateOutPt;
   Result.Pt := pt;
-  opStart.Next.Prev := Result;
+  opEnd.Prev := Result;
   Result.Prev := opStart;
-  Result.Next := opStart.Next;
+  Result.Next := opEnd;
   opStart.Next := Result;
   if toStart then e.OutRec.Pts := Result;
 end;
@@ -1918,20 +1926,6 @@ begin
     dispose(PIntersectNode(FIntersectList[i]));
   end;
   FIntersectList.Clear;
-end;
-//------------------------------------------------------------------------------
-
-function EdgesAdjacentInSel(node: PIntersectNode): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  with node^ do
-    Result := (Edge1.NextInSEL = Edge2) or (Edge1.PrevInSEL = Edge2);
-end;
-//------------------------------------------------------------------------------
-
-function IntersectListSort(node1, node2: Pointer): Integer;
-begin
-  result := PIntersectNode(node2).Pt.Y - PIntersectNode(node1).Pt.Y;
 end;
 //------------------------------------------------------------------------------
 

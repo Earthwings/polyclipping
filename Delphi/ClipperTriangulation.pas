@@ -1,19 +1,14 @@
 unit ClipperTriangulation;
 
 (*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta)                                                     *
-* Date      :  8 Noveber 2017                                                  *
+* Date      :  11 Noveber 2017                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
 * Purpose   :  Triangulate clipping solutions                                  *
-*                                                                              *
-* License:                                                                     *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 * Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
 *******************************************************************************)
 
 {$IFDEF FPC}
@@ -167,7 +162,6 @@ end;
 procedure Update(op: TOutPt; outRec: TOutRec);
 var
   op2: TOutPt;
-  or2: TOutRec;
 begin
   op2 := op;
   repeat
@@ -176,20 +170,6 @@ begin
     TOutPtTri(op2).Outrec := outRec;
     op2 := op2.Next;
   until (op2 = op);
-end;
-//------------------------------------------------------------------------------
-
-function PointCount(pts: TOutPt): Integer; {$IFDEF INLINING} inline; {$ENDIF}
-var
-  p: TOutPt;
-begin
-  Result := 0;
-  if not Assigned(pts) then Exit;
-  p := pts;
-  repeat
-    Inc(Result);
-    p := p.Next;
-  until p = pts;
 end;
 
 //------------------------------------------------------------------------------
@@ -248,8 +228,8 @@ begin
         //tiny self-intersections and these need removing ...
         if CrossProductVal(op2.Pt, op.Pt, op.Prev.Prev.Pt, cpVal) > 0 then
         begin
-          if assigned(TOutPtTri(op).Outrec) then
-            UpdateHelper(TOutPtTri(op).Outrec, op2);
+          if assigned(TOutPtTri(op).RightOutrec) then
+            UpdateHelper(TOutPtTri(op).RightOutrec, op2);
           DisposeOutPt(op);
           op := op2;
           continue;
@@ -261,8 +241,8 @@ begin
     if (op.Prev = opEnd) then break;
     if (cpVal <> 0) then
       AddPolygon(op.Pt, op.Prev.Pt, op.Prev.Prev.Pt);
-    if assigned(TOutPtTri(op.Prev).Outrec) then
-      UpdateHelper(TOutPtTri(op.Prev).Outrec, op);
+    if assigned(TOutPtTri(op.Prev).RightOutrec) then
+      UpdateHelper(TOutPtTri(op.Prev).RightOutrec, op);
     DisposeOutPt(op.Prev);
     if op <> outRec.Pts then op := op.Next;
   end;
@@ -292,7 +272,6 @@ begin
   TOutPtTri(result).Outrec := e.OutRec;
   FLastOp := result;
   Triangulate(e.OutRec);
-  //Triangulate() above may assign Result.OutRecRt so ...
   if IsStartSide(e) and not assigned(TOutPtTri(Result).RightOutrec) then
   begin
     e2 := GetRightAdjacentHotEdge(e);
@@ -320,7 +299,9 @@ begin
   botLft := TOutRecTri(e.OutRec).LeftOutPt;
   botRt := GetOutPt(e);
 
-  if not assigned(botLft) or (botRt.Pt.Y < botLft.Pt.Y) then botLft := botRt;
+  if not assigned(botLft) or
+    not assigned(TOutPtTri(botLft).Outrec.startE) or
+    (botRt.Pt.Y < botLft.Pt.Y) then botLft := botRt;
 
   botRt := InsertPt(botLft.Pt, botLft.Prev);
   botOr := TOutPtTri(botLft).Outrec;
@@ -370,6 +351,7 @@ end;
 
 procedure TClipperTri.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
 var
+  op: TOutPt;
   outrec: TOutRec;
   isOuter: Boolean;
   e: PActive;
@@ -381,13 +363,20 @@ begin
   begin
     if TOutRecTri(e1.OutRec).LeftOutPt <> nil then
       UpdateHelper(e1.OutRec, nil);
-    UpdateHelper(e2.OutRec, nil);
+    if TOutRecTri(e2.OutRec).LeftOutPt <> nil then
+      UpdateHelper(e2.OutRec, nil);
   end;
-
   inherited;
 
   if not assigned(outRec.Pts) then outRec := outRec.Owner;
-  if not isOuter then
+  if isOuter then
+  begin
+    op := outRec.Pts;
+    if assigned(TOutPtTri(op).RightOutrec) then
+      UpdateHelper(TOutPtTri(op).RightOutrec, nil)
+    else if assigned(TOutPtTri(op.Next).RightOutrec) then
+      UpdateHelper(TOutPtTri(op.Next).RightOutrec, nil);
+  end else
   begin
     e := GetRightAdjacentHotEdge(e2);
     if assigned(e) then UpdateHelper(e.OutRec, FLastOp);
