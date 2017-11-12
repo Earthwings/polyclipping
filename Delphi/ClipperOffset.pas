@@ -1,19 +1,13 @@
 unit ClipperOffset;
 
 (*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta)                                                     *
 * Date      :  8 Noveber 2017                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2017                                         *
-*                                                                              *
 * Purpose   :  Offset clipping solutions                                       *
-*                                                                              *
-* License:                                                                     *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
-*                                                                              *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
 
 {$IFDEF FPC}

@@ -8,7 +8,6 @@ unit ClipperTriangulation;
 * Copyright :  Angus Johnson 2010-2017                                         *
 * Purpose   :  Triangulate clipping solutions                                  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
 *******************************************************************************)
 
 {$IFDEF FPC}

@@ -8,7 +8,6 @@ unit Clipper;
 * Copyright :  Angus Johnson 2010-2017                                         *
 * Purpose   :  Base clipping module                                            *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
 *******************************************************************************)
 
 {$IFDEF FPC}

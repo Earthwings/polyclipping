@@ -3,30 +3,30 @@ This is a preview of a major Clipper update. While the code in previous versions
 was functional, in many places it is/was downright ugly. This new version is a 
 significant rewrite that should be easier to understand and maintain. There's 
 also some performance improvement. This new Clipper it's roughly twice as fast 
-as the previous version, even allowing for absence of any merging or simplifying 
-of polygons with common/touching edges in clipping solutions. (That feature was 
-always incomplete in previous versions and is difficult to get right without 
-overly complicating and bloating and slowing the library. It remains a work 
-in progress.) The 'offsetting' code has also undergone significant revision 
-and a new Triangulation unit has been added.
+as the previous version, even allowing for the absence of any merging or 
+simplifying of polygons with common/touching edges in clipping solutions. (That 
+feature was imperfect in previous versions and it's difficult to get right 
+without overly complicating, slowing and bloating the library. It remains 
+a work in progress.) The 'offsetting' code has also undergone significant 
+revision and a new Triangulation unit has been added.
 
 
 There are quite a few changes to Clipper's interface including ...
 1. Most noteworthy of all ... the Closed parameter in the AddPath and AddPaths 
-   methods has changed to IsOpen (ie the exact opposite to previously).
+   methods has been changed to IsOpen (ie the exact opposite to previously).
 2. The PolyFillType enumeration has been renamed FillRule (TFillRule in Delphi).
 3. The cInt type has been replaced with the native 64bit integer type (Int64 
    or int64_t) as there's no longer a need to restrict the range of 64bit path 
-   coordinates.
+   coordinates (at least in the core/base Clipper class).
 4. The IntPoint and IntRect types have also been renamed Point64 and Rect64
    respectively (or TPoint64 and TRect64 in Delphi).
-5. The Clipper object's Execute parameters have changed: an (optional) OpenPaths
-   parameter has been added; also, there's now only one FillRule parameter. 
-   (On reflection it was probably unnecessary and also confusing allowing 
-   different fill rules for Subject and Clip paths.)
+5. The Clipper object's Execute parameters have changed with the addition of an
+   (optional) OpenPaths (solution) parameter, and with the removal of one of 
+   two FillRule parameters. (On reflection it was probably unnecessary and also 
+   confusing providing different fill rules for Subject and Clip paths.)
 6. The Polytree class now contains only closed paths (ie polygons) since open 
-   paths can't contain/own polygons. (Open paths are now returned via a 
-   separate parameter in the Clipper object's Execute method.)
+   paths can't contain/own polygons. (Any open paths in the solution are now 
+   returned via a separate Paths parameter in Clipper's Execute method.)
 
    
 When I originally translated this Library from Delphi (Pascal) to C# and C++,
