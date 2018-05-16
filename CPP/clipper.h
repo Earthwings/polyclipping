@@ -17,6 +17,7 @@
 #include <queue>
 #include <stdexcept>
 #include <cstdlib>
+#include <cfloat>
 
 namespace clipperlib {
 
