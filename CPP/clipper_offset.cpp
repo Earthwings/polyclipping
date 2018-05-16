@@ -345,8 +345,8 @@ namespace clipperlib {
           norms_[j] = PointD(-norms_[j - 1].x, -norms_[j - 1].y);
         norms_[0] = PointD(-n.x, -n.y);
         k = 0;
-        for (size_t j = path_in_size - 1; j >= 0; j--)
-          OffsetPoint(j, k, node->join_type);
+        for (size_t j = path_in_size; j > 0; j--)
+          OffsetPoint(j-1, k, node->join_type);
         solution_.push_back(path_out_);
       }
       else
