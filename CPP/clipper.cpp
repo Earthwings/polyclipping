@@ -71,10 +71,9 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  PolyPath::PolyPath(PolyPath *parent, const Path &path)
+  PolyPath::PolyPath(PolyPath *parent, const Path &path) :
+      parent_(parent), path_(path)
   {
-    parent_ = parent;
-    path_ = path;
   }
   //------------------------------------------------------------------------------
 
