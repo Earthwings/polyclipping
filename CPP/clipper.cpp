@@ -131,7 +131,7 @@ namespace clipperlib {
   inline int Abs(int val) { return val < 0 ? -val : val; }
   //------------------------------------------------------------------------------
 
-  inline bool IsOdd(int val) { return val & 1 ? true : false; }
+  inline bool IsOdd(int val) { return (val & 1) ? true : false; }
   //------------------------------------------------------------------------------
 
   inline bool IsHotEdge(const Active &e) { return (e.outrec); }
