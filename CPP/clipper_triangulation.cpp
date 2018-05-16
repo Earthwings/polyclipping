@@ -12,10 +12,13 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 #include "clipper_triangulation.h"
 #include "clipper.h"
 
+#if _MSC_VER
 #include "windows.h" //debugging only
+#endif
 
 namespace clipperlib {
 
@@ -314,8 +317,14 @@ namespace clipperlib {
     paths.reserve(triangles_.size());
     for (Paths::const_iterator iter = triangles_.cbegin();
       iter != triangles_.cend(); ++iter) {
-        if ((*iter).size() != 3)
-          MessageBeep(750);
+        if ((*iter).size() != 3) {
+#if _MSC_VER
+            MessageBeep(750);
+#else
+            std::cout << '\a';
+#endif
+
+        }
       paths.push_back(*iter);
     }
   }
