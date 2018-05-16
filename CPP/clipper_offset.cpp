@@ -32,12 +32,12 @@ namespace clipperlib {
 
   double Area(Path path)
   {
-    int cnt = (int)path.size();
+    int cnt = int(path.size());
     if (cnt < 3) return 0;
     double a = 0;
     for (int i = 0, j = cnt - 1; i < cnt; ++i)
     {
-      a += ((double)path[j].x + path[i].x) * ((double)path[j].y - path[i].y);
+      a += (double(path[j].x) + path[i].x) * (double(path[j].y) - path[i].y);
       j = i;
     }
     return -a * 0.5;
@@ -46,8 +46,8 @@ namespace clipperlib {
 
   ClipperOffset::PointD ClipperOffset::GetUnitNormal(const Point64 &pt1, const Point64 &pt2)
   {
-    double dx = (double)(pt2.x - pt1.x);
-    double dy = (double)(pt2.y - pt1.y);
+    double dx = double(pt2.x - pt1.x);
+    double dy = double(pt2.y - pt1.y);
     if ((dx == 0) && (dy == 0)) return PointD(0,0);
     double f = 1 * 1.0 / sqrt(dx * dx + dy * dy);
     dx *= f;
@@ -222,7 +222,7 @@ namespace clipperlib {
   void ClipperOffset::DoRound(int j, int k)
   {
     double a = atan2(sin_a_, norms_[k].x * norms_[j].x + norms_[k].y * norms_[j].y);
-    int steps = (std::max)((int)Round(steps_per_radian_ * abs(a)), 1);
+    int steps = std::max(int(Round(steps_per_radian_ * abs(a))), 1);
 
     double x = norms_[k].x, y = norms_[k].y, x2;
     for (int i = 0; i < steps; ++i)

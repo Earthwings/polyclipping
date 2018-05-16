@@ -78,7 +78,7 @@ namespace clipperlib {
   }
   //------------------------------------------------------------------------------
 
-  int PolyPath::ChildCount() const { return (int)childs_.size(); }
+  int PolyPath::ChildCount() const { return int(childs_.size()); }
 
   //------------------------------------------------------------------------------
 
@@ -261,7 +261,7 @@ namespace clipperlib {
   inline void SetDx(Active &e)
   {
     int64_t dy = (e.top.y - e.bot.y);
-    e.dx = (dy == 0) ? CLIPPER_HORIZONTAL : (double)(e.top.x - e.bot.x) / dy;
+    e.dx = (dy == 0) ? CLIPPER_HORIZONTAL : double(e.top.x - e.bot.x) / dy;
   }
   //---------------------------------------------------------------------------
 
@@ -492,7 +492,7 @@ namespace clipperlib {
 
   void Clipper::AddPathToVertexList(const Path &path, PathType polytype, bool is_open) 
   {
-    int path_len = (int)path.size();
+    int path_len = int(path.size());
     while (path_len > 1 && (path[path_len - 1] == path[0])) --path_len;
     if (path_len < 2) return;
 
@@ -920,7 +920,7 @@ namespace clipperlib {
   void Clipper::AddLocalMinPoly(Active &e1, Active &e2, const Point64 pt)
   {
     OutRec *outrec = CreateOutRec();
-    outrec->idx = (unsigned)outrec_list_.size();
+    outrec->idx = unsigned(outrec_list_.size());
     outrec_list_.push_back(outrec);
     outrec->owner = GetOwner(&e1);
     outrec->polypath = NULL;
@@ -1070,7 +1070,7 @@ namespace clipperlib {
   void Clipper::StartOpenPath(Active &e, const Point64 pt)
   {
     OutRec *outrec = CreateOutRec();
-    outrec->idx = (unsigned)outrec_list_.size();
+    outrec->idx = unsigned(outrec_list_.size());
     outrec_list_.push_back(outrec);
     outrec->flag = orOpen;
     outrec->owner = NULL;
