@@ -11,6 +11,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstdlib>
+#include <cmath>
 #include <algorithm>
 #include "clipper.h"
 #include "clipper_offset.h"
