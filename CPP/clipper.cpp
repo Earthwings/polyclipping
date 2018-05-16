@@ -1665,8 +1665,8 @@ namespace clipperlib {
         //or if we've got to the } of an intermediate horizontal edge ...
         if (e->curr.x == horz.top.x && !isMax && !IsHorizontal(*e)) {
           pt = NextVertex(horz).pt;
-          if (is_left_to_right && (TopX(*e, pt.y) >= pt.x) ||
-            (!is_left_to_right && (TopX(*e, pt.y) <= pt.x))) break;
+          if ((is_left_to_right && (TopX(*e, pt.y) >= pt.x)) ||
+            ((!is_left_to_right && (TopX(*e, pt.y) <= pt.x)))) break;
         };
 
         if (e == max_pair) {
