@@ -92,7 +92,7 @@ namespace clipperlib {
 
   PolyPath& PolyPath::GetChild(unsigned index)
   {
-    if (index < 0 || index >= childs_.size())
+    if (index >= childs_.size())
       throw ClipperException("invalid range in PolyPath::GetChild.");
     return *childs_[index];
   }
