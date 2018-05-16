@@ -132,7 +132,7 @@ namespace clipperlib {
     //cross product ...
     sin_a_ = (norms_[k].x * norms_[j].y - norms_[j].x * norms_[k].y);
 
-    if (abs(sin_a_ * delta_) < 1.0) //angle is approaching 180 or 360 deg.
+    if (fabs(sin_a_ * delta_) < 1.0) //angle is approaching 180 or 360 deg.
     {
       //dot product ...
       double cos_a = (norms_[k].x * norms_[j].x + norms_[j].y * norms_[k].y);
@@ -222,7 +222,7 @@ namespace clipperlib {
   void ClipperOffset::DoRound(int j, int k)
   {
     double a = atan2(sin_a_, norms_[k].x * norms_[j].x + norms_[k].y * norms_[j].y);
-    int steps = std::max(int(Round(steps_per_radian_ * abs(a))), 1);
+    int steps = std::max(int(Round(steps_per_radian_ * fabs(a))), 1);
 
     double x = norms_[k].x, y = norms_[k].y, x2;
     for (int i = 0; i < steps; ++i)
@@ -243,7 +243,7 @@ namespace clipperlib {
   void ClipperOffset::DoOffset(double d)
   {
     delta_ = d;
-    double abs_delta = abs(d);
+    double abs_delta = fabs(d);
 
     //if a Zero offset, then just copy CLOSED polygons to FSolution and return ...
     if (abs_delta < TOLERANCE)
