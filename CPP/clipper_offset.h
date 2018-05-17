@@ -66,7 +66,7 @@ namespace clipperlib {
 
   public:
     ClipperOffset(double miter_limit = 2.0, double arc_tolerance = 0) :
-      miter_limit_(miter_limit), arc_tolerance_(arc_tolerance) {};
+      arc_tolerance_(arc_tolerance), miter_limit_(miter_limit) {}
     void Clear();
     void AddPath(const Path &path, JoinType jt, EndType et);
     void AddPaths(const Paths &paths, JoinType jt, EndType et);
