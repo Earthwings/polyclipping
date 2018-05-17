@@ -32,7 +32,7 @@ enum FillRule { frEvenOdd, frNonZero, frPositive, frNegative };
 struct Point64 {
   int64_t x;
   int64_t y;
-  Point64(int64_t x = 0, int64_t y = 0): x(x), y(y) {};
+  Point64(int64_t x = 0, int64_t y = 0): x(x), y(y) {}
 
   friend inline bool operator== (const Point64 &a, const Point64 &b)
   {
@@ -62,7 +62,7 @@ class PolyPath
 	  std::vector< PolyPath* > childs_;
   public:
 	  PolyPath(PolyPath *parent, const Path &path);
-	  virtual ~PolyPath(){};
+      virtual ~PolyPath(){}
     PolyPath &AddChild(const Path &path);
 	  PolyPath& GetChild(unsigned index);
     int ChildCount() const;
@@ -197,7 +197,7 @@ class Clipper {
     virtual void AddLocalMaxPoly(Active &e1, Active &e2, const Point64 pt);
     bool ExecuteInternal(ClipType ct, FillRule ft);
     /*get properties ... */
-    OutRecList& outrec_list() { return outrec_list_; };
+    OutRecList& outrec_list() { return outrec_list_; }
   public:
     Clipper();
     virtual ~Clipper();
