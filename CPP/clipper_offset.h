@@ -30,8 +30,8 @@ namespace clipperlib {
     {
       double x;
       double y;
-      PointD(double x_ = 0, double y_ = 0) : x(x_), y(y_) {};
-      PointD(const Point64 &pt) : x((double)pt.x), y((double)pt.y) {};
+      PointD(double x_ = 0, double y_ = 0) : x(x_), y(y_) {}
+      PointD(const Point64 &pt) : x(double(pt.x)), y(double(pt.y)) {}
     };
 
     struct PathNode
